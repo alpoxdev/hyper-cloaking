@@ -100,6 +100,13 @@ export {
   withDefaultSite,
   workspacePaths
 } from './cookie.mjs';
+export const UNSUPPORTED_CHROME_NO_SANDBOX_FLAG = '--no-sandbox';
+export const REQUIRED_PLAYWRIGHT_IGNORE_DEFAULT_ARGS = [
+  '--enable-automation',
+  '--enable-unsafe-swiftshader',
+  UNSUPPORTED_CHROME_NO_SANDBOX_FLAG
+];
+
 
 /**
  * Creates the runtime workspace and a starter `cookie.yml` when missing.
@@ -153,6 +160,61 @@ async function importCloakBrowser(workspace) {
 }
 
 /**
+ * Removes Chromium's `--no-sandbox` flag from user and CloakBrowser default
+ * arguments. On headed macOS Chromium this flag produces the visible warning
+ * "unsupported command-line flag: --no-sandbox".
+ *
+ * @param {unknown} args Candidate Chromium arguments.
+ * @returns {string[]} Arguments without `--no-sandbox`.
+ */
+export function withoutUnsupportedNoSandbox(args = []) {
+  if (!Array.isArray(args)) return [];
+  return args.filter((arg) => String(arg).split('=')[0] !== UNSUPPORTED_CHROME_NO_SANDBOX_FLAG);
+}
+
+/**
+ * Merges Playwright default-argument suppressions required by this skill.
+ *
+ * @param {unknown} ignoreDefaultArgs Existing Playwright ignoreDefaultArgs value.
+ * @returns {true | string[]} Merged ignoreDefaultArgs.
+ */
+export function mergeRequiredIgnoreDefaultArgs(ignoreDefaultArgs) {
+  if (ignoreDefaultArgs === true) return true;
+  const existing = Array.isArray(ignoreDefaultArgs) ? ignoreDefaultArgs : [];
+  return [...new Set([...existing, ...REQUIRED_PLAYWRIGHT_IGNORE_DEFAULT_ARGS])];
+}
+
+/**
+ * Builds CloakBrowser launch options while preserving stealth defaults except
+ * Chromium's warning-producing `--no-sandbox` flag.
+ *
+ * @param {Record<string, any>} cloakBrowser Imported CloakBrowser module.
+ * @param {{ cloakOptions?: Record<string, any> }} [options] User launch options.
+ * @param {Record<string, any>} [launchOptions] Additional Playwright launch options.
+ * @returns {Record<string, any>} Sanitized CloakBrowser launch options.
+ */
+export function buildNoSandboxWarningSafeCloakOptions(cloakBrowser, options = {}, launchOptions = {}) {
+  const cloakOptions = options.cloakOptions || {};
+  const existingLaunchOptions = cloakOptions.launchOptions || {};
+  const defaultStealthArgs = cloakOptions.stealthArgs === false
+    ? []
+    : (typeof cloakBrowser?.getDefaultStealthArgs === 'function' ? cloakBrowser.getDefaultStealthArgs() : []);
+  return {
+    ...cloakOptions,
+    stealthArgs: false,
+    args: [
+      ...withoutUnsupportedNoSandbox(defaultStealthArgs),
+      ...withoutUnsupportedNoSandbox(cloakOptions.args)
+    ],
+    launchOptions: {
+      ...launchOptions,
+      ...existingLaunchOptions,
+      ignoreDefaultArgs: mergeRequiredIgnoreDefaultArgs(existingLaunchOptions.ignoreDefaultArgs)
+    }
+  };
+}
+
+/**
  * Launches CloakBrowser through the JS API with mandatory humanization.
  *
  * @param {{ workspace?: string, headless?: boolean, cloakOptions?: Record<string, any> }} [options] Launch options.
@@ -160,15 +222,13 @@ async function importCloakBrowser(workspace) {
  */
 export async function launchCloakBrowser(options = {}) {
   const paths = await ensureWorkspace(options.workspace);
-  const { launch } = await importCloakBrowser(options.workspace);
-  const browser = await launch({
-    ...options.cloakOptions,
+  const cloakBrowser = await importCloakBrowser(options.workspace);
+  const browser = await cloakBrowser.launch({
+    ...buildNoSandboxWarningSafeCloakOptions(cloakBrowser, options, {
+      downloadsPath: paths.downloadsDir
+    }),
     humanize: true,
-    headless: options.headless ?? true,
-    launchOptions: {
-      downloadsPath: paths.downloadsDir,
-      ...(options.cloakOptions?.launchOptions || {})
-    }
+    headless: options.headless ?? true
   });
   return { browser, paths };
 }
@@ -181,9 +241,9 @@ export async function launchCloakBrowser(options = {}) {
  */
 export async function launchPersistentCloakContext(options = {}) {
   const paths = await ensureWorkspace(options.workspace);
-  const { launchPersistentContext } = await importCloakBrowser(options.workspace);
-  const context = await launchPersistentContext({
-    ...options.cloakOptions,
+  const cloakBrowser = await importCloakBrowser(options.workspace);
+  const context = await cloakBrowser.launchPersistentContext({
+    ...buildNoSandboxWarningSafeCloakOptions(cloakBrowser, options),
     userDataDir: options.userDataDir || paths.defaultProfileDir,
     humanize: true,
     headless: options.headless ?? true,

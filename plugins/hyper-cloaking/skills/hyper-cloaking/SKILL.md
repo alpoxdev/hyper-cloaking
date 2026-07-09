@@ -101,12 +101,12 @@ Boundary example:
 6. **Install or update missing setup.** Use `npm install cloakbrowser@latest playwright-core@latest` in the selected Node workspace, or a project-appropriate package manager if one already exists. Use `npx cloakbrowser install` to pre-download the binary and `npx cloakbrowser info` to inspect status. Treat `@playwright/mcp` as npx-provided by default; install it persistently only if the target client requires local package resolution.
 7. **Normalize and load site cookies when supplied.** Use `scripts/cookie.mjs` as the standard path for cookie import, normalization, inspection, redaction, and injection. Read `~/.hyper-cloaking/cookie.yml` and apply cookies matching the target URL before the site-specific flow. Support site-specific multi-cookie and multi-account entries, Chrome cookie export JSON, Playwright-compatible cookie arrays, `expirationDate`/`expires`/`expiry`, `sameSite: no_restriction`, and `sameSite: unspecified`. If a matching site has multiple accounts and no default account, ask which account to use before loading cookies. Never store real cookies in the skill folder. Use `references/runtime-workspace.md` for the supported cookie schema.
 8. **Resolve the executable path.** Prefer `npx cloakbrowser info` or `scripts/hyper-cloaking.mjs mcp-config --json`. If a user provides an explicit path, validate it exists before use. Typical Linux-style paths look like `~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome`; macOS paths may point inside `Chromium.app`.
-9. **Select the humanized browser surface.** `humanize: true` is mandatory for this skill. When using the CloakBrowser JavaScript API directly or through a bridge, pass `humanize: true` to `launch()` or `launchPersistentContext()`. Treat plain `npx @playwright/mcp@latest --executable-path ...` as a CloakBrowser-binary MCP route, not proof that CloakBrowser wrapper-level humanization is active. If no CloakBrowser-aware MCP bridge or JS-driver path can prove `humanize: true`, report that blocker instead of claiming full compliance.
+9. **Select the humanized browser surface.** `humanize: true` is mandatory for this skill. When using the CloakBrowser JavaScript API directly or through a bridge, pass `humanize: true` to `launch()` or `launchPersistentContext()`. Treat plain `npx @playwright/mcp@latest --sandbox --executable-path ...` as a CloakBrowser-binary MCP route, not proof that CloakBrowser wrapper-level humanization is active. If no CloakBrowser-aware MCP bridge or JS-driver path can prove `humanize: true`, report that blocker instead of claiming full compliance.
 10. **Select the client surface.** Use Codex TOML for Codex, standard JSON `mcpServers` for Claude Code/Cursor-style MCP clients, the documented client CLI when requested, and the same generic MCP command/config for Gajae-Code sessions because Gajae-Code runs beside existing agents rather than becoming their extension.
-11. **Launch or configure Playwright MCP.** Default to headless mode by adding `--headless`. If the user explicitly says `headless false`, `headed`, `visible`, or asks to watch the browser, omit `--headless` so Playwright MCP opens a visible browser window. Start with the direct command:
+11. **Launch or configure Playwright MCP.** Default to headless mode by adding `--headless`, and include `--sandbox` so Playwright does not launch Chromium with warning-producing `--no-sandbox` defaults. If the user explicitly says `headless false`, `headed`, `visible`, or asks to watch the browser, omit `--headless` so Playwright MCP opens a visible browser window. Start with the direct command:
 
 ```bash
-npx @playwright/mcp@latest --headless --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
+npx @playwright/mcp@latest --headless --sandbox --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
 ```
 
 For Codex config, use a fully expanded executable path rather than relying on `~` expansion:
@@ -114,7 +114,7 @@ For Codex config, use a fully expanded executable path rather than relying on `~
 ```toml
 [mcp_servers.hyper-cloaking]
 command = "npx"
-args = ["@playwright/mcp@latest", "--headless", "--executable-path", "/Users/you/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome"]
+args = ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/Users/you/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome"]
 ```
 
 12. **Perform the browser task through the selected surface.** Navigate, click, fill, extract, or verify exactly what the user requested. Keep the browser context bounded to the authorized target and allowed origins. Prefer a humanized CloakBrowser JS-driver path for action-heavy work when Playwright MCP cannot prove `humanize: true`. Reuse `scripts/browser-utils.mjs` helpers for human-like move/click/type/scroll and XPath lookup. Use `humanMove`/`humanClick` so pointer target position, move steps, and pre-click pause use human-paced randomized defaults. Use `humanType` for text entry so typing defaults to a randomized 250-270 characters per minute unless the user requests another pace. Use `humanScroll` with `pixelsPerSecond`, `steps`, `pauseMs`, or `pauseJitter` when scroll speed needs tuning.
@@ -229,6 +229,7 @@ Before completion, check:
 - [ ] CloakBrowser executable path exists or the blocker is reported precisely.
 - [ ] `humanize: true` is enabled and evidenced for the actual CloakBrowser launch path, or executable-path-only MCP is explicitly reported as insufficient to prove humanization.
 - [ ] MCP launch/config includes `--executable-path`.
+- [ ] MCP launch/config includes `--sandbox` by default to avoid the warning-producing `--no-sandbox` Chromium flag.
 - [ ] MCP launch/config includes `--headless` by default, or omits it when the user explicitly requested visible/headed browsing.
 - [ ] MCP-only handoff/completion includes preflight target classification, allowed origins, final observed URL classification, outcome object, and humanization evidence or MCP limitation note.
 - [ ] Operational tasks are driven through the CloakBrowser-backed MCP browser or humanized JS-driver path, and the requested outcome is evidenced. Page load alone is not completion.

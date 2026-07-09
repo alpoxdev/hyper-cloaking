@@ -7,5 +7,9 @@
   "scripts": {
     "validate": "node scripts/validate.mjs",
     "skills:list": "npx skills add . --list"
+  },
+  "dependencies": {
+    "cloakbrowser": "^0.4.9",
+    "playwright-core": "^1.61.1"
   }
 }

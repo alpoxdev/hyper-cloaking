@@ -99,7 +99,7 @@ node scripts/browser-utils.mjs init
 9. Launch Playwright MCP with the resolved executable:
 
 ```bash
-npx @playwright/mcp@latest --headless --executable-path /absolute/path/to/cloakbrowser/chrome
+npx @playwright/mcp@latest --headless --sandbox --executable-path /absolute/path/to/cloakbrowser/chrome
 ```
 
 Do not run `playwright install chromium` as the default CloakBrowser setup path. CloakBrowser downloads its own Chromium binary; Playwright system dependencies may still be needed on Linux hosts.
@@ -150,18 +150,19 @@ node scripts/browser-utils.mjs cookies --url https://www.coupang.com --json
 - Keep the user's example form available for quick runs:
 
 ```bash
-npx @playwright/mcp --headless --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
+npx @playwright/mcp --headless --sandbox --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
 ```
 
 - For current installs, prefer `@latest` unless the user requests an exact package version:
 
 ```bash
-npx @playwright/mcp@latest --headless --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
+npx @playwright/mcp@latest --headless --sandbox --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
 ```
 
 ## 7. Headless Mode Rules
 
 - Default to headless mode for this skill: include `--headless` in direct MCP launch commands and persistent MCP config.
+- Include `--sandbox` in Playwright MCP commands/configs by default so Playwright does not pass Chromium's warning-producing `--no-sandbox` default.
 - If the user says `headless false`, `headed`, `visible`, or asks to watch the browser, do not include `--headless`; Playwright MCP is headed by default.
 - Confirm the selected mode in the handoff, especially when visible browsing was requested.
 - Do not force a GUI browser when the environment cannot open one; report the environment blocker and keep the command/config ready for a GUI-capable surface.
@@ -209,7 +210,7 @@ Select the client surface deliberately.
 ```toml
 [mcp_servers.hyper-cloaking]
 command = "npx"
-args = ["@playwright/mcp@latest", "--headless", "--executable-path", "/absolute/path/to/chrome"]
+args = ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
 ```
 
 ### Standard JSON MCP Clients
@@ -221,7 +222,7 @@ Use this for Claude Code, Cursor, VS Code-style MCP config, and other clients wh
   "mcpServers": {
     "hyper-cloaking": {
       "command": "npx",
-      "args": ["@playwright/mcp@latest", "--headless", "--executable-path", "/absolute/path/to/chrome"]
+      "args": ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
     }
   }
 }
@@ -232,12 +233,12 @@ Use this for Claude Code, Cursor, VS Code-style MCP config, and other clients wh
 When the user specifically asks for CLI setup, use the Playwright MCP documented CLI shape and include CloakBrowser args:
 
 ```bash
-claude mcp add hyper-cloaking npx @playwright/mcp@latest --headless --executable-path /absolute/path/to/chrome
+claude mcp add hyper-cloaking npx @playwright/mcp@latest --headless --sandbox --executable-path /absolute/path/to/chrome
 ```
 
 ### Cursor
 
-Cursor can use the standard JSON MCP server config. If a UI flow is required, add a new MCP server named `hyper-cloaking` with command `npx` and args `@playwright/mcp@latest`, `--headless`, `--executable-path`, and the absolute CloakBrowser path.
+Cursor can use the standard JSON MCP server config. If a UI flow is required, add a new MCP server named `hyper-cloaking` with command `npx` and args `@playwright/mcp@latest`, `--headless`, `--sandbox`, `--executable-path`, and the absolute CloakBrowser path.
 
 ### Gajae-Code
 
@@ -253,10 +254,10 @@ Gajae-Code (`gjc`) is documented as an external coding-agent harness that runs b
 ```toml
 [mcp_servers.hyper-cloaking]
 command = "npx"
-args = ["@playwright/mcp@latest", "--executable-path", "/absolute/path/to/chrome"]
+args = ["@playwright/mcp@latest", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
 ```
 
-Only add extra MCP flags when they solve the current task. Common flags include `--user-data-dir`, `--storage-state`, `--allowed-origins`, `--blocked-origins`, `--device`, and `--config`.
+`--sandbox` is part of the default MCP command/config to avoid the warning-producing `--no-sandbox` Chromium flag. Only add other MCP flags when they solve the current task. Common optional flags include `--user-data-dir`, `--storage-state`, `--allowed-origins`, `--blocked-origins`, `--device`, and `--config`.
 
 `--allowed-origins` and `--blocked-origins` help route MCP traffic but are not security boundaries. Still record the intended allowed origins in preflight and classify the final observed URL against them.
 

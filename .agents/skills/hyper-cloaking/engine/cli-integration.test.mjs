@@ -5,6 +5,9 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { runCli } from './cli.mjs';
+import { mcpCommand } from './mcp-config.mjs';
+import { buildNoSandboxWarningSafeCloakOptions } from '../scripts/browser-utils.mjs';
+
 
 async function runJson(args) {
   let stdout = '';
@@ -61,6 +64,32 @@ test('mcp-config --json blocked path reports diagnostics and mandatory completio
   assert.ok(Array.isArray(json.blockers));
   assert.ok(json.failure);
   assertCompletionShape(json);
+});
+test('mcp-config commands enable sandbox by default', () => {
+  const command = mcpCommand(process.execPath, { headless: false });
+  assert.ok(command.args.includes('--sandbox'));
+  assert.equal(command.args.includes('--headless'), false);
+  assert.equal(command.args.includes('--no-sandbox'), false);
+});
+
+test('CloakBrowser JS options suppress no-sandbox warning flag', () => {
+  const options = buildNoSandboxWarningSafeCloakOptions(
+    {
+      getDefaultStealthArgs: () => ['--no-sandbox', '--fingerprint=12345', '--fingerprint-platform=macos']
+    },
+    {
+      cloakOptions: {
+        args: ['--no-sandbox', '--window-size=1200,900'],
+        launchOptions: { ignoreDefaultArgs: ['--enable-automation'] }
+      }
+    },
+    { downloadsPath: '/tmp/downloads' }
+  );
+
+  assert.equal(options.stealthArgs, false);
+  assert.deepEqual(options.args, ['--fingerprint=12345', '--fingerprint-platform=macos', '--window-size=1200,900']);
+  assert.deepEqual(options.launchOptions.ignoreDefaultArgs, ['--enable-automation', '--enable-unsafe-swiftshader', '--no-sandbox']);
+  assert.equal(options.launchOptions.downloadsPath, '/tmp/downloads');
 });
 
 test('live --json blocks without fake success and still reports completion shape', async () => {

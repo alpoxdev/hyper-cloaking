@@ -47,7 +47,7 @@ export function validateExecutablePath(executablePath) {
 }
 
 export function mcpCommand(executablePath, options = {}) {
-  const { headless = true } = options;
+  const { headless = true, sandbox = true } = options;
   const validation = validateExecutablePath(executablePath);
   if (!validation.ok) {
     throw new Error(validation.reason);
@@ -55,6 +55,7 @@ export function mcpCommand(executablePath, options = {}) {
 
   const args = [PLAYWRIGHT_MCP_PACKAGE_SPEC];
   if (headless) args.push('--headless');
+  if (sandbox) args.push('--sandbox');
   args.push('--executable-path', validation.executablePath);
   return { command: 'npx', args };
 }

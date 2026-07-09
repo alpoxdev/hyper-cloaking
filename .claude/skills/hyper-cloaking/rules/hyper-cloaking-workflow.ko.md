@@ -104,7 +104,7 @@ node scripts/browser-utils.mjs init
 9. resolved executable로 Playwright MCP 실행:
 
 ```bash
-npx @playwright/mcp@latest --headless --executable-path /absolute/path/to/cloakbrowser/chrome
+npx @playwright/mcp@latest --headless --sandbox --executable-path /absolute/path/to/cloakbrowser/chrome
 ```
 
 기본 CloakBrowser setup path로 `playwright install chromium`을 실행하지 않습니다. CloakBrowser는 자체 Chromium binary를 다운로드합니다. Linux host에서는 Playwright system dependency가 필요할 수 있습니다.
@@ -148,18 +148,19 @@ node scripts/browser-utils.mjs cookies --url https://www.coupang.com --json
 - quick run을 위해 사용자의 example form을 유지합니다.
 
 ```bash
-npx @playwright/mcp --headless --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
+npx @playwright/mcp --headless --sandbox --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
 ```
 
 - current install에서는 사용자가 exact package version을 요청하지 않는 한 `@latest`를 우선합니다.
 
 ```bash
-npx @playwright/mcp@latest --headless --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
+npx @playwright/mcp@latest --headless --sandbox --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
 ```
 
 ## 6. Headless Mode Rules
 
 - 이 스킬의 기본값은 headless mode입니다. direct MCP launch command와 persistent MCP config에 `--headless`를 포함합니다.
+- Playwright가 warning을 만드는 Chromium `--no-sandbox` default를 넘기지 않도록 Playwright MCP command/config에는 기본적으로 `--sandbox`를 포함합니다.
 - 사용자가 `headless false`, `headed`, `visible`, "브라우저 보이게"라고 말하거나 browser를 보면서 진행하라고 요청하면 `--headless`를 포함하지 않습니다. Playwright MCP는 기본적으로 headed입니다.
 - 특히 visible browsing이 요청된 경우 handoff에서 selected mode를 확인해 줍니다.
 - 환경이 GUI browser를 열 수 없다면 강제로 실행하지 말고 environment blocker를 보고한 뒤 GUI-capable surface에서 쓸 command/config를 제공합니다.
@@ -226,7 +227,7 @@ Client surface를 의도적으로 선택합니다.
 ```toml
 [mcp_servers.hyper-cloaking]
 command = "npx"
-args = ["@playwright/mcp@latest", "--headless", "--executable-path", "/absolute/path/to/chrome"]
+args = ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
 ```
 
 ### Standard JSON MCP Clients
@@ -238,7 +239,7 @@ Claude Code, Cursor, VS Code-style MCP config, 그 외 docs가 `mcpServers` JSON
   "mcpServers": {
     "hyper-cloaking": {
       "command": "npx",
-      "args": ["@playwright/mcp@latest", "--headless", "--executable-path", "/absolute/path/to/chrome"]
+      "args": ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
     }
   }
 }
@@ -249,12 +250,12 @@ Claude Code, Cursor, VS Code-style MCP config, 그 외 docs가 `mcpServers` JSON
 사용자가 CLI setup을 명시적으로 요청하면 Playwright MCP 문서의 CLI shape를 사용하고 CloakBrowser args를 포함합니다.
 
 ```bash
-claude mcp add hyper-cloaking npx @playwright/mcp@latest --headless --executable-path /absolute/path/to/chrome
+claude mcp add hyper-cloaking npx @playwright/mcp@latest --headless --sandbox --executable-path /absolute/path/to/chrome
 ```
 
 ### Cursor
 
-Cursor는 standard JSON MCP server config를 사용할 수 있습니다. UI flow가 필요하면 `hyper-cloaking`라는 MCP server를 추가하고 command는 `npx`, args는 `@playwright/mcp@latest`, `--headless`, `--executable-path`, absolute CloakBrowser path로 설정합니다.
+Cursor는 standard JSON MCP server config를 사용할 수 있습니다. UI flow가 필요하면 `hyper-cloaking`라는 MCP server를 추가하고 command는 `npx`, args는 `@playwright/mcp@latest`, `--headless`, `--sandbox`, `--executable-path`, absolute CloakBrowser path로 설정합니다.
 
 ### Gajae-Code
 
@@ -270,10 +271,10 @@ Gajae-Code(`gjc`)는 docs상 기존 tool 옆에서 실행되는 external coding-
 ```toml
 [mcp_servers.hyper-cloaking]
 command = "npx"
-args = ["@playwright/mcp@latest", "--executable-path", "/absolute/path/to/chrome"]
+args = ["@playwright/mcp@latest", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
 ```
 
-추가 MCP flag는 현재 task를 해결할 때만 넣습니다. 흔한 flag는 `--user-data-dir`, `--storage-state`, `--allowed-origins`, `--blocked-origins`, `--device`, `--config`입니다.
+`--sandbox`는 warning을 만드는 Chromium `--no-sandbox` flag를 피하기 위한 default MCP flag입니다. 그 외 흔한 optional flag는 `--user-data-dir`, `--storage-state`, `--allowed-origins`, `--blocked-origins`, `--device`, `--config`입니다.
 
 `--allowed-origins`는 target scope를 표현하고 accidental navigation을 줄이는 보조 장치입니다. completion evidence에는 configured allowed origins와 final observed URL classification을 포함하지만, 이 flag를 보안 또는 권한 boundary로 과장하지 않습니다.
 
