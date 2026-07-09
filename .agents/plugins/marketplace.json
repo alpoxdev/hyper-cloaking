@@ -1,0 +1,21 @@
+{
+  "name": "hyper-cloaking",
+  "interface": {
+    "displayName": "Hyper Cloaking",
+    "shortDescription": "Portable skill and agent pack for multi-agent coding workflows."
+  },
+  "plugins": [
+    {
+      "name": "hyper-cloaking",
+      "source": {
+        "source": "local",
+        "path": "./plugins/hyper-cloaking"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

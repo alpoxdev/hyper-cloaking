@@ -1,0 +1,23 @@
+{
+  "name": "hyper-cloaking",
+  "version": "0.1.0",
+  "description": "Portable skills for Codex plus companion project custom agents.",
+  "author": {
+    "name": "alpox"
+  },
+  "license": "MIT",
+  "keywords": ["skills", "agents", "workflow", "verification"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Hyper Cloaking",
+    "shortDescription": "Workflow, packaging, orchestration, and verification skills.",
+    "longDescription": "A portable skill pack designed to work across Claude Code, Codex, Cursor, and other Open Agent Skills clients.",
+    "developerName": "alpox",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "defaultPrompt": [
+      "Use Hyper Cloaking to package this repo as portable agent skills.",
+      "Use Hyper Cloaking to delegate implementation and verification across subagents."
+    ]
+  }
+}

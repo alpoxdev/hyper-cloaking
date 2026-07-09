@@ -1,0 +1,16 @@
+{
+  "name": "hyper-cloaking",
+  "displayName": "Hyper Cloaking",
+  "description": "Portable skills and subagents for Claude Code, Codex, Cursor, and Open Agent Skills clients.",
+  "version": "0.1.0",
+  "author": {
+    "name": "alpox"
+  },
+  "license": "MIT",
+  "keywords": ["skills", "agents", "workflow", "verification"],
+  "skills": [
+    "./skills/workflow-bootstrap",
+    "./skills/plugin-packaging",
+    "./skills/agent-orchestration"
+  ]
+}

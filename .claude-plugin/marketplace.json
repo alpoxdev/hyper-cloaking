@@ -1,0 +1,28 @@
+{
+  "name": "hyper-cloaking",
+  "description": "Portable skill and agent pack for multi-agent coding workflows.",
+  "version": "0.1.0",
+  "owner": {
+    "name": "alpox"
+  },
+  "plugins": [
+    {
+      "name": "hyper-cloaking",
+      "displayName": "Hyper Cloaking",
+      "description": "Skills and subagents for planning, packaging, delegation, implementation, and verification.",
+      "source": "./plugins/hyper-cloaking",
+      "version": "0.1.0",
+      "author": {
+        "name": "alpox"
+      },
+      "license": "MIT",
+      "category": "Productivity",
+      "tags": ["skills", "agents", "codex", "cursor", "claude-code"],
+      "skills": [
+        "./skills/workflow-bootstrap",
+        "./skills/plugin-packaging",
+        "./skills/agent-orchestration"
+      ]
+    }
+  ]
+}
