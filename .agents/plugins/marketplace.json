@@ -2,7 +2,7 @@
   "name": "hyper-cloaking",
   "interface": {
     "displayName": "Hyper Cloaking",
-    "shortDescription": "Portable skill and agent pack for multi-agent coding workflows."
+    "shortDescription": "Portable Hyper Cloaking skill for CloakBrowser-backed Playwright MCP workflows."
   },
   "plugins": [
     {

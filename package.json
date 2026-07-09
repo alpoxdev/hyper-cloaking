@@ -1,8 +1,8 @@
 {
   "name": "hyper-cloaking",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
-  "description": "Portable skills and subagents for Claude Code, Codex, Cursor, and Open Agent Skills clients.",
+  "description": "Portable Hyper Cloaking skill for CloakBrowser-backed Playwright MCP workflows.",
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate.mjs",

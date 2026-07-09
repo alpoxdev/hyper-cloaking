@@ -1,7 +1,7 @@
 {
   "name": "hyper-cloaking",
-  "description": "Portable skill and agent pack for multi-agent coding workflows.",
-  "version": "0.1.0",
+  "description": "Portable Hyper Cloaking skill for CloakBrowser-backed Playwright MCP workflows.",
+  "version": "0.0.1",
   "owner": {
     "name": "alpox"
   },
@@ -9,20 +9,17 @@
     {
       "name": "hyper-cloaking",
       "displayName": "Hyper Cloaking",
-      "description": "Skills and subagents for planning, packaging, delegation, implementation, and verification.",
+      "description": "Hyper Cloaking skill for CloakBrowser setup, Playwright MCP configuration, and verified browser task execution.",
       "source": "./plugins/hyper-cloaking",
-      "version": "0.1.0",
+      "version": "0.0.1",
       "author": {
         "name": "alpox"
       },
       "license": "MIT",
       "category": "Productivity",
-      "tags": ["skills", "agents", "codex", "cursor", "claude-code"],
+      "tags": ["skills", "codex", "cursor", "claude-code"],
       "skills": [
-        "./skills/workflow-bootstrap",
-        "./skills/plugin-packaging",
-        "./skills/agent-orchestration",
-        "./skills/cloak-browser"
+        "./skills/hyper-cloaking"
       ]
     }
   ]

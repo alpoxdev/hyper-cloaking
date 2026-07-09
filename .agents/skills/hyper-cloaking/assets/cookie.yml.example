@@ -1,0 +1,47 @@
+# Hyper Cloaking cookie jar.
+# Runtime default path: ~/.hyper-cloaking/cookie.yml
+#
+# Add only cookies that the user is authorized to use. Do not commit real
+# session cookies, secrets, or account tokens to a repository.
+
+sites:
+  default:
+    description: Fallback cookies used when a requested site has no dedicated entry.
+    defaultAccount: default
+    accounts:
+      default:
+        label: Default fallback account
+        cookies:
+          - domain: .example.com
+            path: /
+            name: replace_me
+            value: replace_me
+            httpOnly: false
+            secure: true
+            sameSite: Lax
+
+  coupang:
+    description: Coupang cookies. Add one account block per user-approved account.
+    domain: .coupang.com
+    defaultAccount: personal
+    accounts:
+      personal:
+        label: Personal account
+        cookies:
+          - path: /
+            name: replace_me
+            value: replace_me
+            httpOnly: true
+            secure: true
+            sameSite: Lax
+
+          - path: /
+            name: another_cookie_for_same_account
+            value: replace_me
+            httpOnly: true
+            secure: true
+            sameSite: Lax
+
+      work:
+        label: Work account
+        cookies: []

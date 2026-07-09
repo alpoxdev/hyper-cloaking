@@ -1,17 +1,14 @@
 {
   "name": "hyper-cloaking",
   "displayName": "Hyper Cloaking",
-  "description": "Portable skills and subagents for Claude Code, Codex, Cursor, and Open Agent Skills clients.",
-  "version": "0.1.0",
+  "description": "Portable Hyper Cloaking skill for CloakBrowser-backed Playwright MCP workflows.",
+  "version": "0.0.1",
   "author": {
     "name": "alpox"
   },
   "license": "MIT",
-  "keywords": ["skills", "agents", "workflow", "verification"],
+  "keywords": ["skills", "workflow", "verification"],
   "skills": [
-    "./skills/workflow-bootstrap",
-    "./skills/plugin-packaging",
-    "./skills/agent-orchestration",
-    "./skills/cloak-browser"
+    "./skills/hyper-cloaking"
   ]
 }

@@ -1,23 +1,23 @@
 {
   "name": "hyper-cloaking",
-  "version": "0.1.0",
-  "description": "Portable skills for Codex plus companion project custom agents.",
+  "version": "0.0.1",
+  "description": "Portable Hyper Cloaking skill for CloakBrowser-backed Playwright MCP workflows.",
   "author": {
     "name": "alpox"
   },
   "license": "MIT",
-  "keywords": ["skills", "agents", "workflow", "verification"],
+  "keywords": ["skills", "workflow", "verification"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Hyper Cloaking",
-    "shortDescription": "Workflow, packaging, orchestration, and verification skills.",
-    "longDescription": "A portable skill pack designed to work across Claude Code, Codex, Cursor, and other Open Agent Skills clients.",
+    "shortDescription": "CloakBrowser-backed Playwright MCP workflow skill.",
+    "longDescription": "A portable Hyper Cloaking skill for setting up CloakBrowser, configuring Playwright MCP, and executing authorized browser tasks with evidence.",
     "developerName": "alpox",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "defaultPrompt": [
-      "Use Hyper Cloaking to package this repo as portable agent skills.",
-      "Use Hyper Cloaking to delegate implementation and verification across subagents."
+      "Use Hyper Cloaking to set up CloakBrowser with Playwright MCP.",
+      "Use Hyper Cloaking to run this authorized browser task with evidence."
     ]
   }
 }
