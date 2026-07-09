@@ -57,6 +57,7 @@ test('requires approval for localhost, loopback, RFC1918, .local, and single-lab
     'http://localhost',
     'https://app.localhost',
     'https://127.0.0.1',
+    'https://[::ffff:127.0.0.1]',
     'https://10.0.0.1',
     'https://172.16.1.1',
     'https://192.168.1.1',
@@ -73,6 +74,7 @@ test('blocks metadata, link-local, unspecified, reserved, and multicast IPs', ()
   for (const target of [
     'http://169.254.169.254/latest/meta-data',
     'https://169.254.1.2',
+    'https://[::ffff:169.254.169.254]',
     'https://0.0.0.0',
     'https://224.0.0.1',
     'https://192.0.2.1',

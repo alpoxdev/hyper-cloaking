@@ -69,6 +69,8 @@ function sanitizeString(value, context) {
   if (isProfileLabel(context.path)) return sanitizeLabel(value, context.readable);
   if (looksLikeUrl(value)) return sanitizeUrl(value, context.readable);
   if (looksSecretLike(value)) return '[stripped]';
+  if (looksPiiLike(value)) return '[stripped]';
+  if (looksRawContentLike(value, context.path)) return '[stripped]';
   if (value.length > 240) return '[stripped]';
   return value;
 }
@@ -114,6 +116,21 @@ function looksSecretLike(value) {
   if (/bearer\s+[a-z0-9._~+/-]+/iu.test(value)) return true;
   if (/\b(?:token|secret|password|sessionid|sid|api[_-]?key)=/iu.test(value)) return true;
   if (/^[a-z0-9+/]{32,}={0,2}$/iu.test(value)) return true;
+  return false;
+}
+
+function looksPiiLike(value) {
+  if (/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/iu.test(value)) return true;
+  if (/\b(?:\+?\d[\d\s().-]{7,}\d)\b/u.test(value)) return true;
+  if (/\b\d{3}[-.\s]?\d{2}[-.\s]?\d{4}\b/u.test(value)) return true;
+  return false;
+}
+
+function looksRawContentLike(value, pathParts = []) {
+  const keySuggestsRawText = pathParts.some((part) => /message|reason|error|text|content|body|html|title|dom/iu.test(part));
+  if (/<\/?[a-z][\s\S]*>/iu.test(value)) return true;
+  if (/ignore\s+(all\s+)?previous\s+instructions/iu.test(value)) return true;
+  if (keySuggestsRawText && /\s/u.test(value) && value.length > 40) return true;
   return false;
 }
 

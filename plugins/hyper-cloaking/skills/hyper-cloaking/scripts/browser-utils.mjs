@@ -6,7 +6,7 @@
  * Humanized input behavior lives in `engine/input-core.mjs`, `engine/mouse.mjs`,
  * `engine/keyboard.mjs`, and `engine/scroll.mjs`; this file re-exports those
  * helpers for browser-oriented consumers. Cookie normalization and injection live in
- * `scripts/hyper-cloaking.mjs cookies` and are re-exported here for backward compatibility.
+ * `scripts/cookie.mjs` and are re-exported here for backward compatibility.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -221,8 +221,8 @@ async function main() {
   const command = args[0] || 'help';
   if (command === 'help' || args.includes('--help') || args.includes('-h')) {
     console.log(`Usage:
-  node scripts/hyper-cloaking.mjs browser init [--workspace DIR] [--json]
-  node scripts/hyper-cloaking.mjs browser cookies --url URL [--site SITE] [--account ACCOUNT] [--workspace DIR] [--json]
+  node scripts/browser-utils.mjs init [--workspace DIR] [--json]
+  node scripts/browser-utils.mjs cookies --url URL [--site SITE] [--account ACCOUNT] [--workspace DIR] [--json]
 
 Purpose:
   Manage the Hyper Cloaking runtime workspace and provide reusable browser

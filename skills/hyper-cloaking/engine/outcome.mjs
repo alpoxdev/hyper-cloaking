@@ -118,7 +118,9 @@ function evaluateSingle(observation, criterion) {
 }
 
 function explicitPageLoadCriterion(criterion) {
-  return criterion.type === 'urlLoaded' || criterion.requiresPageOpen === true || criterion.requiresPageLoad === true;
+  return criterion.requiresPageOpen === true
+    || criterion.requiresPageLoad === true
+    || criterion.justification === 'page-open-only';
 }
 
 export function evaluateOutcome(observation = {}, criteria = []) {
@@ -134,20 +136,24 @@ export function evaluateOutcome(observation = {}, criteria = []) {
       requiresPageOpen: explicitPageLoadCriterion(normalized)
     };
   });
-  const passed = criteriaResults.length > 0 && criteriaResults.every((result) => result.passed);
+  const rawPassed = criteriaResults.length > 0 && criteriaResults.every((result) => result.passed);
   const failedCriteria = criteriaResults.filter((result) => !result.passed);
-  const pageLoadOnlySuccess = passed
+  const pageLoadOnlySuccess = rawPassed
     && criteriaResults.length > 0
     && criteriaResults.every((result) => result.type === 'urlLoaded');
+  const pageLoadOnlyJustified = !pageLoadOnlySuccess || criteriaResults.some((result) => result.requiresPageOpen);
+  const passed = rawPassed && pageLoadOnlyJustified;
 
   return {
     passed,
     success: passed,
     criteria: criteriaResults,
-    failedCriteria,
+    failedCriteria: pageLoadOnlySuccess && !pageLoadOnlyJustified
+      ? [...failedCriteria, { id: 'page-load-only', type: 'pageLoadOnlyJustification', passed: false, expected: 'explicit page-open-only justification' }]
+      : failedCriteria,
     evidenceRefs: asArray(observation.evidenceRefs),
     pageLoadOnlySuccess,
-    pageLoadOnlyJustified: !pageLoadOnlySuccess || criteriaResults.some((result) => result.requiresPageOpen)
+    pageLoadOnlyJustified
   };
 }
 
@@ -159,7 +165,7 @@ export function makeOutcomeReport({ targetSafety, outcome, failure, contentBound
   const ok = Boolean(normalizedOutcome.ok ?? normalizedOutcome.passed ?? normalizedOutcome.success);
   const pageLoadOnlySuccess = Boolean(normalizedOutcome.pageLoadOnlySuccess)
     || (ok === true && criteria.length > 0 && criteria.every((criterion) => criterion.type === 'urlLoaded'));
-  const pageLoadOnlyJustified = !pageLoadOnlySuccess || criteria.some((criterion) => criterion.requiresPageOpen || criterion.requiresPageLoad || criterion.type === 'urlLoaded');
+  const pageLoadOnlyJustified = !pageLoadOnlySuccess || criteria.some((criterion) => criterion.requiresPageOpen === true || criterion.requiresPageLoad === true || criterion.justification === 'page-open-only');
 
   return {
     targetSafety: targetSafety ?? { disposition: 'blocker', reason: 'target-safety-not-provided', risks: [] },

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+
 import { fileURLToPath } from 'node:url';
 
 import {
@@ -420,17 +420,6 @@ async function mcpConfigCommand(options) {
     liveLaunch: 'not-attempted'
   });
 }
-function delegateScript(scriptName, args) {
-  const scriptPath = fileURLToPath(new URL(`../scripts/${scriptName}`, import.meta.url));
-  const result = spawnSync(process.execPath, [scriptPath, ...args], {
-    cwd: process.cwd(),
-    env: process.env,
-    encoding: 'utf8'
-  });
-  if (result.stdout) process.stdout.write(result.stdout);
-  if (result.stderr) process.stderr.write(result.stderr);
-  return result.status ?? 1;
-}
 
 function containedEnv(home, env = process.env) {
   const resolvedHome = resolveHome(home);
@@ -499,7 +488,70 @@ async function closeBrowserHandle(browser) {
   }
 }
 
+async function installNavigationSafety(page, options = {}) {
+  if (!page || typeof page.route !== 'function') {
+    return { ok: false, blocker: 'Playwright route interception is unavailable; unsafe redirects cannot be blocked before request dispatch' };
+  }
+  await page.route('**/*', async (route) => {
+    const request = route.request();
+    const isNavigation = typeof request.isNavigationRequest === 'function'
+      ? request.isNavigationRequest()
+      : request.resourceType?.() === 'document';
+    if (!isNavigation) {
+      await route.continue();
+      return;
+    }
+    const url = request.url();
+    const safety = classifyTargetUrl(url, options);
+    if (safety.disposition !== 'ok') {
+      await route.abort('blockedbyclient');
+      return;
+    }
+    await route.continue();
+  });
+  Object.defineProperty(page, '__hyperCloakingNavigationSafety', {
+    value: true,
+    configurable: true
+  });
+  return { ok: true };
+}
+
+async function readPageTextSignal(page) {
+  if (!page) return '';
+  try {
+    if (typeof page.locator === 'function') {
+      const body = page.locator('body');
+      if (body && typeof body.innerText === 'function') return await body.innerText({ timeout: 1_000 });
+    }
+    if (typeof page.textContent === 'function') return await page.textContent('body', { timeout: 1_000 }) || '';
+  } catch {
+    return '';
+  }
+  return '';
+}
+
+async function withTemporaryEnv(envPatch, fn) {
+  const previous = new Map();
+  for (const [name, value] of Object.entries(envPatch || {})) {
+    previous.set(name, process.env[name]);
+    process.env[name] = value;
+  }
+  try {
+    return await fn();
+  } finally {
+    for (const [name, value] of previous.entries()) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+}
+
 async function gotoAndClassify(page, fromUrl, toUrl, options = {}) {
+  if (page?.__hyperCloakingNavigationSafety !== true) {
+    const error = new Error('Navigation safety route interception must be installed before page.goto');
+    error.code = 'HYPER_CLOAKING_NAVIGATION_SAFETY_NOT_INSTALLED';
+    throw error;
+  }
   assertNavigationAllowed(toUrl, options);
   await page.goto(toUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
   const finalUrl = typeof page.url === 'function' ? page.url() : toUrl;
@@ -575,12 +627,13 @@ async function liveCommand(options, env = process.env) {
 
   const packageChecks = [];
   for (const packageName of [CLOAKBROWSER_PACKAGE, PLAYWRIGHT_CORE_PACKAGE]) {
-    const check = await tryImportPackage(packageName);
+    const check = await withTemporaryEnv(childEnv, () => tryImportPackage(packageName));
     packageChecks.push(check);
     if (!check.ok) blockers.push(`${packageName} unavailable: ${check.blocker.reason}`);
   }
 
   const mcpExecutablePath = (await executableCandidates(homePath(home, 'cache', 'cloakbrowser')))[0];
+  if (!mcpExecutablePath) blockers.push(`No executable found under ${homePath(home, 'cache', 'cloakbrowser')}`);
   const mcpConfig = mcpExecutablePath
     ? generateMcpConfig({
       client: 'json',
@@ -679,14 +732,32 @@ async function liveCommand(options, env = process.env) {
   let page;
   const attempted = ['target classification', 'containment audit', 'Node runtime check', 'package import checks', 'CloakBrowser JS launch'];
   try {
-    const launched = await launchCloakBrowser({ workspace: home, headless: wantsHeadless(options) });
+    const launched = await withTemporaryEnv(childEnv, () => launchCloakBrowser({ workspace: home, headless: wantsHeadless(options) }));
     browser = launched.browser;
     page = await newPageFromBrowser(browser);
+    const routeSafety = await installNavigationSafety(page, { allowAboutBlank: true, context: 'setup' });
+    if (!routeSafety.ok) {
+      const error = new Error(routeSafety.blocker);
+      error.code = 'HYPER_CLOAKING_REDIRECT_INTERCEPTION_UNAVAILABLE';
+      throw error;
+    }
     attempted.push('about:blank navigation');
     await gotoAndClassify(page, 'about:blank', 'about:blank', { allowAboutBlank: true, context: 'setup' });
     attempted.push('safe public navigation');
     const navigation = await gotoAndClassify(page, target, navigationTarget, { allowAboutBlank: true });
     const title = typeof page.title === 'function' ? await page.title() : '';
+    const bodyText = await readPageTextSignal(page);
+    const challenge = classifyChallengeObservation({
+      url: navigation.finalUrl,
+      title,
+      text: bodyText
+    });
+    if (challenge.blocker) {
+      const error = new Error(`Challenge or access blocker observed: ${challenge.labels.join(', ')}`);
+      error.code = 'HYPER_CLOAKING_CHALLENGE_OBSERVED';
+      error.challenge = challenge;
+      throw error;
+    }
     const evidenceRefs = await captureLiveEvidence(page, homePath(home, 'evidence'));
     const cleanup = await closeBrowserHandle(browser);
     browser = null;
@@ -695,7 +766,7 @@ async function liveCommand(options, env = process.env) {
         url: navigation.finalUrl,
         urlLoaded: true,
         title,
-        text: title,
+        text: `${title}\n${bodyText}`.trim(),
         evidenceCaptured: evidenceRefs.length > 0,
         evidenceRefs: evidenceRefs.map((ref) => ref.path).filter(Boolean),
         artifacts: evidenceRefs
@@ -706,10 +777,22 @@ async function liveCommand(options, env = process.env) {
         ...(evidenceRefs.length > 0 ? [{ type: 'evidenceCaptured', id: 'live-evidence-captured' }] : [])
       ]
     );
+    const humanization = {
+      ok: false,
+      configured: true,
+      method: 'cloakbrowser-js-api',
+      evidence: 'launchCloakBrowser configuration requests humanize:true; runtime telemetry is unavailable',
+      blocker: 'runtime humanization telemetry unavailable'
+    };
+    const livePassed = outcome.passed && humanization.ok;
+    const liveBlockers = [
+      ...outcome.failedCriteria.map((criterion) => `${criterion.id} failed`),
+      ...(humanization.ok ? [] : [humanization.blocker])
+    ];
 
     return makeResult('live', {
-      ok: outcome.passed,
-      status: outcome.passed ? 'ok' : 'blocked',
+      ok: livePassed,
+      status: livePassed ? 'ok' : 'blocked',
       ...baseLiveFields,
       finalUrl: navigation.finalUrl,
       title,
@@ -717,25 +800,21 @@ async function liveCommand(options, env = process.env) {
       publicNavigation: {
         requested: true,
         target: navigationTarget,
-        ok: outcome.passed,
+        ok: livePassed,
         finalUrl: navigation.finalUrl,
         redirectSafety: navigation.redirectSafety
       },
-      humanization: {
-        ok: true,
-        method: 'cloakbrowser-js-api',
-        evidence: 'launchCloakBrowser passed humanize:true'
-      },
+      humanization,
       mcpFeasibility: {
         ok: Boolean(mcpConfig),
         blocker: mcpConfig ? null : `No executable found under ${homePath(home, 'cache', 'cloakbrowser')}`
       },
       cleanup,
-      blockers: outcome.passed ? [] : outcome.failedCriteria.map((criterion) => `${criterion.id} failed`),
+      blockers: livePassed ? [] : liveBlockers,
       ...completionFields({
         targetSafety: navigation.redirectSafety,
         outcome,
-        failure: outcome.passed ? null : blockedFailure('live-outcome', outcome.failedCriteria.map((criterion) => `${criterion.id} failed`), attempted),
+        failure: livePassed ? null : blockedFailure('live-outcome', liveBlockers, attempted),
         contentBoundary,
         learning: baseLiveFields.learning
       }),
@@ -812,10 +891,6 @@ export async function runCli(argv = process.argv.slice(2), io = {}) {
       result = await mcpConfigCommand(options);
     } else if (command === 'live') {
       result = await liveCommand(options);
-    } else if (command === 'browser') {
-      return delegateScript('browser-utils.mjs', argv.slice(1));
-    } else if (command === 'cookies') {
-      return delegateScript('cookie.mjs', argv.slice(1));
     } else {
       result = { ok: false, status: 'failed', command, error: `Unknown command: ${command}`, ...baseMetadata() };
     }

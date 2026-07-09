@@ -40,14 +40,21 @@ test('evaluateOutcome passes and fails deterministic multi-criteria without file
   assert.deepEqual(failed.failedCriteria.map((criterion) => criterion.type), ['selectorVisible', 'recordCountAtLeast']);
 });
 
-test('evaluateOutcome supports urlLoaded, urlMatches, and page-open-only semantics', () => {
+test('evaluateOutcome supports urlLoaded, urlMatches, and explicit page-open-only semantics', () => {
   const pageOnly = evaluateOutcome({ urlLoaded: true, url: 'https://example.test/open' }, [
     { type: 'urlLoaded' }
   ]);
 
-  assert.equal(pageOnly.passed, true);
+  assert.equal(pageOnly.passed, false);
   assert.equal(pageOnly.pageLoadOnlySuccess, true);
-  assert.equal(pageOnly.pageLoadOnlyJustified, true);
+  assert.equal(pageOnly.pageLoadOnlyJustified, false);
+
+  const explicitlyOpenPage = evaluateOutcome({ urlLoaded: true, url: 'https://example.test/open' }, [
+    { type: 'urlLoaded', requiresPageOpen: true }
+  ]);
+
+  assert.equal(explicitlyOpenPage.pageLoadOnlyJustified, true);
+  assert.equal(explicitlyOpenPage.passed, true);
 
   const contentChecked = evaluateOutcome({ url: 'https://example.test/open', text: 'done' }, [
     { type: 'urlMatches', expected: '^https://example\\.test/' },
@@ -67,7 +74,7 @@ test('makeOutcomeReport includes mandatory top-level keys and disabled learning 
   });
 
   assert.deepEqual(Object.keys(report), ['targetSafety', 'outcome', 'failure', 'contentBoundary', 'learning']);
-  assert.equal(report.outcome.pageLoadOnlyJustified, true);
+  assert.equal(report.outcome.pageLoadOnlyJustified, false);
   assert.equal(report.learning.enabled, false);
   assert.equal(report.learning.applied, false);
 });

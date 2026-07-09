@@ -681,8 +681,8 @@ async function main() {
   const json = args.includes('--json');
   if (command === 'help' || args.includes('--help') || args.includes('-h')) {
     console.log(`Usage:
-  node scripts/hyper-cloaking.mjs cookies inspect --url URL [--site SITE] [--account ACCOUNT] [--workspace DIR] [--json]
-  node scripts/hyper-cloaking.mjs cookies import-json --site SITE [--account ACCOUNT] [--url URL] [--from FILE] [--workspace DIR] [--json]
+  node scripts/cookie.mjs inspect --url URL [--site SITE] [--account ACCOUNT] [--workspace DIR] [--json]
+  node scripts/cookie.mjs import-json --site SITE [--account ACCOUNT] [--url URL] [--from FILE] [--workspace DIR] [--json]
 
 Purpose:
   Normalize, inspect, and import user-supplied cookies for Hyper Cloaking runs.

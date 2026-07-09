@@ -197,6 +197,8 @@ function classifyIpv4(host) {
 
 function classifyIpv6(host) {
   const normalized = host.toLowerCase();
+  const mappedIpv4 = ipv4FromMappedIpv6(normalized);
+  if (mappedIpv4) return classifyIpv4(mappedIpv4);
   if (normalized === '::' || normalized === '0:0:0:0:0:0:0:0') return { scope: 'blocked', reason: 'unspecified-address' };
   if (normalized === '::1' || normalized === '0:0:0:0:0:0:0:1') return { scope: 'loopback', reason: 'loopback-address' };
   const first = Number.parseInt(normalized.split(':')[0] || '0', 16);
@@ -205,4 +207,20 @@ function classifyIpv6(host) {
   if ((first & 0xff00) === 0xff00) return { scope: 'blocked', reason: 'multicast-or-reserved-address' };
   if (normalized.startsWith('2001:db8:') || normalized === '2001:db8::') return { scope: 'blocked', reason: 'reserved-address' };
   return { scope: 'public', reason: 'public-ip-literal' };
+}
+
+function ipv4FromMappedIpv6(normalized) {
+  const dotted = normalized.match(/^(?:::ffff:|0:0:0:0:0:ffff:)(\d{1,3}(?:\.\d{1,3}){3})$/u);
+  if (dotted) return dotted[1];
+  const hex = normalized.match(/^(?:::ffff:|0:0:0:0:0:ffff:)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/iu);
+  if (!hex) return null;
+  const high = Number.parseInt(hex[1], 16);
+  const low = Number.parseInt(hex[2], 16);
+  if (!Number.isInteger(high) || !Number.isInteger(low)) return null;
+  return [
+    (high >> 8) & 0xff,
+    high & 0xff,
+    (low >> 8) & 0xff,
+    low & 0xff
+  ].join('.');
 }
