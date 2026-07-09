@@ -6,7 +6,7 @@ import {
   PLAYWRIGHT_MCP_PACKAGE_SPEC
 } from './config.mjs';
 
-const SUPPORTED_CLIENTS = new Set(['direct', 'codex', 'json', 'claude', 'claude-code', 'gajae-code', 'gjc']);
+const SUPPORTED_CLIENTS = new Set(['direct', 'codex', 'json', 'claude', 'claude-code', 'gajae-code', 'gjc', 'openclaw', 'hermes', 'hermes-agent']);
 
 export function normalizeClient(client = 'direct') {
   const normalized = String(client || 'direct').toLowerCase();
@@ -75,9 +75,36 @@ export function jsonMcpConfig(commandSpec) {
   };
 }
 
+export function openClawConfig(commandSpec) {
+  return {
+    mcp: {
+      servers: {
+        [MCP_SERVER_ID]: {
+          command: commandSpec.command,
+          args: commandSpec.args
+        }
+      }
+    }
+  };
+}
+
+
 export function codexTomlConfig(commandSpec) {
   return `[mcp_servers.${MCP_SERVER_ID}]\ncommand = ${JSON.stringify(commandSpec.command)}\nargs = ${JSON.stringify(commandSpec.args)}\n`;
 }
+
+function yamlScalar(value) {
+  return JSON.stringify(value);
+}
+
+function yamlList(values, indent = '      ') {
+  return values.map((value) => `${indent}- ${yamlScalar(value)}`).join('\n');
+}
+
+export function hermesYamlConfig(commandSpec) {
+  return `mcp_servers:\n  ${MCP_SERVER_ID}:\n    command: ${yamlScalar(commandSpec.command)}\n    args:\n${yamlList(commandSpec.args)}\n    idle_timeout_seconds: 300\n`;
+}
+
 
 export function claudeCommand(commandSpec) {
   return ['claude', 'mcp', 'add', MCP_SERVER_ID, commandSpec.command, ...commandSpec.args];
@@ -135,6 +162,24 @@ export function generateMcpConfig(options = {}) {
     };
   }
 
+  if (client === 'openclaw') {
+    return {
+      serverId: MCP_SERVER_ID,
+      type: 'openclaw-managed-outbound',
+      config: openClawConfig(commandSpec)
+    };
+  }
+
+  if (client === 'hermes' || client === 'hermes-agent') {
+    return {
+      serverId: MCP_SERVER_ID,
+      type: 'hermes-config-yaml',
+      configPath: '~/.hermes/config.yaml',
+      config: hermesYamlConfig(commandSpec)
+    };
+  }
+
+
   return {
     serverId: MCP_SERVER_ID,
     type: 'gajae-code-guidance',
@@ -148,6 +193,8 @@ export function generateAllMcpConfigs(options = {}) {
     codex: generateMcpConfig({ ...options, client: 'codex' }),
     json: generateMcpConfig({ ...options, client: 'json' }),
     claudeCode: generateMcpConfig({ ...options, client: 'claude-code' }),
-    gajaeCode: generateMcpConfig({ ...options, client: 'gajae-code' })
+    gajaeCode: generateMcpConfig({ ...options, client: 'gajae-code' }),
+    openclaw: generateMcpConfig({ ...options, client: 'openclaw' }),
+    hermes: generateMcpConfig({ ...options, client: 'hermes' })
   };
 }

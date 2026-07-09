@@ -33,6 +33,7 @@ Operational request에서는 setup, cookie loading, browser launch 전에 runtim
 - Codex native structured user input이 있는 경우
 - Gajae-Code/GJC question bridge 또는 session prompt가 있는 경우
 - Cursor/client-native prompt가 있는 경우
+- OpenClaw prompt 또는 Hermes Agent prompt가 있는 경우
 - structured question surface가 없을 때만 하나의 concise plain-text question
 
 Preflight는 하나의 묶음 질문으로 처리합니다. setup 단계마다 반복해서 묻지 않습니다. Preflight는 다음을 포함해야 합니다.
@@ -232,7 +233,7 @@ args = ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path"
 
 ### Standard JSON MCP Clients
 
-Claude Code, Cursor, VS Code-style MCP config, 그 외 docs가 `mcpServers` JSON을 허용하는 client에 사용합니다.
+Claude Code, Cursor, VS Code-style MCP config, 그 외 docs가 `mcpServers` JSON을 허용하는 client에 사용합니다. OpenClaw는 이 shape가 아니라 `mcp.servers.<name>`을 사용합니다.
 
 ```json
 {
@@ -257,6 +258,40 @@ claude mcp add hyper-cloaking npx @playwright/mcp@latest --headless --sandbox --
 
 Cursor는 standard JSON MCP server config를 사용할 수 있습니다. UI flow가 필요하면 `hyper-cloaking`라는 MCP server를 추가하고 command는 `npx`, args는 `@playwright/mcp@latest`, `--headless`, `--sandbox`, `--executable-path`, absolute CloakBrowser path로 설정합니다.
 
+### OpenClaw
+
+OpenClaw는 supported first-class client입니다. Skill root는 workspace `skills/`, workspace `.agents/skills`, `~/.agents/skills`, `~/.openclaw/skills`, 또는 compatible bundle plugin의 skill root 중 하나를 사용합니다. Outbound MCP server는 `mcp.servers.<name>`에 설정하고, CLI가 필요한 경우 local OpenClaw 버전에 맞춰 `openclaw mcp set`, `openclaw mcp add`, `openclaw mcp probe`로 등록/확인합니다.
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "hyper-cloaking": {
+        "command": "npx",
+        "args": ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
+      }
+    }
+  }
+}
+```
+
+### Hermes Agent
+
+Hermes Agent도 supported first-class client입니다. Skill은 `~/.hermes/skills/`에 두거나 `~/.hermes/config.yaml`의 `skills.external_dirs`에 추가한 directory에서 로드합니다. MCP server는 같은 `~/.hermes/config.yaml`의 `mcp_servers.<name>` 아래에 설정합니다.
+
+```yaml
+mcp_servers:
+  hyper-cloaking:
+    command: "npx"
+    args:
+      - "@playwright/mcp@latest"
+      - "--headless"
+      - "--sandbox"
+      - "--executable-path"
+      - "/absolute/path/to/chrome"
+```
+
+
 ### Gajae-Code
 
 Gajae-Code(`gjc`)는 docs상 기존 tool 옆에서 실행되는 external coding-agent harness이며 skills/workflows를 노출합니다. Gajae-Code 사용 시:
@@ -264,7 +299,7 @@ Gajae-Code(`gjc`)는 docs상 기존 tool 옆에서 실행되는 external coding-
 - 이 폴더를 normal skill folder로 유지합니다.
 - GJC session 안에서 사용하는 underlying MCP-capable agent 또는 client에 MCP server config를 적용합니다.
 - local GJC installation이 문서화하지 않은 GJC-specific MCP config path를 발명하지 않습니다.
-- GJC를 workflow runner로만 쓰는 경우 paired agent에 적용할 direct MCP command와 standard JSON/TOML config를 제공합니다.
+- GJC를 workflow runner로만 쓰는 경우 paired agent에 적용할 direct MCP command와 standard JSON/TOML/OpenClaw/Hermes config를 제공합니다.
 
 ### Visible/Headed Override
 
@@ -344,7 +379,7 @@ Layer별로 debug합니다.
 8. CloakBrowser binary download가 실패했습니다.
 9. `~/.hyper-cloaking/cache/cloakbrowser` 아래 executable이 없습니다.
 10. 실제 launch path에서 `humanize: true`가 빠졌거나 증명되지 않습니다.
-11. Client MCP config surface가 unsupported 또는 unknown입니다.
+11. Client MCP config surface가 unsupported 또는 unknown입니다. 지원되는 first-class surface에는 Codex TOML, standard JSON/Claude Code/Cursor, OpenClaw `mcp.servers.<name>`, Hermes `mcp_servers.<name>`, Gajae-Code paired-agent guidance가 포함됩니다.
 12. Playwright MCP가 시작되지 않습니다.
 13. MCP는 시작되지만 CloakBrowser를 사용하지 않습니다.
 14. target site가 requested flow를 block, challenge, disallow합니다. WAF/challenge/CAPTCHA는 blocker/routing으로만 기록하고 bypass recipe를 제공하지 않습니다.

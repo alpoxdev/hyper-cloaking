@@ -24,7 +24,7 @@ Operational requests must ask or confirm runtime inputs before setup, cookie loa
 - Claude Code AskUserQuestion or equivalent structured question surface
 - Codex native structured user input when available
 - Gajae-Code/GJC question bridge or session prompt when available
-- Cursor/client-native prompt when available
+- Cursor/OpenClaw/Hermes client-native prompt when available
 - one concise plain-text question only when no structured question surface exists
 
 Ask one bundled preflight question. Do not scatter repeated prompts across setup steps. The preflight must cover:
@@ -203,7 +203,7 @@ const ctx = await launchPersistentContext({
 
 ## 9. MCP Configuration Patterns
 
-Select the client surface deliberately.
+Select the client surface deliberately. Keep the MCP args shape stable across clients: command `npx`, args beginning with `@playwright/mcp@latest`, `--headless` by default, `--sandbox`, then `--executable-path` and an absolute CloakBrowser executable path.
 
 ### Codex TOML
 
@@ -248,6 +248,29 @@ Gajae-Code (`gjc`) is documented as an external coding-agent harness that runs b
 - Apply the MCP server config to the underlying MCP-capable agent or client used inside the GJC session.
 - Do not invent a GJC-specific MCP config path unless the local GJC installation documents one.
 - If GJC is being used only as a workflow runner, provide the direct MCP command and the standard JSON/TOML config for the paired agent.
+
+### OpenClaw
+
+OpenClaw can load this skill from workspace `skills/`, workspace `.agents/skills`, `~/.agents/skills`, `~/.openclaw/skills`, or a compatible bundle plugin. For outbound MCP, use `mcp.servers.<name>` rather than generic `mcpServers`; manage it with `openclaw mcp set/add/probe` when the CLI is available.
+
+```yaml
+mcp:
+  servers:
+    hyper-cloaking:
+      command: npx
+      args: ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
+```
+
+### Hermes Agent
+
+Hermes skills live in `~/.hermes/skills/` or in directories listed under `skills.external_dirs` in `~/.hermes/config.yaml`. Configure MCP servers in the same file under `mcp_servers.<name>`:
+
+```yaml
+mcp_servers:
+  hyper-cloaking:
+    command: npx
+    args: ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/absolute/path/to/chrome"]
+```
 
 ### Visible/Headed Override
 

@@ -5,7 +5,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { runCli } from './cli.mjs';
-import { mcpCommand } from './mcp-config.mjs';
+import { generateMcpConfig, mcpCommand } from './mcp-config.mjs';
 import { buildNoSandboxWarningSafeCloakOptions } from '../scripts/browser-utils.mjs';
 
 
@@ -70,6 +70,31 @@ test('mcp-config commands enable sandbox by default', () => {
   assert.ok(command.args.includes('--sandbox'));
   assert.equal(command.args.includes('--headless'), false);
   assert.equal(command.args.includes('--no-sandbox'), false);
+});
+
+test('OpenClaw MCP config uses managed outbound mcp.servers shape and preserves command args', () => {
+  const config = generateMcpConfig({ client: 'openclaw', executablePath: process.execPath });
+  const server = config.config.mcp.servers['hyper-cloaking'];
+
+  assert.equal(config.type, 'openclaw-managed-outbound');
+  assert.equal(server.command, 'npx');
+  assert.equal(server.args[0], '@playwright/mcp@latest');
+  assert.ok(server.args.includes('--headless'));
+  assert.ok(server.args.includes('--sandbox'));
+  assert.ok(server.args.includes('--executable-path'));
+  assert.equal(server.args[server.args.indexOf('--executable-path') + 1], process.execPath);
+});
+
+test('Hermes MCP config renders config.yaml-compatible mcp_servers YAML and preserves command args', () => {
+  const config = generateMcpConfig({ client: 'hermes-agent', executablePath: process.execPath });
+
+  assert.equal(config.type, 'hermes-config-yaml');
+  assert.equal(config.configPath, '~/.hermes/config.yaml');
+  assert.match(config.config, /^mcp_servers:\n  hyper-cloaking:\n/m);
+  assert.match(config.config, /    command: "npx"\n/);
+  assert.match(config.config, /    args:\n      - "@playwright\/mcp@latest"\n      - "--headless"\n      - "--sandbox"\n      - "--executable-path"\n/);
+  assert.match(config.config, new RegExp(`      - ${JSON.stringify(process.execPath).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\n`));
+  assert.match(config.config, /    idle_timeout_seconds: 300\n/);
 });
 
 test('CloakBrowser JS options suppress no-sandbox warning flag', () => {

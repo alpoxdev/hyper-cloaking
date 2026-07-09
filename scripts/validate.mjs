@@ -231,6 +231,39 @@ function validateNoStalePublicIdentity() {
     }
   }
 }
+function requireText(file, needle, label = needle) {
+  requireFile(file);
+  if (!existsSync(fullPath(file))) return;
+  if (!readText(file).includes(needle)) fail(`${file} must mention ${label}`);
+}
+
+function validateClientSupportSurfaces() {
+  requireText('skills/hyper-cloaking/engine/mcp-config.mjs', 'openclaw', 'OpenClaw MCP client target');
+  requireText('skills/hyper-cloaking/engine/mcp-config.mjs', 'hermes', 'Hermes MCP client target');
+
+  for (const file of [
+    'skills/hyper-cloaking/SKILL.md',
+    'skills/hyper-cloaking/rules/hyper-cloaking-workflow.md',
+    'skills/hyper-cloaking/references/cloakbrowser-playwright-mcp.md',
+    'skills/hyper-cloaking/SKILL.ko.md',
+    'skills/hyper-cloaking/rules/hyper-cloaking-workflow.ko.md',
+    'skills/hyper-cloaking/references/cloakbrowser-playwright-mcp.ko.md'
+  ]) {
+    requireText(file, 'OpenClaw');
+    requireText(file, 'Hermes');
+  }
+
+  for (const file of [
+    'skills/hyper-cloaking/rules/hyper-cloaking-workflow.md',
+    'skills/hyper-cloaking/references/cloakbrowser-playwright-mcp.md',
+    'skills/hyper-cloaking/rules/hyper-cloaking-workflow.ko.md',
+    'skills/hyper-cloaking/references/cloakbrowser-playwright-mcp.ko.md'
+  ]) {
+    requireText(file, 'mcp.servers', 'OpenClaw mcp.servers config');
+    requireText(file, 'mcp_servers', 'Hermes mcp_servers config');
+  }
+}
+
 
 const packageManifest = parseJson('package.json');
 const claudeMarketplace = parseJson('.claude-plugin/marketplace.json');
@@ -311,6 +344,8 @@ for (const dir of [`${pluginRoot}/skills`, '.agents/skills', '.claude/skills', '
 }
 
 
+validateClientSupportSurfaces();
+
 validateNoStalePublicIdentity();
 
 if (errors.length > 0) {
@@ -318,4 +353,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Validated ${skillNames.length} skill, version metadata, skill paths, helper scripts, and stale identity checks for Claude Code, Codex, Cursor, and Open Agent Skills.`);
+console.log(`Validated ${skillNames.length} skill, version metadata, skill paths, helper scripts, OpenClaw/Hermes client support, and stale identity checks for Claude Code, Codex, Cursor, OpenClaw, Hermes, and Open Agent Skills.`);

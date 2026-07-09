@@ -93,7 +93,7 @@ function wantsHeadless(options) {
 }
 
 function usage() {
-  return `Usage: hyper-cloaking <validate|smoke|mcp-config|live> [--json] [--home DIR]\n\nCommands:\n  validate    Check local engine metadata without network or package probes.\n  smoke       Create/check a sandbox home and render fake-executable MCP configs.\n  mcp-config  Render MCP config for direct, codex, json, claude-code, or gajae-code.\n  live        Run local live verification after containment, package, and target-safety preflight.`;
+  return `Usage: hyper-cloaking <validate|smoke|mcp-config|live> [--json] [--home DIR]\n\nCommands:\n  validate    Check local engine metadata without network or package probes.\n  smoke       Create/check a sandbox home and render fake-executable MCP configs.\n  mcp-config  Render MCP config for direct, codex, json, claude-code, gajae-code, openclaw, hermes, or hermes-agent.\n  live        Run local live verification after containment, package, and target-safety preflight.`;
 }
 
 function jsonResult(result) {
