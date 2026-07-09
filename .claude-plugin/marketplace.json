@@ -21,7 +21,8 @@
       "skills": [
         "./skills/workflow-bootstrap",
         "./skills/plugin-packaging",
-        "./skills/agent-orchestration"
+        "./skills/agent-orchestration",
+        "./skills/cloak-browser"
       ]
     }
   ]

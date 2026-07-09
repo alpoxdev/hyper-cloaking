@@ -3,7 +3,8 @@ import path from 'node:path';
 
 const root = process.cwd();
 const pluginRoot = 'plugins/hyper-cloaking';
-const skillNames = ['workflow-bootstrap', 'plugin-packaging', 'agent-orchestration'];
+const skillNames = ['workflow-bootstrap', 'plugin-packaging', 'agent-orchestration', 'cloak-browser'];
+const rootSkillNames = ['cloak-browser'];
 const agentNames = ['architect', 'executor', 'verifier'];
 const errors = [];
 
@@ -108,8 +109,10 @@ for (const skillName of skillNames) {
   validateSkill(canonical, skillName);
   validateSkill(`.agents/skills/${skillName}/SKILL.md`, skillName);
   validateSkill(`.claude/skills/${skillName}/SKILL.md`, skillName);
+  if (rootSkillNames.includes(skillName)) validateSkill(`skills/${skillName}/SKILL.md`, skillName);
   assertSame(canonical, `.agents/skills/${skillName}/SKILL.md`);
   assertSame(canonical, `.claude/skills/${skillName}/SKILL.md`);
+  if (rootSkillNames.includes(skillName)) assertSame(canonical, `skills/${skillName}/SKILL.md`);
 }
 
 for (const agentName of agentNames) {
