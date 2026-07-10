@@ -54,7 +54,13 @@ function frontmatter(text, file) {
     if (!line.trim() || line.startsWith('  ') || line.startsWith('- ')) continue;
     const index = line.indexOf(':');
     if (index === -1) continue;
-    fields.set(line.slice(0, index).trim(), line.slice(index + 1).trim().replace(/^['"]|['"]$/g, ''));
+    fields.set(
+      line.slice(0, index).trim(),
+      line
+        .slice(index + 1)
+        .trim()
+        .replace(/^['"]|['"]$/g, '')
+    );
   }
   return fields;
 }
@@ -67,18 +73,18 @@ function validateSkill(file, expectedName) {
   const name = fm.get('name');
   const description = fm.get('description');
 
-  if (name !== expectedName) fail(`${file} has name=${name ?? '<missing>'}, expected ${expectedName}`);
+  if (name !== expectedName)
+    fail(`${file} has name=${name ?? '<missing>'}, expected ${expectedName}`);
   if (!description) fail(`${file} is missing description`);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name ?? '')) fail(`${file} name is not kebab-case`);
 }
-
-
 
 function assertSame(left, right) {
   requireFile(left);
   requireFile(right);
   if (!existsSync(fullPath(left)) || !existsSync(fullPath(right))) return;
-  if (readText(left) !== readText(right)) fail(`${right} is not byte-for-byte mirrored from ${left}`);
+  if (readText(left) !== readText(right))
+    fail(`${right} is not byte-for-byte mirrored from ${left}`);
 }
 function listRelativeFiles(dir) {
   const base = fullPath(dir);
@@ -140,8 +146,10 @@ function validateSkillPaths(file, skills) {
     fail(`${file} skills must be an array`);
     return;
   }
-  if (!skills.includes('./skills/hyper-cloaking')) fail(`${file} must reference ./skills/hyper-cloaking`);
-  if (skills.includes('./skills/cloak-browser')) fail(`${file} must not reference ./skills/cloak-browser`);
+  if (!skills.includes('./skills/hyper-cloaking'))
+    fail(`${file} must reference ./skills/hyper-cloaking`);
+  if (skills.includes('./skills/cloak-browser'))
+    fail(`${file} must not reference ./skills/cloak-browser`);
 }
 
 function walkFiles(start) {
@@ -173,18 +181,11 @@ function validateNoStalePublicIdentity() {
   for (const dir of staleSkillDirs) {
     rejectPathExists(dir, 'old cloak-browser skill directory is not supported');
   }
-  const customAgentDirs = [
-    `${pluginRoot}/agents`,
-    '.claude/agents',
-    '.codex',
-    '.cursor'
-  ];
+  const customAgentDirs = [`${pluginRoot}/agents`, '.claude/agents', '.codex', '.cursor'];
 
   for (const dir of customAgentDirs) {
     rejectPathExists(dir, 'custom agents are not part of this skill-only package');
   }
-
-
 
   const scanTargets = [
     'package.json',
@@ -216,7 +217,7 @@ function validateNoStalePublicIdentity() {
     { label: 'HYPERCORE_BUSINESS_HOME', regex: /\bHYPERCORE_BUSINESS_HOME\b/g },
     { label: '~/.hypercore-business', regex: /~\/\.hypercore-business\b/g },
     { label: '~/.cloakbrowser', regex: /~\/\.cloakbrowser\b/g },
-    { label: 'resolve-cloak-mcp.mjs', regex: /resolve-cloak-mcp\.mjs/g },
+    { label: 'resolve-cloak-mcp.mjs', regex: /resolve-cloak-mcp\.mjs/g }
   ];
 
   for (const file of files) {
@@ -250,7 +251,10 @@ function validateEngineOnlyMigration() {
     'skills/hyper-cloaking'
   ];
   for (const base of skillBases) {
-    rejectPathExists(`${base}/scripts`, 'skill-local scripts helper surface was removed in the engine-only migration');
+    rejectPathExists(
+      `${base}/scripts`,
+      'skill-local scripts helper surface was removed in the engine-only migration'
+    );
   }
 
   // Old skill-local helper commands/imports are only allowed inside a bounded migration block in docs,
@@ -264,7 +268,9 @@ function validateEngineOnlyMigration() {
   ];
 
   const scanTargets = ['.agents', '.claude', '.codex', '.cursor', pluginRoot, 'skills'];
-  const files = scanTargets.flatMap((target) => (existsSync(fullPath(target)) ? walkFiles(target) : []));
+  const files = scanTargets.flatMap((target) =>
+    existsSync(fullPath(target)) ? walkFiles(target) : []
+  );
 
   for (const file of files) {
     if (file === 'scripts/validate.mjs') continue;
@@ -294,7 +300,11 @@ function requireText(file, needle, label = needle) {
 }
 
 function validateClientSupportSurfaces() {
-  requireText('skills/hyper-cloaking/engine/mcp-config.mjs', 'openclaw', 'OpenClaw MCP client target');
+  requireText(
+    'skills/hyper-cloaking/engine/mcp-config.mjs',
+    'openclaw',
+    'OpenClaw MCP client target'
+  );
   requireText('skills/hyper-cloaking/engine/mcp-config.mjs', 'hermes', 'Hermes MCP client target');
 
   for (const file of [
@@ -320,7 +330,6 @@ function validateClientSupportSurfaces() {
   }
 }
 
-
 const packageManifest = parseJson('package.json');
 const claudeMarketplace = parseJson('.claude-plugin/marketplace.json');
 const codexMarketplace = parseJson('.agents/plugins/marketplace.json');
@@ -329,19 +338,28 @@ const codexPlugin = parseJson(`${pluginRoot}/.codex-plugin/plugin.json`);
 
 validateVersionMetadata('package.json', packageManifest);
 validateVersionMetadata('.claude-plugin/marketplace.json', claudeMarketplace);
-validatePluginVersionMetadata('.claude-plugin/marketplace.json plugins[0]', claudeMarketplace.plugins?.[0]);
+validatePluginVersionMetadata(
+  '.claude-plugin/marketplace.json plugins[0]',
+  claudeMarketplace.plugins?.[0]
+);
 validateVersionMetadata(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin);
 validateVersionMetadata(`${pluginRoot}/.codex-plugin/plugin.json`, codexPlugin);
 
 if (packageManifest.name !== 'hyper-cloaking') fail('Package name must be hyper-cloaking');
-if (claudeMarketplace.name !== 'hyper-cloaking') fail('Claude marketplace name must be hyper-cloaking');
-if (claudeMarketplace.plugins?.[0]?.source !== './plugins/hyper-cloaking') fail('Claude marketplace source must point at ./plugins/hyper-cloaking');
-if (codexMarketplace.plugins?.[0]?.source?.path !== './plugins/hyper-cloaking') fail('Codex marketplace source.path must point at ./plugins/hyper-cloaking');
+if (claudeMarketplace.name !== 'hyper-cloaking')
+  fail('Claude marketplace name must be hyper-cloaking');
+if (claudeMarketplace.plugins?.[0]?.source !== './plugins/hyper-cloaking')
+  fail('Claude marketplace source must point at ./plugins/hyper-cloaking');
+if (codexMarketplace.plugins?.[0]?.source?.path !== './plugins/hyper-cloaking')
+  fail('Codex marketplace source.path must point at ./plugins/hyper-cloaking');
 if (claudePlugin.name !== 'hyper-cloaking') fail('Claude plugin name must be hyper-cloaking');
 if (codexPlugin.name !== 'hyper-cloaking') fail('Codex plugin name must be hyper-cloaking');
 if (codexPlugin.skills !== './skills/') fail('Codex plugin skills path must be ./skills/');
 
-validateSkillPaths('.claude-plugin/marketplace.json plugins[0]', claudeMarketplace.plugins?.[0]?.skills);
+validateSkillPaths(
+  '.claude-plugin/marketplace.json plugins[0]',
+  claudeMarketplace.plugins?.[0]?.skills
+);
 validateSkillPaths(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin.skills);
 
 for (const helper of [
@@ -369,7 +387,20 @@ for (const helper of [
   'engine/providers/generic.mjs',
   'engine/providers/naver.mjs',
   'engine/providers/reddit.mjs',
-  'engine/providers/instagram.mjs',
+  'engine/providers/instagram/index.mjs',
+  'engine/providers/instagram/metadata.mjs',
+  'engine/providers/instagram/selectors.mjs',
+  'engine/providers/instagram/session.mjs',
+  'engine/providers/instagram/actions/user.mjs',
+  'engine/providers/instagram/actions/posts.mjs',
+  'engine/providers/instagram/actions/analyze.mjs',
+  'engine/providers/instagram/actions/reactions.mjs',
+  'engine/providers/instagram/actions/dm.mjs',
+  'engine/providers/instagram/actions/analyze.test.mjs',
+  'engine/providers/instagram/instagram-actions.test.mjs',
+  'engine/action-runtime/guardrails.mjs',
+  'engine/action-runtime/action-result.mjs',
+  'engine/action-runtime/guardrails.test.mjs',
   'engine/providers/youtube.mjs',
   'engine/providers/x.mjs',
   'engine/providers/index.mjs',
@@ -395,9 +426,6 @@ assertDirectorySame(hyperCanonicalDir, '.agents/skills/hyper-cloaking');
 assertDirectorySame(hyperCanonicalDir, '.claude/skills/hyper-cloaking');
 assertDirectorySame(hyperCanonicalDir, 'skills/hyper-cloaking');
 
-
-
-
 const expectedSkillDirs = [...skillNames].sort();
 for (const dir of [`${pluginRoot}/skills`, '.agents/skills', '.claude/skills', 'skills']) {
   const actualSkillDirs = readdirSync(fullPath(dir), { withFileTypes: true })
@@ -405,10 +433,11 @@ for (const dir of [`${pluginRoot}/skills`, '.agents/skills', '.claude/skills', '
     .map((entry) => entry.name)
     .sort();
   if (JSON.stringify(actualSkillDirs) !== JSON.stringify(expectedSkillDirs)) {
-    fail(`${dir} directories ${JSON.stringify(actualSkillDirs)} do not match expected ${JSON.stringify(expectedSkillDirs)}`);
+    fail(
+      `${dir} directories ${JSON.stringify(actualSkillDirs)} do not match expected ${JSON.stringify(expectedSkillDirs)}`
+    );
   }
 }
-
 
 validateClientSupportSurfaces();
 
@@ -421,4 +450,6 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Validated ${skillNames.length} skill, version metadata, skill paths, helper scripts, OpenClaw/Hermes client support, and stale identity checks for Claude Code, Codex, Cursor, OpenClaw, Hermes, and Open Agent Skills.`);
+console.log(
+  `Validated ${skillNames.length} skill, version metadata, skill paths, helper scripts, OpenClaw/Hermes client support, and stale identity checks for Claude Code, Codex, Cursor, OpenClaw, Hermes, and Open Agent Skills.`
+);

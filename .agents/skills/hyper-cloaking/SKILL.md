@@ -205,6 +205,30 @@ This is an intentional engine-only hard migration, not an accidental omission. T
 
 `engine/cli.mjs live` accepts an optional `--provider ID` (`naver`, `reddit`, `instagram`, `youtube`, `x`, or `generic`). It selects **metadata only** — domain/origin suggestions and cookie/profile/preflight hints — and never authorizes broader origins or bypasses target-safety, recon, or preflight. An unknown `--provider` fails closed (`unknown-provider`) before any cookie or browser work. Without `--provider`, the provider is inferred from the navigation target URL, and unknown hosts fall back to `generic`. Cookie selection stays controlled by `--cookie-site`/`--site` and `--account`; a provider `cookie.siteKey` is only a hint applied after preflight authorization, and redirect shorteners resolve the provider for navigation without seeding a cookie hint.
 
+## Instagram action modules (importable)
+
+Provider *metadata* stays metadata-only (no selectors/automation — enforced by `engine/providers/schema.mjs`). Reusable Instagram *action* flows live as **sibling modules** so you `import` a tested function instead of hand-writing a flow each session. They are **JS-driver (`live` lane) helpers** — they need a real Playwright `page` from `launchCloakBrowser`/`launchPersistentCloakContext` and are **not usable in Playwright-MCP mode** (no `page` handle there). Provider-agnostic guardrails live at `engine/action-runtime/`.
+
+```js
+import { buildInstagramSession, instagramActions } from './engine/providers/instagram/index.mjs';
+const { browser, paths } = await launchCloakBrowser({ headless: false });
+const page = await browser.newPage();
+await page.goto('https://www.instagram.com/');
+const session = buildInstagramSession(page, { stateDir: paths.stateDir, interactive: true });
+
+// reads (no gate)
+const profile = await instagramActions.getUser(session, 'nasa');
+const posts   = await instagramActions.getUserPosts(session, 'nasa', { limit: 12, includeReels: true });
+const report  = instagramActions.analyzePosts(posts.content.posts);
+const threads = await instagramActions.listDMThreads(session, { limit: 20 });
+
+// writes are dry-run by default; pass { dryRun: false } to act
+await instagramActions.likePost(session, 'https://www.instagram.com/p/ABC/', { dryRun: false });
+await instagramActions.replyToDM(session, threads.content[0], '고마워요!', { dryRun: false });
+```
+
+**Authorized personal-automation scope.** These modules automate the user's *own* authenticated account for personal management, and are permitted only under the built-in guardrails: writes are dry-run by default; DM replies target **existing** conversations only (an opaque `/direct/t/<id>` handle from `listDMThreads`/`readDMThread`, never a username or `/direct/new/` — no cold outreach); bulk replies are capped, rate-limited via a persisted rolling window, human-confirmed (the confirmation gate cannot be satisfied non-interactively), and resumable so an interrupted run never re-sends. This is an additive allowance; the `<forbidden>` ban on *unauthorized*, mass/unsolicited, or evasive account automation is unchanged. Any challenge/CAPTCHA/rate-limit signal still stops the flow as a diagnostic blocker.
+
 <required>
 
 - Verify authorization and task boundary before using CloakBrowser, humanization, persistent profiles, cookies, or anti-detection-related tooling.

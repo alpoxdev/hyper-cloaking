@@ -2,7 +2,10 @@
 // registry API (getProvider, resolveProviderForUrl, validateProviderRegistry).
 
 import { genericProvider } from './generic.mjs';
-import { instagramProvider } from './instagram.mjs';
+// Import the provider metadata directly (not the action barrel) so building the
+// registry stays lean — it must not eager-load the browser-automation/fs action
+// stack. Importers of the actions use ./instagram/index.mjs.
+import { instagramProvider } from './instagram/metadata.mjs';
 import { naverProvider } from './naver.mjs';
 import { redditProvider } from './reddit.mjs';
 import {

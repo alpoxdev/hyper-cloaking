@@ -204,6 +204,30 @@ skill-local `scripts/*.mjs` helper surface는 제거되었습니다. runtime hel
 
 `engine/cli.mjs live`는 선택적 `--provider ID`(`naver`, `reddit`, `instagram`, `youtube`, `x`, `generic`)를 받습니다. 이는 **메타데이터만** 선택합니다 — domain/origin 제안과 cookie/profile/preflight hint이며, 더 넓은 origin을 승인하거나 target-safety/recon/preflight를 우회하지 않습니다. unknown `--provider`는 cookie나 browser 작업 전에 fail-closed(`unknown-provider`)됩니다. `--provider`가 없으면 navigation target URL에서 provider를 추론하고, unknown host는 `generic`으로 fallback합니다. cookie 선택은 계속 `--cookie-site`/`--site`와 `--account`가 제어하며, provider `cookie.siteKey`는 preflight 승인 이후에만 적용되는 hint일 뿐입니다. redirect shortener는 provider를 navigation용으로만 매칭하고 cookie hint를 seed하지 않습니다.
 
+## Instagram 액션 모듈 (import 사용)
+
+provider *메타데이터*는 메타데이터 전용을 유지합니다(selector/automation 없음 — `engine/providers/schema.mjs`가 강제). 재사용 가능한 Instagram *액션* 플로우는 **형제(sibling) 모듈**로 존재하므로, 매 세션 플로우를 직접 작성하는 대신 검증된 함수를 `import`합니다. 이들은 **JS 드라이버(`live` 레인) 헬퍼**입니다 — `launchCloakBrowser`/`launchPersistentCloakContext`가 만든 실제 Playwright `page`가 필요하며, **Playwright-MCP 모드에서는 사용할 수 없습니다**(그 모드에는 `page` 핸들이 없음). provider 무관 가드레일은 `engine/action-runtime/`에 있습니다.
+
+```js
+import { buildInstagramSession, instagramActions } from './engine/providers/instagram/index.mjs';
+const { browser, paths } = await launchCloakBrowser({ headless: false });
+const page = await browser.newPage();
+await page.goto('https://www.instagram.com/');
+const session = buildInstagramSession(page, { stateDir: paths.stateDir, interactive: true });
+
+// 조회 (게이트 없음)
+const profile = await instagramActions.getUser(session, 'nasa');
+const posts   = await instagramActions.getUserPosts(session, 'nasa', { limit: 12, includeReels: true });
+const report  = instagramActions.analyzePosts(posts.content.posts);
+const threads = await instagramActions.listDMThreads(session, { limit: 20 });
+
+// 쓰기 액션은 기본 dry-run; 실제 실행은 { dryRun: false }
+await instagramActions.likePost(session, 'https://www.instagram.com/p/ABC/', { dryRun: false });
+await instagramActions.replyToDM(session, threads.content[0], '고마워요!', { dryRun: false });
+```
+
+**승인된 개인 자동화 범위.** 이 모듈들은 사용자 *본인*의 인증된 계정을 개인 관리 목적으로 자동화하며, 내장 가드레일 하에서만 허용됩니다: 쓰기는 기본 dry-run; DM 답장은 **기존** 대화만 대상(`listDMThreads`/`readDMThread`가 준 불투명 `/direct/t/<id>` 핸들만, username이나 `/direct/new/`는 거부 — cold outreach 불가); 대량 답장은 상한/영구 롤링 윈도우 rate limit/사람 확인 게이트(비대화형에서는 확인 불가)/중단 후 재개 시 재전송 없음(idempotent)을 적용합니다. 이는 *추가* 허용이며, *비승인*·대량/무단·회피성 계정 자동화에 대한 `<required>`/`<forbidden>` 금지는 그대로입니다. challenge/CAPTCHA/rate-limit 신호는 여전히 진단 blocker로 플로우를 중단합니다.
+
 <required>
 
 - stealth, proxy, fingerprint, CAPTCHA, WAF/challenge 관련 tooling은 우회 기능으로 제안하거나 사용하지 않습니다. authorization과 task boundary를 확인하고, challenge 관찰은 blocker/routing diagnostic으로만 보고합니다.
