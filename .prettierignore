@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Generated mirror trees — the canonical source lives under plugins/.
+# Format the canonical files, then re-mirror; never format the copies directly,
+# or the 4-tree byte-parity that scripts/validate.mjs enforces will break.
+.agents/
+.claude/
+.codex/
+.cursor/
+skills/
+
+# Agent / tooling state (also gitignored)
+.omc/
+.gjc/
+.omx/
+.hypercore/
+.codegraph/
+references/
+
+# Data / non-source
+**/*.jsonl
+**/*.min.js

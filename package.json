@@ -6,10 +6,18 @@
   "type": "module",
   "scripts": {
     "validate": "node scripts/validate.mjs",
-    "skills:list": "npx skills add . --list"
+    "skills:list": "npx skills add . --list",
+    "lint": "oxlint plugins scripts",
+    "lint:fix": "oxlint --fix plugins scripts",
+    "format": "prettier --write \"plugins/**/*.mjs\" \"scripts/**/*.mjs\"",
+    "format:check": "prettier --check \"plugins/**/*.mjs\" \"scripts/**/*.mjs\""
   },
   "dependencies": {
     "cloakbrowser": "^0.4.9",
     "playwright-core": "^1.61.1"
+  },
+  "devDependencies": {
+    "oxlint": "^1.73.0",
+    "prettier": "^3.9.5"
   }
 }
