@@ -1,7 +1,12 @@
-.gjc/
-.omx/
+.gjc
+.omx
+.omc
+.hypercore
 .codegraph
+
+./references/
+
 node_modules/
 npm-debug.log*
+
 .DS_Store
-/references/
