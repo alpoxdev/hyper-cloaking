@@ -4,7 +4,7 @@
 .hypercore
 .codegraph
 
-./references/
+/references/
 
 node_modules/
 npm-debug.log*
