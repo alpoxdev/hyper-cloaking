@@ -363,7 +363,18 @@ for (const helper of [
   'engine/cli-integration.test.mjs',
   'engine/outcome-diagnostics-boundary.test.mjs',
   'engine/recon-run-shapes.test.mjs',
-  'engine/target-safety.test.mjs'
+  'engine/target-safety.test.mjs',
+  'engine/providers/schema.mjs',
+  'engine/providers/registry.mjs',
+  'engine/providers/generic.mjs',
+  'engine/providers/naver.mjs',
+  'engine/providers/reddit.mjs',
+  'engine/providers/instagram.mjs',
+  'engine/providers/youtube.mjs',
+  'engine/providers/x.mjs',
+  'engine/providers/index.mjs',
+  'engine/providers/provider-registry.test.mjs',
+  'engine/providers/schema.test.mjs'
 ]) {
   requireFile(`${pluginRoot}/skills/hyper-cloaking/${helper}`);
   requireFile(`skills/hyper-cloaking/${helper}`);

@@ -53,6 +53,11 @@ import {
 import {
   launchCloakBrowser
 } from './browser-utils.mjs';
+import {
+  getProvider,
+  resolveProviderForUrl,
+  validateProviderRegistry
+} from './providers/index.mjs';
 
 function parseArgs(argv) {
   const options = { _: [] };
@@ -93,7 +98,9 @@ function wantsHeadless(options) {
 }
 
 function usage() {
-  return `Usage: hyper-cloaking <validate|smoke|mcp-config|live> [--json] [--home DIR]\n\nCommands:\n  validate    Check local engine metadata without network or package probes.\n  smoke       Create/check a sandbox home and render fake-executable MCP configs.\n  mcp-config  Render MCP config for direct, codex, json, claude-code, gajae-code, openclaw, hermes, or hermes-agent.\n  live        Run local live verification after containment, package, and target-safety preflight.`;
+  return `Usage: hyper-cloaking <validate|smoke|mcp-config|live> [--json] [--home DIR]\n\nCommands:\n  validate    Check local engine metadata without network or package probes.\n  smoke       Create/check a sandbox home and render fake-executable MCP configs.\n  mcp-config  Render MCP config for direct, codex, json, claude-code, gajae-code, openclaw, hermes, or hermes-agent.\n  live        Run local live verification after containment, package, and target-safety preflight.
+              Options: --provider ID (explicit provider metadata, fails closed on unknown id),
+              --cookie-site SITE / --site SITE (cookie selection), --account ACCOUNT.`;
 }
 
 function jsonResult(result) {
@@ -231,6 +238,7 @@ async function validateCommand() {
     [{ type: 'textIncludes', expected: 'helper-contract' }, { type: 'textIncludes', expected: 'no-network' }, { type: 'textIncludes', expected: 'no-launch' }]
   );
   const contentBoundary = sampleContentBoundary('about:blank');
+  const providerRegistry = validateProviderRegistry();
   const checks = [
     { name: 'skill-id', ok: SKILL_ID === 'hyper-cloaking', expected: 'hyper-cloaking', actual: SKILL_ID },
     { name: 'version', ok: VERSION === '0.0.1', expected: '0.0.1', actual: VERSION },
@@ -240,6 +248,7 @@ async function validateCommand() {
     { name: 'cloakbrowser-package', ok: CLOAKBROWSER_PACKAGE === 'cloakbrowser', expected: 'cloakbrowser', actual: CLOAKBROWSER_PACKAGE },
     { name: 'playwright-core-package', ok: PLAYWRIGHT_CORE_PACKAGE === 'playwright-core', expected: 'playwright-core', actual: PLAYWRIGHT_CORE_PACKAGE },
     { name: 'playwright-mcp-package', ok: PLAYWRIGHT_MCP_PACKAGE === '@playwright/mcp', expected: '@playwright/mcp', actual: PLAYWRIGHT_MCP_PACKAGE },
+    { name: 'provider-registry', ok: providerRegistry.ok, expected: true, actual: providerRegistry.ok },
     ...helperChecks
   ];
   const ok = checks.every((check) => check.ok);
@@ -248,6 +257,7 @@ async function validateCommand() {
     status: ok ? 'ok' : 'failed',
     checks,
     helperMetadata: helperChecks,
+    providerRegistry,
     ...completionFields({
       targetSafety,
       outcome,
@@ -581,6 +591,110 @@ async function captureLiveEvidence(page, evidenceDir) {
 }
 
 
+function emptyProviderField(source) {
+  return {
+    ok: false,
+    id: null,
+    label: null,
+    source,
+    fallbackUsed: false,
+    matchedDomain: null,
+    cookieSiteKeyHint: null,
+    profileLabelHint: null,
+    preflightDefaults: null,
+    outcomeHints: null,
+    safeFlowNotes: null
+  };
+}
+
+function providerField(provider, { source, fallbackUsed = false, matchedDomain = null }) {
+  return {
+    ok: true,
+    id: provider.id,
+    label: provider.label,
+    source,
+    fallbackUsed,
+    matchedDomain,
+    cookieSiteKeyHint: provider.cookie.siteKey,
+    profileLabelHint: provider.profile.label,
+    preflightDefaults: provider.preflight,
+    outcomeHints: provider.outcomeHints,
+    safeFlowNotes: provider.safeFlowNotes
+  };
+}
+
+// Resolves provider metadata only. `--provider` is explicit selection and
+// fails closed on an unknown id (no generic fallback). Without `--provider`,
+// the provider is inferred from navigationTarget; unknown hosts fall back to
+// generic and invalid/ambiguous hosts fail closed. Provider hints never
+// override target-safety/recon/preflight gates.
+function resolveProviderInfo(options, navigationTarget) {
+  const hasExplicitProvider = typeof options.provider === 'string' || options.provider === true;
+  if (hasExplicitProvider) {
+    const requestedId = typeof options.provider === 'string' ? options.provider : '';
+    const resolution = getProvider(requestedId);
+    if (!resolution.ok) {
+      return {
+        provider: emptyProviderField('explicit'),
+        providerError: { ...resolution.error, source: 'explicit' },
+        matchedViaNavigationOnlyAlias: false
+      };
+    }
+    return {
+      provider: providerField(resolution.provider, { source: 'explicit' }),
+      providerError: null,
+      matchedViaNavigationOnlyAlias: false
+    };
+  }
+
+  const resolution = resolveProviderForUrl(navigationTarget);
+  if (!resolution.ok) {
+    return {
+      provider: emptyProviderField('url'),
+      providerError: { ...resolution.error, source: 'url' },
+      matchedViaNavigationOnlyAlias: false
+    };
+  }
+  return {
+    provider: providerField(resolution.provider, {
+      source: resolution.source,
+      fallbackUsed: resolution.fallbackUsed,
+      matchedDomain: resolution.matchedDomain
+    }),
+    providerError: null,
+    matchedViaNavigationOnlyAlias: Boolean(resolution.matchedViaNavigationOnlyAlias)
+  };
+}
+
+// Cookie selection precedence: --cookie-site wins, --site remains a
+// cookie-site alias (not a provider id), --account wins. Provider
+// cookie.siteKey is only a hint/seed, and navigation-only alias matches
+// (link-shortener/redirect hosts) never seed it. liveCommand does not load
+// cookies today, so this reflects option-derived selection with loadedCount 0.
+function buildCookieSelection(options, providerInfo, matchedViaNavigationOnlyAlias) {
+  const explicitSite = typeof options['cookie-site'] === 'string' ? options['cookie-site'] : null;
+  const legacySite = typeof options.site === 'string' ? options.site : null;
+  const explicitAccount = typeof options.account === 'string' ? options.account : null;
+  const providerSiteKeyHint = (providerInfo?.ok && !matchedViaNavigationOnlyAlias) ? providerInfo.cookieSiteKeyHint : null;
+
+  let siteSource = 'none';
+  if (explicitSite) siteSource = 'cookie-site';
+  else if (legacySite) siteSource = 'site-alias';
+  else if (providerSiteKeyHint) siteSource = 'provider-hint';
+
+  return {
+    siteSource,
+    site: explicitSite || legacySite || providerSiteKeyHint || null,
+    account: explicitAccount,
+    explicitSite,
+    explicitAccount,
+    providerSiteKeyHint,
+    loadedCount: 0,
+    needsAccount: false,
+    fallbackUsed: !explicitSite && !legacySite && Boolean(providerSiteKeyHint)
+  };
+}
+
 async function liveCommand(options, env = process.env) {
   const home = resolveHome(options.home || DEFAULT_HOME);
   const target = String(options.target || 'about:blank');
@@ -589,6 +703,44 @@ async function liveCommand(options, env = process.env) {
   const targetSafety = targetSafetyFor(target);
   const navigationTargetSafety = targetSafetyFor(navigationTarget);
   const contentBoundary = sampleContentBoundary(target);
+
+  // Provider resolution happens alongside target computation, before any
+  // cookie/browser/package work. An explicit unknown --provider (or an
+  // invalid/ambiguous inferred host) fails closed here.
+  const providerResolution = resolveProviderInfo(options, navigationTarget);
+  const cookieSelection = buildCookieSelection(options, providerResolution.provider, providerResolution.matchedViaNavigationOnlyAlias);
+
+  if (providerResolution.providerError) {
+    const providerBlockers = [`Provider resolution failed: ${providerResolution.providerError.code}: ${providerResolution.providerError.message}`];
+    const providerFailure = blockedFailure('live-provider-resolution', providerBlockers, ['target classification', 'provider resolution']);
+    return makeResult('live', {
+      ok: false,
+      status: 'blocked',
+      home,
+      target,
+      publicTarget,
+      navigationTarget,
+      provider: providerResolution.provider,
+      providerError: providerResolution.providerError,
+      cookieSelection,
+      targetSafety,
+      navigationTargetSafety,
+      blockers: providerBlockers,
+      ...completionFields({
+        targetSafety,
+        outcome: safeOutcome(
+          { text: 'blocked before package-checks and browser-launch due to provider-resolution-failure' },
+          [{ type: 'textIncludes', expected: 'provider resolved' }]
+        ),
+        failure: providerFailure,
+        contentBoundary,
+        learning: false
+      }),
+      network: 'not-used',
+      liveLaunch: 'not-attempted'
+    });
+  }
+
   const learningEnabled = options.learning === true || options.learning === 'true';
   const runShape = sanitizeRunShape({
     command: 'live',
@@ -658,6 +810,9 @@ async function liveCommand(options, env = process.env) {
     packageChecks,
     targetSafety,
     navigationTargetSafety,
+    provider: providerResolution.provider,
+    providerError: null,
+    cookieSelection,
     mcpConfig: mcpConfig
       ? {
         ok: true,

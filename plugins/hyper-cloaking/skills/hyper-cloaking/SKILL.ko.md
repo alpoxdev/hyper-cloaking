@@ -200,6 +200,10 @@ skill-local `scripts/*.mjs` helper surface는 제거되었습니다. runtime hel
 
 이는 의도된 engine-only hard migration이며 누락이 아닙니다. compatibility wrapper는 없습니다.
 
+## Provider 메타데이터 (선택)
+
+`engine/cli.mjs live`는 선택적 `--provider ID`(`naver`, `reddit`, `instagram`, `youtube`, `x`, `generic`)를 받습니다. 이는 **메타데이터만** 선택합니다 — domain/origin 제안과 cookie/profile/preflight hint이며, 더 넓은 origin을 승인하거나 target-safety/recon/preflight를 우회하지 않습니다. unknown `--provider`는 cookie나 browser 작업 전에 fail-closed(`unknown-provider`)됩니다. `--provider`가 없으면 navigation target URL에서 provider를 추론하고, unknown host는 `generic`으로 fallback합니다. cookie 선택은 계속 `--cookie-site`/`--site`와 `--account`가 제어하며, provider `cookie.siteKey`는 preflight 승인 이후에만 적용되는 hint일 뿐입니다. redirect shortener는 provider를 navigation용으로만 매칭하고 cookie hint를 seed하지 않습니다.
+
 <required>
 
 - stealth, proxy, fingerprint, CAPTCHA, WAF/challenge 관련 tooling은 우회 기능으로 제안하거나 사용하지 않습니다. authorization과 task boundary를 확인하고, challenge 관찰은 blocker/routing diagnostic으로만 보고합니다.

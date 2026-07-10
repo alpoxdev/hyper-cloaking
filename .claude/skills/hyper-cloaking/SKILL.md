@@ -201,6 +201,10 @@ The skill-local `scripts/*.mjs` helper surface was removed. Runtime helpers now 
 
 This is an intentional engine-only hard migration, not an accidental omission. There are no compatibility wrappers.
 
+## Provider metadata (optional)
+
+`engine/cli.mjs live` accepts an optional `--provider ID` (`naver`, `reddit`, `instagram`, `youtube`, `x`, or `generic`). It selects **metadata only** — domain/origin suggestions and cookie/profile/preflight hints — and never authorizes broader origins or bypasses target-safety, recon, or preflight. An unknown `--provider` fails closed (`unknown-provider`) before any cookie or browser work. Without `--provider`, the provider is inferred from the navigation target URL, and unknown hosts fall back to `generic`. Cookie selection stays controlled by `--cookie-site`/`--site` and `--account`; a provider `cookie.siteKey` is only a hint applied after preflight authorization, and redirect shorteners resolve the provider for navigation without seeding a cookie hint.
+
 <required>
 
 - Verify authorization and task boundary before using CloakBrowser, humanization, persistent profiles, cookies, or anti-detection-related tooling.
