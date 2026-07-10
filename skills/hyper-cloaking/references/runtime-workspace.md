@@ -17,7 +17,7 @@ The default runtime workspace is:
 └── state/
 ```
 
-`scripts/browser-utils.mjs` creates this structure on demand. For sandboxed tests or alternate users, override the path with `HYPER_CLOAKING_HOME`.
+`engine/browser-utils.mjs` creates this structure on demand. For sandboxed tests or alternate users, override the path with `HYPER_CLOAKING_HOME`.
 
 ## Preflight, Target Safety, and Run Shape
 
@@ -64,7 +64,7 @@ Default cookie file:
 ~/.hyper-cloaking/cookie.yml
 ```
 
-The skill should load this file before visiting a target site when the user has supplied site cookies. Store only cookies the user is authorized to use. Do not store real cookies in the skill folder or commit them to a repository. Use `scripts/cookie.mjs` for all import, normalization, inspection, redaction, and Playwright injection; do not hand-convert Chrome cookie exports.
+The skill should load this file before visiting a target site when the user has supplied site cookies. Store only cookies the user is authorized to use. Do not store real cookies in the skill folder or commit them to a repository. Use `engine/cookie.mjs` for all import, normalization, inspection, redaction, and Playwright injection; do not hand-convert Chrome cookie exports.
 
 Preferred site/account schema:
 
@@ -133,13 +133,13 @@ Cookies are filtered by target URL before loading. A `.coupang.com` cookie appli
 Initialize or inspect the workspace:
 
 ```bash
-node scripts/browser-utils.mjs init
-node scripts/browser-utils.mjs init --workspace /tmp/cloak-workspace --json
-node scripts/cookie.mjs inspect --url https://www.coupang.com --json
-node scripts/cookie.mjs inspect --url https://www.coupang.com --site coupang --account personal --json
-node scripts/cookie.mjs import-json --site coupang --url https://www.coupang.com --from /path/to/chrome-cookies.json --json
-node scripts/browser-utils.mjs cookies --url https://www.coupang.com --json
-node scripts/browser-utils.mjs cookies --url https://www.coupang.com --site coupang --account personal --json
+node engine/browser-utils.mjs init
+node engine/browser-utils.mjs init --workspace /tmp/cloak-workspace --json
+node engine/cookie.mjs inspect --url https://www.coupang.com --json
+node engine/cookie.mjs inspect --url https://www.coupang.com --site coupang --account personal --json
+node engine/cookie.mjs import-json --site coupang --url https://www.coupang.com --from /path/to/chrome-cookies.json --json
+node engine/browser-utils.mjs cookies --url https://www.coupang.com --json
+node engine/browser-utils.mjs cookies --url https://www.coupang.com --site coupang --account personal --json
 ```
 
 `cookie.mjs import-json` accepts Chrome cookie export objects (`{ "cookies": [...] }`), raw cookie arrays, and Playwright-style arrays. CLI output redacts values.
@@ -172,10 +172,10 @@ import {
   humanTypeDelayMs,
   humanType,
   humanScroll
-} from './scripts/browser-utils.mjs';
+} from './engine/browser-utils.mjs';
 ```
 
-For cookie-only tooling, import directly from `./scripts/cookie.mjs`.
+For cookie-only tooling, import directly from `./engine/cookie.mjs`.
 
 `humanMove` randomizes target position inside the element using `DEFAULT_HUMAN_TARGET_MIN_RATIO` and `DEFAULT_HUMAN_TARGET_MAX_RATIO`, and randomizes movement steps using `DEFAULT_HUMAN_MOVE_MIN_STEPS` and `DEFAULT_HUMAN_MOVE_MAX_STEPS`. Override `ratioX`/`ratioY` for exact targeting or `minSteps`/`maxSteps` for a different movement smoothness.
 

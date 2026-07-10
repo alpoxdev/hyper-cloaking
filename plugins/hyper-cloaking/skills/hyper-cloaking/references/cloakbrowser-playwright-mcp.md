@@ -294,7 +294,7 @@ When the skill is loaded for an operational browser task and setup is missing, r
 4. Run `npx cloakbrowser install`.
 5. Run `npx cloakbrowser info`.
 6. Confirm `npx @playwright/mcp@latest --help` can run.
-7. Resolve the executable with `scripts/hyper-cloaking.mjs mcp-config`.
+7. Resolve the executable with `engine/cli.mjs mcp-config`.
 
 If network access or package installation is blocked, follow the environment's approval/escalation policy. Do not pretend setup succeeded.
 

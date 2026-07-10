@@ -17,7 +17,7 @@ persistent cookie, profile data, download, evidence, reusable browser-driver uti
 └── state/
 ```
 
-`scripts/browser-utils.mjs`가 이 구조를 필요할 때 생성합니다. sandbox test 또는 alternate user에서는 `HYPER_CLOAKING_HOME`로 경로를 override합니다.
+`engine/browser-utils.mjs`가 이 구조를 필요할 때 생성합니다. sandbox test 또는 alternate user에서는 `HYPER_CLOAKING_HOME`로 경로를 override합니다.
 
 ## Target Safety and Evidence Boundary
 
@@ -77,7 +77,7 @@ Preflight 또는 MCP-only handoff/completion에는 target classification, allowe
 ~/.hyper-cloaking/cookie.yml
 ```
 
-사용자가 사이트별 cookie를 제공한 경우 target site 방문 전에 이 file을 load합니다. 사용자가 사용할 권한이 있는 cookie만 저장합니다. 실제 cookie를 skill folder에 저장하거나 repository에 commit하지 않습니다. 모든 import, normalization, inspection, redaction, Playwright injection은 `scripts/cookie.mjs`를 사용하고 Chrome cookie export를 손으로 변환하지 않습니다.
+사용자가 사이트별 cookie를 제공한 경우 target site 방문 전에 이 file을 load합니다. 사용자가 사용할 권한이 있는 cookie만 저장합니다. 실제 cookie를 skill folder에 저장하거나 repository에 commit하지 않습니다. 모든 import, normalization, inspection, redaction, Playwright injection은 `engine/cookie.mjs`를 사용하고 Chrome cookie export를 손으로 변환하지 않습니다.
 
 권장 site/account schema:
 
@@ -180,13 +180,13 @@ Helper contract mapping: `target-safety.mjs` -> `targetSafety`, `outcome.mjs` ->
 Workspace 초기화 또는 확인:
 
 ```bash
-node scripts/browser-utils.mjs init
-node scripts/browser-utils.mjs init --workspace /tmp/cloak-workspace --json
-node scripts/cookie.mjs inspect --url https://www.coupang.com --json
-node scripts/cookie.mjs inspect --url https://www.coupang.com --site coupang --account personal --json
-node scripts/cookie.mjs import-json --site coupang --url https://www.coupang.com --from /path/to/chrome-cookies.json --json
-node scripts/browser-utils.mjs cookies --url https://www.coupang.com --json
-node scripts/browser-utils.mjs cookies --url https://www.coupang.com --site coupang --account personal --json
+node engine/browser-utils.mjs init
+node engine/browser-utils.mjs init --workspace /tmp/cloak-workspace --json
+node engine/cookie.mjs inspect --url https://www.coupang.com --json
+node engine/cookie.mjs inspect --url https://www.coupang.com --site coupang --account personal --json
+node engine/cookie.mjs import-json --site coupang --url https://www.coupang.com --from /path/to/chrome-cookies.json --json
+node engine/browser-utils.mjs cookies --url https://www.coupang.com --json
+node engine/browser-utils.mjs cookies --url https://www.coupang.com --site coupang --account personal --json
 ```
 
 `cookie.mjs import-json`은 Chrome cookie export object(`{ "cookies": [...] }`), raw cookie array, Playwright-style array를 받습니다. CLI output은 value를 redact합니다.
@@ -219,10 +219,10 @@ import {
   humanTypeDelayMs,
   humanType,
   humanScroll
-} from './scripts/browser-utils.mjs';
+} from './engine/browser-utils.mjs';
 ```
 
-Cookie-only tooling은 `./scripts/cookie.mjs`에서 직접 import합니다.
+Cookie-only tooling은 `./engine/cookie.mjs`에서 직접 import합니다.
 
 `humanMove`는 `DEFAULT_HUMAN_TARGET_MIN_RATIO`와 `DEFAULT_HUMAN_TARGET_MAX_RATIO`를 사용해 element 내부 target position을 randomized 하고, `DEFAULT_HUMAN_MOVE_MIN_STEPS`와 `DEFAULT_HUMAN_MOVE_MAX_STEPS`를 사용해 movement steps를 randomized 합니다. exact targeting이 필요하면 `ratioX`/`ratioY`, 다른 movement smoothness가 필요하면 `minSteps`/`maxSteps`를 override합니다.
 

@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import { runCli } from './cli.mjs';
 import { generateMcpConfig, mcpCommand } from './mcp-config.mjs';
-import { buildNoSandboxWarningSafeCloakOptions } from '../scripts/browser-utils.mjs';
+import { buildNoSandboxWarningSafeCloakOptions } from './browser-utils.mjs';
 
 
 async function runJson(args) {

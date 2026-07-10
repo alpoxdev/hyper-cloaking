@@ -84,11 +84,13 @@ function listRelativeFiles(dir) {
   const base = fullPath(dir);
   if (!existsSync(base)) return [];
   const output = [];
+  const skipDirs = new Set(['.git', '.gjc', '.omc', '.omx', '.impeccable', 'node_modules']);
   function walk(current) {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       const absolute = path.join(current, entry.name);
       const relative = toPosix(path.relative(base, absolute));
       if (entry.isDirectory()) {
+        if (skipDirs.has(entry.name)) continue;
         output.push(...walk(absolute));
       } else if (entry.isFile()) {
         output.push(relative);
@@ -231,6 +233,60 @@ function validateNoStalePublicIdentity() {
     }
   }
 }
+
+// Headings under which removed skill-local helper command strings may appear (bounded migration block).
+const migrationBlockHeadings = new Set([
+  '## Engine-only migration: removed commands',
+  '## Engine-only migration: removed helper commands',
+  '## Engine-only 마이그레이션: 제거된 명령'
+]);
+
+function validateEngineOnlyMigration() {
+  // The skill-local scripts helper surface must not exist in canonical or mirrors.
+  const skillBases = [
+    `${pluginRoot}/skills/hyper-cloaking`,
+    '.agents/skills/hyper-cloaking',
+    '.claude/skills/hyper-cloaking',
+    'skills/hyper-cloaking'
+  ];
+  for (const base of skillBases) {
+    rejectPathExists(`${base}/scripts`, 'skill-local scripts helper surface was removed in the engine-only migration');
+  }
+
+  // Old skill-local helper commands/imports are only allowed inside a bounded migration block in docs,
+  // inside this validator (skipped below), and nowhere else.
+  const stalePatterns = [
+    { label: 'scripts/hyper-cloaking.mjs', regex: /scripts\/hyper-cloaking\.mjs/ },
+    { label: 'scripts/browser-utils.mjs', regex: /scripts\/browser-utils\.mjs/ },
+    { label: 'scripts/cookie.mjs', regex: /scripts\/cookie\.mjs/ },
+    { label: 'skills/hyper-cloaking/scripts/', regex: /skills\/hyper-cloaking\/scripts\// },
+    { label: '../scripts/ helper import', regex: /\.\.\/scripts\// }
+  ];
+
+  const scanTargets = ['.agents', '.claude', '.codex', '.cursor', pluginRoot, 'skills'];
+  const files = scanTargets.flatMap((target) => (existsSync(fullPath(target)) ? walkFiles(target) : []));
+
+  for (const file of files) {
+    if (file === 'scripts/validate.mjs') continue;
+    const lines = readText(file).split('\n');
+    let blockLevel = 0;
+    for (const line of lines) {
+      const heading = line.match(/^(#{1,6})\s+/);
+      if (heading) {
+        const level = heading[1].length;
+        if (blockLevel && level <= blockLevel) blockLevel = 0;
+        if (!blockLevel && migrationBlockHeadings.has(line.trim())) blockLevel = level;
+        continue;
+      }
+      if (blockLevel) continue;
+      for (const pattern of stalePatterns) {
+        if (pattern.regex.test(line)) {
+          fail(`${file} contains stale ${pattern.label} outside the engine-only migration block`);
+        }
+      }
+    }
+  }
+}
 function requireText(file, needle, label = needle) {
   requireFile(file);
   if (!existsSync(fullPath(file))) return;
@@ -289,12 +345,11 @@ validateSkillPaths('.claude-plugin/marketplace.json plugins[0]', claudeMarketpla
 validateSkillPaths(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin.skills);
 
 for (const helper of [
-  'scripts/hyper-cloaking.mjs',
-  'scripts/browser-utils.mjs',
-  'scripts/cookie.mjs',
   'engine/config.mjs',
   'engine/mcp-config.mjs',
   'engine/cli.mjs',
+  'engine/browser-utils.mjs',
+  'engine/cookie.mjs',
   'engine/input-core.mjs',
   'engine/mouse.mjs',
   'engine/keyboard.mjs',
@@ -347,6 +402,8 @@ for (const dir of [`${pluginRoot}/skills`, '.agents/skills', '.claude/skills', '
 validateClientSupportSurfaces();
 
 validateNoStalePublicIdentity();
+
+validateEngineOnlyMigration();
 
 if (errors.length > 0) {
   console.error(errors.map((error) => `- ${error}`).join('\n'));

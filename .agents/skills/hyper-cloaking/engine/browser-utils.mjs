@@ -6,7 +6,7 @@
  * Humanized input behavior lives in `engine/input-core.mjs`, `engine/mouse.mjs`,
  * `engine/keyboard.mjs`, and `engine/scroll.mjs`; this file re-exports those
  * helpers for browser-oriented consumers. Cookie normalization and injection live in
- * `scripts/cookie.mjs` and are re-exported here for backward compatibility.
+ * `engine/cookie.mjs` and are re-exported here for backward compatibility.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -31,53 +31,53 @@ export {
   findByXPath,
   resolveHumanRange,
   resolveTarget
-} from '../engine/input-core.mjs';
+} from './input-core.mjs';
 export {
   humanClick,
   humanMove
-} from '../engine/mouse.mjs';
+} from './mouse.mjs';
 export {
   DEFAULT_HUMAN_TYPE_MAX_CPM,
   DEFAULT_HUMAN_TYPE_MIN_CPM,
   humanType,
   humanTypeDelayMs
-} from '../engine/keyboard.mjs';
+} from './keyboard.mjs';
 export {
   DEFAULT_HUMAN_SCROLL_PAUSE_JITTER,
   DEFAULT_HUMAN_SCROLL_PIXELS_PER_SECOND,
   humanScroll
-} from '../engine/scroll.mjs';
+} from './scroll.mjs';
 export {
   assertNavigationAllowed,
   classifyRedirect,
   classifyTargetUrl,
   normalizeOrigin as normalizeTargetOrigin
-} from '../engine/target-safety.mjs';
+} from './target-safety.mjs';
 export {
   evaluateOutcome,
   makeOutcomeReport
-} from '../engine/outcome.mjs';
+} from './outcome.mjs';
 export {
   classifyChallengeObservation,
   makeFailureDiagnostic
-} from '../engine/diagnostics.mjs';
+} from './diagnostics.mjs';
 export {
   markUntrustedBrowserContent,
   redactEvidenceText,
   summarizeEvidenceRef
-} from '../engine/evidence-boundary.mjs';
+} from './evidence-boundary.mjs';
 export {
   classifyEvidenceScope,
   isOriginApproved,
   isSameOrigin,
   makeEvidencePlan,
   normalizeOrigin as normalizeEvidenceOrigin
-} from '../engine/recon-scope.mjs';
+} from './recon-scope.mjs';
 export {
   appendRunShape,
   clearRunShapes,
   sanitizeRunShape
-} from '../engine/run-shapes.mjs';
+} from './run-shapes.mjs';
 
 export {
   COOKIE_TEMPLATE,
@@ -281,8 +281,8 @@ async function main() {
   const command = args[0] || 'help';
   if (command === 'help' || args.includes('--help') || args.includes('-h')) {
     console.log(`Usage:
-  node scripts/browser-utils.mjs init [--workspace DIR] [--json]
-  node scripts/browser-utils.mjs cookies --url URL [--site SITE] [--account ACCOUNT] [--workspace DIR] [--json]
+  node engine/browser-utils.mjs init [--workspace DIR] [--json]
+  node engine/browser-utils.mjs cookies --url URL [--site SITE] [--account ACCOUNT] [--workspace DIR] [--json]
 
 Purpose:
   Manage the Hyper Cloaking runtime workspace and provide reusable browser

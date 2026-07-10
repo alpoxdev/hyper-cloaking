@@ -52,7 +52,7 @@ import {
 } from './run-shapes.mjs';
 import {
   launchCloakBrowser
-} from '../scripts/browser-utils.mjs';
+} from './browser-utils.mjs';
 
 function parseArgs(argv) {
   const options = { _: [] };

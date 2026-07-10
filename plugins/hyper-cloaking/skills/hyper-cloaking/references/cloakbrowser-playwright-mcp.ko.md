@@ -283,7 +283,7 @@ Config file schema도 `browser.launchOptions.executablePath`를 허용하지만,
 4. `npx cloakbrowser install`을 실행합니다.
 5. `npx cloakbrowser info`를 실행합니다.
 6. `npx @playwright/mcp@latest --help`가 실행 가능한지 확인합니다.
-7. `scripts/hyper-cloaking.mjs mcp-config`로 executable을 확인합니다.
+7. `engine/cli.mjs mcp-config`로 executable을 확인합니다.
 
 network access 또는 package installation이 막히면 environment의 approval/escalation policy를 따릅니다. setup 성공을 가장하지 않습니다.
 

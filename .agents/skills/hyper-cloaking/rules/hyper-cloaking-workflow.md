@@ -42,7 +42,7 @@ If the user's prompt already contains a value, do not re-ask it. Include the exp
 
 Do not request raw cookie values unless cookies are needed and the user chooses to provide or update them. When raw cookies are provided, store them only in `~/.hyper-cloaking/cookie.yml`; never echo them back, screenshot them, or write them to the skill folder.
 
-If `scripts/cookie.mjs inspect ... --json` or `scripts/browser-utils.mjs cookies ... --json` reports `needsAccount: true`, ask the user to choose from the returned `availableAccounts` before loading cookies.
+If `engine/cookie.mjs inspect ... --json` or `engine/browser-utils.mjs cookies ... --json` reports `needsAccount: true`, ask the user to choose from the returned `availableAccounts` before loading cookies.
 
 MCP-only handoff or completion must carry forward the preflight target classification, allowed origins, final observed URL classification, outcome object, and humanization evidence or an explicit MCP limitation note.
 
@@ -87,13 +87,13 @@ npx @playwright/mcp@latest --help
 7. Resolve the executable:
 
 ```bash
-node scripts/hyper-cloaking.mjs mcp-config
+node engine/cli.mjs mcp-config
 ```
 
 8. Initialize the runtime workspace:
 
 ```bash
-node scripts/browser-utils.mjs init
+node engine/browser-utils.mjs init
 ```
 
 9. Launch Playwright MCP with the resolved executable:
@@ -123,7 +123,7 @@ If `live` cannot run because of sandbox, GUI, network, package, or binary limita
 - Create `cookie.yml`, `profiles/`, `downloads/`, `evidence/`, `logs/`, and `state/` before live browsing.
 - Use `HYPER_CLOAKING_HOME` only for sandboxed verification or an explicit alternate workspace.
 - Load matching cookies from `~/.hyper-cloaking/cookie.yml` before visiting a target site when the user has supplied cookies.
-- Use `scripts/cookie.mjs` for all cookie import, normalization, inspection, redaction, and Playwright injection.
+- Use `engine/cookie.mjs` for all cookie import, normalization, inspection, redaction, and Playwright injection.
 - Support Chrome cookie export JSON, Playwright-compatible cookie arrays, the skill's `cookie.yml` schema, and legacy flat `cookies:` lists.
 - Normalize Chrome export fields before injection: `expirationDate`/`expiry` become Playwright `expires`, `sameSite: no_restriction` becomes `None`, and `sameSite: unspecified` is omitted so Playwright may use its default.
 - Support multiple cookies per site account and multiple accounts per site.
@@ -136,10 +136,10 @@ If `live` cannot run because of sandbox, GUI, network, package, or binary limita
 Supported helper commands:
 
 ```bash
-node scripts/cookie.mjs inspect --url https://www.coupang.com --json
-node scripts/cookie.mjs import-json --site coupang --url https://www.coupang.com --from /path/to/chrome-cookies.json --json
-node scripts/browser-utils.mjs init
-node scripts/browser-utils.mjs cookies --url https://www.coupang.com --json
+node engine/cookie.mjs inspect --url https://www.coupang.com --json
+node engine/cookie.mjs import-json --site coupang --url https://www.coupang.com --from /path/to/chrome-cookies.json --json
+node engine/browser-utils.mjs init
+node engine/browser-utils.mjs cookies --url https://www.coupang.com --json
 ```
 
 ## 6. Executable Path Rules
@@ -290,7 +290,7 @@ After MCP is configured, complete the user's browser task through that MCP surfa
 
 - Navigate only to the authorized target and allowed origins.
 - Interact only with elements needed for the task.
-- Use `scripts/browser-utils.mjs` helper functions for repeated human-like mouse movement, clicks, typing, scrolling, and XPath lookup when driving CloakBrowser through the JavaScript API.
+- Use `engine/browser-utils.mjs` helper functions for repeated human-like mouse movement, clicks, typing, scrolling, and XPath lookup when driving CloakBrowser through the JavaScript API.
 - Use `humanMove` and `humanClick` so pointer target position, movement steps, and pre-click pause are randomized within conservative human-paced ranges.
 - Use `humanType` for typing work so text entry defaults to a randomized 250-270 characters per minute. Override with `delayMs` for a fixed delay or `minCpm`/`maxCpm` for another randomized range only when the user explicitly asks for another typing speed.
 - Use `humanScroll` with `pixelsPerSecond`, `steps`, `pauseMs`, or `pauseJitter` when scroll speed needs to be slower, faster, or less regular for the task.
