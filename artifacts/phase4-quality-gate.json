@@ -1,0 +1,50 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "Architecture: KEY decision — engine write actions already own the atomic reserve->dispatch->finalize guardrail sequence, so guardrail-bridge does NOT re-reserve (avoids double-counting rate/idempotency and preserving atomicity). The bridge maps tool params (dryRun default TRUE, cap clamped to 20, interactive:false) and classifies engine result envelopes; the engine action is the single dispatch path. cloak_provider_write shares the fail-closed resolution + a per-provider WRITE allowlist with the read tool. cloak_credentials delegates to redacted-only reads; reveal is structurally impossible (no cleartext API) and returns needs-confirmation. Product: dryRun default performs no navigation; unknown/read/helper actions refused; duplicate/concurrent reservations admit exactly one; credential reveal host-only. Code: single PROVIDERS table for reads+writes, single bridge, no duplication; imports guardrails/credentials via deep engine subpaths; engine unchanged.",
+    "commands": ["leader architect review over G005 changeset (guardrail-bridge.mjs, providers write tool + writes allowlist, credentials tool, index/catalog, phase4 tests)"],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "dryRun-default proven to perform NO navigation at the tool boundary; unknown-provider and read-as-write refused; duplicate + concurrent guarded reservations admit exactly one (no double dispatch); credential reveal returns needs-confirmation and list returns redacted profiles. Full mcp suite (40) green; engine guardrails invariants (16) green and unaffected.",
+    "e2eCommands": ["cd mcp && node --test --test-timeout=120000 test/*.test.mjs", "cd tests/unit/engine && node --test action-runtime/guardrails.test.mjs"],
+    "redTeamCommands": ["node --test test/phase4.contract.test.mjs (unknown/read-as-write/dryrun/idempotency/reveal)"],
+    "artifactRefs": [
+      { "id": "phase4-qa-report", "kind": "api-package-test-report", "path": "artifacts/phase4-qa-report.json", "description": "Phase 4 API QA report: write guardrail bridge + credentials + design decision" }
+    ],
+    "contractCoverage": [
+      { "id": "cc-dryrun-default", "contractRef": "AC4 (dryRun default, no write)", "obligation": "no-dryRun write performs no real write / no navigation", "status": "covered", "surfaceEvidenceRefs": ["se-write"], "adversarialCaseRefs": ["adv-dryrun-default"] },
+      { "id": "cc-idempotency", "contractRef": "AC4 (no dispatch on non-reserved; idempotent)", "obligation": "duplicate/concurrent idempotency key never double-reserves/dispatches", "status": "covered", "surfaceEvidenceRefs": ["se-guard"], "adversarialCaseRefs": ["adv-idempotency"] },
+      { "id": "cc-bulk-confirm", "contractRef": "AC5 (bulk needs host confirmation)", "obligation": "server non-interactive; bulk/confirmed alone -> needs-confirmation", "status": "covered", "surfaceEvidenceRefs": ["se-guard"], "adversarialCaseRefs": ["adv-confirmation"] },
+      { "id": "cc-write-allowlist", "contractRef": "Phase-4 (writes only via write tool, fail-closed)", "obligation": "unknown provider and read/helper actions refused at the write boundary", "status": "covered", "surfaceEvidenceRefs": ["se-write"], "adversarialCaseRefs": ["adv-write-unknown-provider", "adv-read-as-write"] },
+      { "id": "cc-credentials", "contractRef": "AC6 (secrets never cleartext)", "obligation": "reveal refused host-only; list redacted", "status": "covered", "surfaceEvidenceRefs": ["se-cred"], "adversarialCaseRefs": ["adv-reveal-blocked"] }
+    ],
+    "surfaceEvidence": [
+      { "id": "se-write", "contractRef": "cloak_provider_write", "surface": "api", "invocation": "direct handler calls: fail-closed refusals + dryRun-default no-navigation", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] },
+      { "id": "se-guard", "contractRef": "guarded reservation + confirmation invariants", "surface": "package", "invocation": "reserveGuardedAction duplicate/concurrent + engine guardrails.test.mjs + classifyWriteResult", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] },
+      { "id": "se-cred", "contractRef": "cloak_credentials", "surface": "api", "invocation": "reveal needs-confirmation + list redacted after initCredentialStore", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] }
+    ],
+    "adversarialCases": [
+      { "id": "adv-write-unknown-provider", "contractRef": "Phase-4", "scenario": "unknown provider at write tool", "expectedBehavior": "refused", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] },
+      { "id": "adv-read-as-write", "contractRef": "Phase-4", "scenario": "read action via write tool", "expectedBehavior": "refused (unsupported-write-action)", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] },
+      { "id": "adv-dryrun-default", "contractRef": "AC4", "scenario": "write without dryRun", "expectedBehavior": "dry-run, no navigation", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] },
+      { "id": "adv-idempotency", "contractRef": "AC4", "scenario": "duplicate/concurrent guarded reservations", "expectedBehavior": "exactly one reserved; never double dispatch", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] },
+      { "id": "adv-confirmation", "contractRef": "AC5", "scenario": "bulk/non-interactive confirmation", "expectedBehavior": "needs-confirmation", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] },
+      { "id": "adv-reveal-blocked", "contractRef": "AC6", "scenario": "credential reveal", "expectedBehavior": "needs-confirmation host-only, no cleartext", "verdict": "passed", "artifactRefs": ["phase4-qa-report"] }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "Leader ai-slop-cleaner sweep on the G005 changeset: no blocking findings. Key correctness call caught during the sweep — NOT re-reserving in the bridge (engine already self-guards) prevents double-counting rate/idempotency; verified engine write actions self-guard via source (resolveWriteGate/reserveGuardedAction/finalizeGuardedAction across all provider write modules). No duplication (one PROVIDERS table, one bridge), no dead code, no fallback masking. Full suite rerun clean.",
+    "fullRerun": true,
+    "rerunCommands": ["cd mcp && node --test --test-timeout=120000 test/*.test.mjs"],
+    "blockers": []
+  }
+}

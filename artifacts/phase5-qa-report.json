@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "api-package-test-report",
+  "goal": "G006",
+  "phase": "Phase 5 — distribution, slim skill, client registration, docs",
+  "surface": "package (npx bundle + full ci) + api (registration renderer)",
+  "generatedAt": "2026-07-11T17:00:00.000Z",
+  "commands": [
+    { "cmd": "cd mcp && npm run build", "result": "pass", "note": "dist/server.mjs 988KB, single shebang line 1, cloakbrowser external+dynamic, no inlined source" },
+    { "cmd": "node mcp/dist/server.mjs (stdio handshake)", "result": "pass", "note": "dist server handshakes and lists 15 tools (npx-able)" },
+    { "cmd": "cd mcp && node --test test/register.contract.test.mjs", "result": "pass", "tests": 5 },
+    { "cmd": "npm run ci", "result": "pass", "note": "validate + lint(0 errors) + format + test(e2e 5 + engine 374) + engine:validate + mcp:test(45) all green, exit 0" }
+  ],
+  "adversarialCases": [
+    { "id": "adv-dist-shebang", "scenario": "bundled dist had two shebangs (source + banner) -> invalid ESM start", "expected": "single shebang on line 1; dist server starts and handshakes", "verdict": "passed", "evidence": "removed source shebang; dist handshakes 15 tools" },
+    { "id": "adv-register-unsupported", "scenario": "render registration for an unsupported client", "expected": "rejected (Unsupported MCP client)", "verdict": "passed", "evidence": "register.contract.test.mjs" },
+    { "id": "adv-ci-lint-baseline", "scenario": "pre-existing lint errors (no-control-regex, no-unused-expressions) blocked ci", "expected": "behavior-preserving fixes -> lint exit 0 -> full ci green", "verdict": "passed", "evidence": "npm run ci exit 0; validateRelativeModulePath ASCII behavior preserved" },
+    { "id": "adv-skill-mirror", "scenario": "edit SKILL.md without mirroring to all 4 skill roots", "expected": "validate fails closed on mirror drift until parity restored", "verdict": "passed", "evidence": "SKILL.md live-surface section mirrored to skills/.claude/.agents/plugins; validate exit 0" }
+  ],
+  "deliverables": {
+    "distribution": "mcp/ npx-able: esbuild bundle externalizes cloakbrowser/playwright-core and preserves the runtime dynamic import; bin -> dist/server.mjs with a valid shebang.",
+    "registration": "mcp/src/register.mjs renders single-stdio-server registration for all 8 targets (direct, codex, json, claude-code, gajae-code, openclaw, hermes, hermes-agent), mirroring engine/mcp-config.mjs shapes.",
+    "skill": "SKILL.md gains a primary Live-surface section routing to hyper-cloaking-mcp with tool order + guardrail/consent narrative; cli.mjs live explicitly RETAINED (not deprecated). Additive routing section (full engine-glue prose removal is a follow-up).",
+    "ci": "npm run ci wired to include mcp:test (45 mcp tests) and is fully green."
+  },
+  "regressions": "none — full ci green including e2e(5), engine(374), mcp(45); pre-existing lint fixes preserve behavior.",
+  "blockers": []
+}

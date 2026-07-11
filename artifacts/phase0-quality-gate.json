@@ -1,0 +1,50 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "Architecture: workspace-in-place (engine/package.json exports covering ., ./providers/*, ./action-runtime/*, ./*) + esbuild bundle boundary is sound; no engine source moved so engine relative imports and tests are untouched (Principle 6). Import seam proven by import-smoke; distribution boundary proven by bundle test (cloakbrowser/playwright-core external, dynamic workspace fallback preserved). Product: Phase-0 acceptance met — stdio handshake completes, tools/list returns zero tools, humanize spike emits the per-method matrix and proves the default engine-routed path humanizes; exit checks P0-a/b/c pass, P0-d documented as the Phase-2 queue contract. Code: server.mjs registry seam is minimal and exercised by tests; CallTool returns a grounded structured error (no fallback masking); no dead code/duplication; engine/package.json mirrored byte-for-byte into all four skill roots keeping validate green.",
+    "commands": ["leader architect review over G001 changeset (mcp/, engine/package.json + mirrors, root workspace wiring)"],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "Real stdio MCP server spawned and handshaked via SDK client; unknown-tool call returns structured isError (no raw throw). Real CloakBrowser (humanize:true forced) launched; per-method humanization matrix captured. Distribution bundle asserted to externalize cloakbrowser/playwright-core and preserve the dynamic workspace-fallback import. 374 engine unit + 5 e2e regression tests unchanged and green; validate + engine:validate green.",
+    "e2eCommands": ["cd mcp && node --test --test-timeout=200000 test/*.test.mjs", "npm test"],
+    "redTeamCommands": ["node --test test/server.stdio.test.mjs (unknown-tool)", "node --test test/humanize-spike.test.mjs (raw keyboard humanize-gap)", "node --test test/bundle.test.mjs (inline-leak)"],
+    "artifactRefs": [
+      { "id": "phase0-qa-report", "kind": "api-package-test-report", "path": "artifacts/phase0-qa-report.json", "description": "Phase 0 API/package QA report: commands, exit checks, adversarial cases" },
+      { "id": "humanize-matrix", "kind": "algorithm-boundary-report", "path": "artifacts/humanize-spike-matrix.json", "description": "per-input-method behavioral humanization matrix from a real CloakBrowser context" },
+      { "id": "humanize-transcript", "kind": "browser-automation-transcript", "path": "artifacts/humanize-spike-transcript.json", "description": "browser automation transcript of the humanized launch/click/type/scroll run" },
+      { "id": "humanize-screenshot", "kind": "screenshot", "path": "artifacts/humanize-spike-screenshot.png", "description": "post-run screenshot of the humanized CloakBrowser page" }
+    ],
+    "contractCoverage": [
+      { "id": "cc-handshake", "contractRef": "AC1 (handshake + tools/list)", "obligation": "server starts over stdio, handshakes, lists tools (zero in Phase 0)", "status": "covered", "surfaceEvidenceRefs": ["se-stdio"], "adversarialCaseRefs": ["adv-unknown-tool"] },
+      { "id": "cc-humanize", "contractRef": "AC2/2b (humanize proof + matrix)", "obligation": "default engine-routed input is measurably humanized; per-method matrix emitted", "status": "covered", "surfaceEvidenceRefs": ["se-browser"], "adversarialCaseRefs": ["adv-raw-keyboard"] },
+      { "id": "cc-packaging", "contractRef": "P0-b/P0-c (import + bundle boundary)", "obligation": "mcp imports deep engine modules by package name; bundle externalizes native deps and preserves dynamic fallback", "status": "covered", "surfaceEvidenceRefs": ["se-package"], "adversarialCaseRefs": ["adv-bundle-inline"] },
+      { "id": "cc-noregress", "contractRef": "AC7 (engine unchanged, tests green)", "obligation": "engine imported unchanged; engine + e2e tests pass without assertion edits", "status": "covered", "surfaceEvidenceRefs": ["se-package"], "adversarialCaseRefs": ["adv-mirror-drift"] }
+    ],
+    "surfaceEvidence": [
+      { "id": "se-stdio", "contractRef": "MCP stdio server", "surface": "api", "invocation": "StdioClientTransport spawn of node mcp/src/server.mjs + initialize/listTools/callTool", "verdict": "passed", "artifactRefs": ["phase0-qa-report"] },
+      { "id": "se-browser", "contractRef": "humanized input surface", "surface": "web", "invocation": "launchCloakBrowser({headless:true}); humanClick/humanType/humanScroll on a data: page with mousemove/keydown recorders", "verdict": "passed", "artifactRefs": ["humanize-transcript", "humanize-screenshot", "humanize-matrix"] },
+      { "id": "se-package", "contractRef": "hyper-cloaking-engine package + esbuild bundle", "surface": "package", "invocation": "node --test import-smoke.test.mjs + bundle.test.mjs + npm test + npm run validate/engine:validate", "verdict": "passed", "artifactRefs": ["phase0-qa-report"] }
+    ],
+    "adversarialCases": [
+      { "id": "adv-unknown-tool", "contractRef": "AC10 (no raw throw to client)", "scenario": "call a non-existent tool over stdio", "expectedBehavior": "structured isError result, never a raw exception", "verdict": "passed", "artifactRefs": ["phase0-qa-report"] },
+      { "id": "adv-raw-keyboard", "contractRef": "AC2b (refuse un-proven humanize paths)", "scenario": "raw page.keyboard.press on a humanize:true context", "expectedBehavior": "measurably NOT humanized, justifying engine-routed default + boundary refusal", "verdict": "passed", "artifactRefs": ["humanize-matrix"] },
+      { "id": "adv-bundle-inline", "contractRef": "P0-c (externalize native deps)", "scenario": "detect cloakbrowser source inlined into the bundle", "expectedBehavior": "cloakbrowser externalized, not inlined", "verdict": "passed", "artifactRefs": ["phase0-qa-report"] },
+      { "id": "adv-mirror-drift", "contractRef": "AC7 (no regression)", "scenario": "add engine/package.json to the canonical skill without mirroring; run npm run validate", "expectedBehavior": "validate fails closed on mirror drift until all 4 skill roots match, then passes", "verdict": "passed", "artifactRefs": ["phase0-qa-report"] }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "Leader ai-slop-cleaner sweep on the G001 changeset found no blocking findings (registry seam exercised; grounded structured error; real assertions; no dead code/duplication). Pre-existing lint errors in scripts/jsdoc-inventory.mjs and scripts/audit-jsdoc.mjs are baseline debt outside this changeset and outside the mcp lint scope. Full verification rerun clean after the cleanup review.",
+    "fullRerun": true,
+    "rerunCommands": ["cd mcp && node --test --test-timeout=200000 test/*.test.mjs", "npm test", "npm run validate", "npm run engine:validate"],
+    "blockers": []
+  }
+}

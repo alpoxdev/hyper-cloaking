@@ -1,0 +1,48 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "Architecture: single session-manager owns the browser handle + a FIFO queue over EVERY session-touching call (launch/navigate/snapshot/click/type/scroll/screenshot/teardown), with depth-bounded busy back-pressure and idle teardown routed through the same queue with claim-gating (A4). Tools are factory-wired to one process-wide manager. Reads use native ariaSnapshot({mode:'ai'}); writes resolve ref/selector via snapshot-resolver (C1: bare eXX id, resolver prepends aria-ref=) into engine humanized input. Product: launch forces humanize (no param disables); navigate uses non-throwing classifyTargetUrl and refuses non-ok dispositions with needs-preflight and NO navigation; teardown is claim-gated; snapshot is untrusted-marked/truncated (C2). Code: teardown closes the browser (closes contexts+pages), fixing a process-leak; error-signal maps target-safety throws to needs-preflight so no raw throw escapes.",
+    "commands": ["leader architect review over G003 changeset (session-manager, snapshot-resolver, tools/lifecycle|navigate|interact, error-signal target-safety rule, tests)"],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "24-test mcp suite green: real-browser humanize-contract proves cloak_click multi-step trusted motion + paced cloak_type and that a synthetic click yields no humanized motion (teeth); navigate refuses unsafe/approval-required with no goto; queue serializes + busy-bounds; teardown + idle respect claim-gating; snapshot untrusted-marked.",
+    "e2eCommands": ["cd mcp && node --test --test-timeout=120000 test/*.test.mjs"],
+    "redTeamCommands": ["node --test test/humanize-contract.test.mjs (synthetic-click teeth)", "node --test test/navigate.contract.test.mjs (unsafe/approval no-nav)", "node --test test/session-queue.test.mjs (race/busy/teardown/idle)"],
+    "artifactRefs": [
+      { "id": "phase2-qa-report", "kind": "api-package-test-report", "path": "artifacts/phase2-qa-report.json", "description": "Phase 2 API QA report: commands + adversarial cases" },
+      { "id": "humanize-transcript", "kind": "browser-automation-transcript", "path": "artifacts/humanize-spike-transcript.json", "description": "browser automation transcript of the engine humanized input path the Phase-2 tools invoke" },
+      { "id": "humanize-screenshot", "kind": "screenshot", "path": "artifacts/humanize-spike-screenshot.png", "description": "non-uniform screenshot of the humanized run (visible typed text)" }
+    ],
+    "contractCoverage": [
+      { "id": "cc-humanize-tool", "contractRef": "AC2 (humanized click/type via tools)", "obligation": "cloak_click/cloak_type route through engine humanized input; non-humanized action detectable", "status": "covered", "surfaceEvidenceRefs": ["se-browser"], "adversarialCaseRefs": ["adv-synthetic-click"] },
+      { "id": "cc-navigate", "contractRef": "AC3 (off-origin needs-preflight)", "obligation": "unsafe/approval-required URLs refused with no navigation", "status": "covered", "surfaceEvidenceRefs": ["se-tools"], "adversarialCaseRefs": ["adv-navigate-unsafe"] },
+      { "id": "cc-queue", "contractRef": "AC3b (serialized queue + busy)", "obligation": "interleaved calls serialized; overflow -> busy, never a raced page", "status": "covered", "surfaceEvidenceRefs": ["se-tools"], "adversarialCaseRefs": ["adv-queue-race"] },
+      { "id": "cc-teardown", "contractRef": "Phase-2 gate (teardown gating)", "obligation": "teardown/idle refuse to drop a session with pending claims unless forced", "status": "covered", "surfaceEvidenceRefs": ["se-tools"], "adversarialCaseRefs": ["adv-teardown-claims"] }
+    ],
+    "surfaceEvidence": [
+      { "id": "se-tools", "contractRef": "Phase-2 session tools", "surface": "api", "invocation": "direct handler calls (navigate/queue/teardown) + live stdio tools/list of 12 cloak_* tools", "verdict": "passed", "artifactRefs": ["phase2-qa-report"] },
+      { "id": "se-browser", "contractRef": "humanized input via cloak_click/cloak_type", "surface": "web", "invocation": "launchCloakBrowser + cloak_click/cloak_type through the session manager; motion recorded", "verdict": "passed", "artifactRefs": ["humanize-transcript", "humanize-screenshot", "phase2-qa-report"] }
+    ],
+    "adversarialCases": [
+      { "id": "adv-synthetic-click", "contractRef": "AC2", "scenario": "engine cloak_click vs synthetic DOM click", "expectedBehavior": "engine path humanized; synthetic path 0 moves", "verdict": "passed", "artifactRefs": ["phase2-qa-report"] },
+      { "id": "adv-navigate-unsafe", "contractRef": "AC3", "scenario": "navigate to file:// and http://", "expectedBehavior": "needs-preflight, no goto", "verdict": "passed", "artifactRefs": ["phase2-qa-report"] },
+      { "id": "adv-queue-race", "contractRef": "AC3b", "scenario": "interleave + overflow queue", "expectedBehavior": "serialized; overflow busy", "verdict": "passed", "artifactRefs": ["phase2-qa-report"] },
+      { "id": "adv-teardown-claims", "contractRef": "Phase-2 gate", "scenario": "teardown/idle with pending claim", "expectedBehavior": "needs-confirmation / session kept alive", "verdict": "passed", "artifactRefs": ["phase2-qa-report"] }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "Leader ai-slop-cleaner sweep on the G003 changeset: caught and fixed a real teardown resource leak (was closing context, not browser -> hung process); no fallback masking (needs-preflight/busy/needs-confirmation are grounded states); no duplication (shared TARGET_SCHEMA, single resolver, single manager); no dead code. Full 24-test suite rerun clean after the fix.",
+    "fullRerun": true,
+    "rerunCommands": ["cd mcp && node --test --test-timeout=120000 test/*.test.mjs"],
+    "blockers": []
+  }
+}

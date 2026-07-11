@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "browser-automation-transcript",
+  "tool": "cloakbrowser+playwright-core",
+  "surface": "web",
+  "engine": "cloakbrowser (humanize:true)",
+  "screenshot": "/Users/alpox/Desktop/dev/alpox/hyper-cloaking/artifacts/humanize-spike-screenshot.png",
+  "actions": [
+    {
+      "timestamp": "2026-07-11T16:33:38.833Z",
+      "step": 1,
+      "type": "launch",
+      "selector": "browser",
+      "detail": "launchCloakBrowser({headless:true}) humanize:true forced",
+      "verdict": "ok"
+    },
+    {
+      "timestamp": "2026-07-11T16:33:38.834Z",
+      "step": 2,
+      "type": "navigate",
+      "selector": "data:",
+      "detail": "data: page with mousemove/keydown/wheel recorders",
+      "verdict": "ok"
+    },
+    {
+      "timestamp": "2026-07-11T16:33:38.835Z",
+      "step": 3,
+      "type": "humanClick",
+      "selector": "button",
+      "detail": "moves=111 trusted=true",
+      "verdict": "humanized"
+    },
+    {
+      "timestamp": "2026-07-11T16:33:38.836Z",
+      "step": 4,
+      "type": "humanType",
+      "selector": "input",
+      "detail": "\"hello\" keys=5 deltas=[256,261,262,266]",
+      "verdict": "humanized"
+    },
+    {
+      "timestamp": "2026-07-11T16:33:38.837Z",
+      "step": 5,
+      "type": "humanScroll",
+      "selector": "body",
+      "detail": "800px/6steps wheel=6",
+      "verdict": "humanized"
+    },
+    {
+      "timestamp": "2026-07-11T16:33:38.838Z",
+      "step": 6,
+      "type": "screenshot",
+      "selector": "page",
+      "detail": "/Users/alpox/Desktop/dev/alpox/hyper-cloaking/artifacts/humanize-spike-screenshot.png",
+      "verdict": "ok"
+    }
+  ]
+}

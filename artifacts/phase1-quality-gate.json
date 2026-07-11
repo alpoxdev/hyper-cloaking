@@ -1,0 +1,43 @@
+{
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "evidence": "Architecture: shared error-signal.mjs (ajv validation + throw->typed-signal + secret redaction) is the single boundary layer; tools/index.mjs is the catalog seam the server registers, so tools/list reflects real capability and later phases extend one list. Product: Phase-1 acceptance met — cloak_setup/status/cookies_list/cookies_status are read-only and session-less (no launch); cookie values redacted; account ambiguity returns structured needs-account. Code: tools import the engine facade (ensureWorkspace, cookie.mjs) unchanged; no duplicated cookie logic; invalid input returns invalid-args rather than throwing.",
+    "commands": ["leader architect review over G002 changeset (mcp/src/error-signal.mjs, tools/setup.mjs, tools/cookies.mjs, tools/index.mjs, server wiring, tests)"],
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "evidence": "Contract tests drive each tool handler and the live stdio catalog: redaction proven (no secret leaks), needs-account signal proven, invalid-args proven non-throwing. Full mcp suite (11 tests) green including the Phase-0 real-browser spike and bundle/import checks.",
+    "e2eCommands": ["cd mcp && node --test test/tools.contract.test.mjs test/server.stdio.test.mjs", "cd mcp && node --test test/*.test.mjs"],
+    "redTeamCommands": ["node --test test/tools.contract.test.mjs (secret-leak, account-ambiguity, bad-input)"],
+    "artifactRefs": [
+      { "id": "phase1-qa-report", "kind": "api-package-test-report", "path": "artifacts/phase1-qa-report.json", "description": "Phase 1 API QA report: commands + adversarial cases" }
+    ],
+    "contractCoverage": [
+      { "id": "cc-redaction", "contractRef": "AC6 (redaction, no secret leak)", "obligation": "cookie values redacted; no secret in results/logs", "status": "covered", "surfaceEvidenceRefs": ["se-tools"], "adversarialCaseRefs": ["adv-secret-leak"] },
+      { "id": "cc-needs-account", "contractRef": "Phase-1 gate (needs-account on ambiguity)", "obligation": "multi-account site with no account -> structured needs-account", "status": "covered", "surfaceEvidenceRefs": ["se-tools"], "adversarialCaseRefs": ["adv-account-ambiguity"] },
+      { "id": "cc-no-throw", "contractRef": "AC10 (no raw throw to client)", "obligation": "invalid input becomes a structured signal", "status": "covered", "surfaceEvidenceRefs": ["se-tools"], "adversarialCaseRefs": ["adv-bad-input"] }
+    ],
+    "surfaceEvidence": [
+      { "id": "se-tools", "contractRef": "Phase-1 MCP tools", "surface": "api", "invocation": "direct handler calls + live stdio tools/list of cloak_setup/status/cookies_list/cookies_status", "verdict": "passed", "artifactRefs": ["phase1-qa-report"] }
+    ],
+    "adversarialCases": [
+      { "id": "adv-secret-leak", "contractRef": "AC6", "scenario": "list cookies whose records carry secret values", "expectedBehavior": "values redacted; raw secret never in output", "verdict": "passed", "artifactRefs": ["phase1-qa-report"] },
+      { "id": "adv-account-ambiguity", "contractRef": "Phase-1 gate", "scenario": "multi-account site, no account chosen", "expectedBehavior": "needs-account with availableAccounts, no records", "verdict": "passed", "artifactRefs": ["phase1-qa-report"] },
+      { "id": "adv-bad-input", "contractRef": "AC10", "scenario": "non-string workspace argument", "expectedBehavior": "invalid-args structured signal, no throw", "verdict": "passed", "artifactRefs": ["phase1-qa-report"] }
+    ],
+    "blockers": []
+  },
+  "iteration": {
+    "status": "passed",
+    "evidence": "Leader ai-slop-cleaner sweep on the G002 changeset: no blocking findings — no fallback masking (needs-account is grounded engine state, invalid-args is real validation), no duplication (single SELECTION_SCHEMA, single error mapper), no dead code. Verification rerun clean.",
+    "fullRerun": true,
+    "rerunCommands": ["cd mcp && node --test --test-timeout=200000 test/*.test.mjs"],
+    "blockers": []
+  }
+}
