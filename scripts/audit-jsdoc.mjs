@@ -130,9 +130,11 @@ function documentable(node) {
 function walk(node, out = []) {
   if (!node || typeof node !== 'object') return out;
   if (documentable(node)) out.push(node);
-  for (const [key, value] of Object.entries(node))
-    if (!['loc', 'range'].includes(key))
-      Array.isArray(value) ? value.forEach((item) => walk(item, out)) : walk(value, out);
+  for (const [key, value] of Object.entries(node)) {
+    if (['loc', 'range'].includes(key)) continue;
+    if (Array.isArray(value)) value.forEach((item) => walk(item, out));
+    else walk(value, out);
+  }
   return out;
 }
 function analyze(file) {

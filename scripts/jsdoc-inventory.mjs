@@ -19,7 +19,7 @@ export function validateRelativeModulePath(value) {
   return (
     typeof value === 'string' &&
     value.length > 0 &&
-    /^[\x00-\x7F]+$/.test(value) &&
+    [...value].every((ch) => ch.charCodeAt(0) <= 0x7f) &&
     !value.startsWith('/') &&
     !/^[A-Za-z]:/.test(value) &&
     !value.includes('\\') &&
