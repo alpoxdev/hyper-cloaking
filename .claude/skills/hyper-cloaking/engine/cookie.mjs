@@ -153,7 +153,7 @@ function parseScalar(value) {
 function assignPair(target, source) {
   const index = source.indexOf(':');
   if (index === -1) return;
-  const key = requireSafeCookieKey(source.slice(0, index).trim(), 'cookie property');
+  const key = requireSafeCookieProperty(source.slice(0, index).trim(), 'cookie property');
   const value = source.slice(index + 1);
   target[key] = parseScalar(value);
 }
@@ -659,6 +659,23 @@ function requireSafeCookieKey(value, label) {
     || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value)
     || Object.prototype.hasOwnProperty.call(Object.prototype, value)
     || Object.prototype.hasOwnProperty.call(Function.prototype, value)
+  ) {
+    throw new TypeError(`${label} must be a safe identifier`);
+  }
+  return value;
+}
+
+// Data field keys (cookie properties, site/account metadata) legitimately include
+// names that Function.prototype owns, such as `name` and `length`. Only block the
+// keys that can actually pollute a plain-object prototype chain. The identifier
+// regex already rejects `__proto__` (leading underscore); the set covers the rest.
+const COOKIE_PROPERTY_POLLUTION_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+function requireSafeCookieProperty(value, label) {
+  if (
+    typeof value !== 'string'
+    || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value)
+    || COOKIE_PROPERTY_POLLUTION_KEYS.has(value)
   ) {
     throw new TypeError(`${label} must be a safe identifier`);
   }
