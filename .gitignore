@@ -1,6 +1,9 @@
 # 의존성 (Dependencies)
 node_modules/
 
+# 빌드 산출물 (Build output)
+mcp/dist/
+
 # 로그 (Logs)
 npm-debug.log*
 

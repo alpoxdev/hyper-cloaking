@@ -1,0 +1,23 @@
+{
+  "name": "hyper-cloaking-engine",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared CloakBrowser-backed automation engine consumed by the hyper-cloaking skill and the hyper-cloaking-mcp server.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./browser-utils.mjs",
+    "./package.json": "./package.json",
+    "./providers/*": "./providers/*",
+    "./action-runtime/*": "./action-runtime/*",
+    "./agents/*": "./agents/*",
+    "./*": "./*"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "cloakbrowser": "^0.4.10",
+    "playwright-core": "^1.61.1"
+  }
+}

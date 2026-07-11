@@ -2,6 +2,10 @@
   "name": "hyper-cloaking",
   "version": "0.0.1",
   "private": true,
+  "workspaces": [
+    "skills/hyper-cloaking/engine",
+    "mcp"
+  ],
   "description": "Portable Hyper Cloaking skill for CloakBrowser-backed Playwright MCP workflows.",
   "type": "module",
   "scripts": {
@@ -12,19 +16,23 @@
     "lint:fix": "oxlint --fix plugins scripts tests",
     "test": "node --test tests/e2e/*.test.mjs && cd tests/unit/engine && node --test",
     "engine:validate": "node skills/hyper-cloaking/engine/cli.mjs validate --json",
-    "ci": "npm run validate && npm run lint && npm run format:check && npm test && npm run engine:validate",
-    "ci:compat": "npm test && npm run engine:validate",
+    "mcp:test": "node --test --test-timeout=120000 mcp/test/*.test.mjs",
+    "ci": "npm run validate && npm run lint && npm run format:check && npm test && npm run engine:validate && npm run mcp:test",
+    "ci:compat": "npm test && npm run engine:validate && npm run mcp:test",
     "format": "prettier --write \"plugins/**/*.mjs\" \"scripts/**/*.mjs\" \"tests/**/*.mjs\" \".github/workflows/ci.yml\"",
     "format:check": "prettier --check \"plugins/**/*.mjs\" \"scripts/**/*.mjs\" \"tests/**/*.mjs\" \".github/workflows/ci.yml\""
   },
   "dependencies": {
     "ajv": "^8.20.0",
-    "cloakbrowser": "^0.4.9",
+    "cloakbrowser": "^0.4.10",
     "playwright-core": "^1.61.1"
   },
   "devDependencies": {
-    "oxlint": "^1.73.0",
     "acorn": "8.15.0",
+    "oxlint": "^1.73.0",
     "prettier": "^3.9.5"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
   }
 }
