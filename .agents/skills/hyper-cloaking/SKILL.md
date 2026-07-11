@@ -39,6 +39,21 @@ Do not use this skill to help bypass access controls, evade fraud systems, solve
 
 </routing_rule>
 
+<live_surface>
+
+## Live surface: the `hyper-cloaking-mcp` server (recommended)
+
+The primary live surface is the stdio MCP server under `mcp/` (`hyper-cloaking-mcp`). It holds one humanized CloakBrowser session (shared across callers via a per-session FIFO queue) and exposes the engine as typed `cloak_*` tools, so MCP-capable clients call tools instead of reading engine files and writing glue.
+
+- **Humanize is structural**: the server owns `launchCloakBrowser` (humanize is force-enabled) and routes all generic input through the engine's `humanClick`/`humanType`/`humanScroll`; no tool param can disable it.
+- **Host owns the human**: tools never call AskUserQuestion. They return structured `needs-preflight` / `needs-confirmation` signals; the host runs the question and re-calls with proof.
+- **Tool order**: `cloak_setup` → `cloak_launch` → `cloak_navigate` → `cloak_snapshot` → act (`cloak_click` / `cloak_type` / `cloak_scroll` / `cloak_screenshot`) → provider actions (`cloak_provider_read` / `cloak_provider_write`) → `cloak_teardown`. Session-less tools (`cloak_setup`, `cloak_status`, `cloak_cookies_list` / `_status`, `cloak_credentials`) may be called any time.
+- **Writes are guarded**: `cloak_provider_write` is `dryRun`-default; the engine enforces reserve→dispatch→finalize, rate limits, idempotency, and bulk confirmation. The server is non-interactive, so bulk writes return `needs-confirmation` until the host re-drives them. Cookie values and credential secrets are never returned in cleartext; page-derived output is untrusted-marked.
+- **Registration**: `mcp/src/register.mjs` renders single-stdio-server registration snippets for each supported client (direct, codex, json, claude-code, gajae-code, openclaw, hermes, hermes-agent), pointing at `npx hyper-cloaking-mcp` (or a `node <dist>` command override). This mirrors the `engine/mcp-config.mjs` shapes, which remain the setup helper for the EXTERNAL `@playwright/mcp` config.
+- **`cli.mjs live` is retained** as the supported one-shot / CI verification entry point (it is not deprecated); the MCP server is the recommended stateful live path.
+
+</live_surface>
+
 <instruction_contract>
 
 | Field | Contract |
