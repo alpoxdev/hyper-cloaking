@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "taskMode": "verification-only",
+  "targetUrl": "https://example.com/",
+  "allowedOrigins": ["https://example.com"],
+  "headless": true,
+  "workspace": "/tmp/hyper-cloaking-e2e",
+  "provider": null,
+  "cookieSite": null,
+  "account": null,
+  "agentStagingRoot": "/tmp/hyper-cloaking-e2e-stage",
+  "maxRedirects": 2
+}

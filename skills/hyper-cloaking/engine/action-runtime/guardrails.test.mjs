@@ -57,7 +57,78 @@ test('rate window persists across calls and blocks at the cap', async () => {
   const recovered = await checkAndRecordAction(dir, 'like', { maxPerWindow: 3, windowMs: 1000, now: now + 5000 });
   assert.equal(recovered.allowed, true);
 });
+test('rate preflight does not consume an event', async () => {
+  const dir = await tmpStateDir();
+  const options = { maxPerWindow: 1, windowMs: 1000, now: 1_000_000_000_000 };
 
+  const preflight = await checkAndRecordAction(dir, 'like', { ...options, record: false });
+  assert.equal(preflight.allowed, true);
+  assert.equal(preflight.count, 0);
+
+  const reservation = await checkAndRecordAction(dir, 'like', options);
+  assert.equal(reservation.allowed, true);
+  assert.equal(reservation.count, 1);
+});
+
+test('rate state rejects corrupt JSON and invalid shapes', async () => {
+  const corruptDir = await tmpStateDir();
+  await fs.writeFile(path.join(corruptDir, 'action-rate.json'), '{not json', 'utf8');
+  await assert.rejects(
+    checkAndRecordAction(corruptDir, 'like'),
+    SyntaxError
+  );
+
+  const invalidDir = await tmpStateDir();
+  await fs.writeFile(path.join(invalidDir, 'action-rate.json'), JSON.stringify({ like: 'not-an-array' }), 'utf8');
+  await assert.rejects(
+    checkAndRecordAction(invalidDir, 'like'),
+    /invalid action-rate state/
+  );
+});
+
+test('concurrent rate reservations cannot exceed the cap or lose events', async () => {
+  const dir = await tmpStateDir();
+  const results = await Promise.all(
+    Array.from({ length: 8 }, (_, index) => checkAndRecordAction(dir, 'like', {
+      maxPerWindow: 3,
+      windowMs: 1000,
+      now: 1_000_000_000_000 + index
+    }))
+  );
+
+  assert.equal(results.filter((result) => result.allowed).length, 3);
+  assert.equal(results.filter((result) => !result.allowed).length, 5);
+
+  const store = JSON.parse(await fs.readFile(path.join(dir, 'action-rate.json'), 'utf8'));
+  assert.equal(store.like.length, 3);
+});
+
+test('atomic rate persistence preserves concurrent action-type events', async () => {
+  const dir = await tmpStateDir();
+  const actions = Array.from({ length: 12 }, (_, index) => checkAndRecordAction(
+    dir,
+    index % 2 === 0 ? 'like' : 'comment',
+    { maxPerWindow: 10, windowMs: 1000, now: 1_000_000_000_000 + index }
+  ));
+
+  const results = await Promise.all(actions);
+  assert.equal(results.every((result) => result.allowed), true);
+
+  const store = JSON.parse(await fs.readFile(path.join(dir, 'action-rate.json'), 'utf8'));
+  assert.equal(store.like.length, 6);
+  assert.equal(store.comment.length, 6);
+});
+
+test('rate state and persistence failures propagate', async () => {
+  const dir = await tmpStateDir();
+  const statePath = path.join(dir, 'not-a-directory');
+  await fs.writeFile(statePath, 'file', 'utf8');
+
+  await assert.rejects(
+    checkAndRecordAction(statePath, 'like'),
+    (error) => error?.code === 'EEXIST' || error?.code === 'ENOTDIR'
+  );
+});
 test('bulk ledger makes resume idempotent (skip already-sent)', async () => {
   const dir = await tmpStateDir();
   const runId = 'batch-1';

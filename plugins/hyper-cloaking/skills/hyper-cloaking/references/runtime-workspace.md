@@ -19,6 +19,12 @@ The default runtime workspace is:
 
 `engine/browser-utils.mjs` creates this structure on demand. For sandboxed tests or alternate users, override the path with `HYPER_CLOAKING_HOME`.
 
+## Role Evidence and Protocol
+
+Parent-executed role output uses agent protocol integer `schemaVersion: 1`; this is separate from the engine release/config version `0.0.1`. Browser roles write only relative evidence files below a parent-created staging directory. After verified browser cleanup, the parent validates and publishes them under `evidence/<evidenceId>/` with a token-bound `.publication.json` state (`reserved`, `publishing`, `complete`). A receipt exists only for `complete`.
+
+Diagnostics and failure JSON are generated in a separate parent-private staging directory. Cookie, authorization, token, password, credential, absolute/traversal, duplicate, reserved, and symlink evidence paths are rejected or redacted. Roles never publish final evidence themselves. Interrupted publication may be recovered only with the matching invocation token and recorded hashes.
+
 ## Preflight, Target Safety, and Run Shape
 
 Before setup, cookie loading, or browser launch, ask one bundled preflight question through the host's native structured question surface when available. Claude Code, Codex, Gajae-Code/GJC, Cursor, and other clients may expose different names for the same AskUserQuestion-style capability; use the native mechanism when it exists, and fall back to one concise plain-text question only when it does not. Run the Target Safety Gate first or include it in this preflight.

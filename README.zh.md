@@ -218,10 +218,13 @@ scripts/validate.mjs            # 结构 + 镜像一致性验证
 npm run validate      # 结构与镜像一致性检查
 npm run lint          # 对 plugins 与 scripts 运行 oxlint
 npm run format        # prettier 格式化
+npm test              # 根目录 E2E 与规范引擎测试
+npm run ci            # 完整的本地 CI 检查
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # 引擎自检（无网络）
 ```
 
-测试是位于 `engine/` 下的同址 `*.test.mjs` 文件，用 `node --test` 运行。
+`npm test` 会运行根目录 E2E 套件和规范的 `skills/hyper-cloaking/engine` 测试。`npm run validate` 会验证各技能镜像目录逐字节一致。
+首次成功运行 GitHub Actions 后，确认必需的作业检查名称为 `quality` 和 `Node 20 compatibility`，再为 `main` 分支配置 Ruleset；本仓库不会自动应用该设置。
 
 ---
 

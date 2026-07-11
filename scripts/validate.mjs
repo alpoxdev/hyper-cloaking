@@ -1,5 +1,9 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import {
+  MANAGED_EXCLUDED_SEGMENTS,
+  OWNED_CANONICAL_MANIFEST
+} from '../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/lib/sync-mirror.mjs';
 
 const root = process.cwd();
 const pluginRoot = 'plugins/hyper-cloaking';
@@ -97,14 +101,14 @@ function listRelativeFiles(dir) {
       const relative = toPosix(path.relative(base, absolute));
       if (entry.isDirectory()) {
         if (skipDirs.has(entry.name)) continue;
-        output.push(...walk(absolute));
+        walk(absolute);
       } else if (entry.isFile()) {
         output.push(relative);
       }
     }
     return output;
   }
-  return walk(base).sort();
+  return walk(base).toSorted();
 }
 
 function assertDirectorySame(left, right) {
@@ -255,6 +259,14 @@ function validateEngineOnlyMigration() {
       `${base}/scripts`,
       'skill-local scripts helper surface was removed in the engine-only migration'
     );
+    rejectPathExists(
+      `${base}/engine/providers/youtube.mjs`,
+      'flat YouTube provider module was replaced by the directory module'
+    );
+    rejectPathExists(
+      `${base}/engine/providers/reddit.mjs`,
+      'flat Reddit provider module was replaced by the directory module'
+    );
   }
 
   // Old skill-local helper commands/imports are only allowed inside a bounded migration block in docs,
@@ -291,6 +303,79 @@ function validateEngineOnlyMigration() {
         }
       }
     }
+  }
+}
+function validateAgentContracts(packageManifest, packageLock) {
+  const canonical = `${pluginRoot}/skills/hyper-cloaking`;
+  const roleNames = ['setup-agent', 'browser-task-agent', 'diagnostics-agent'];
+  const requiredSections = [
+    '## Objective',
+    '## Trigger',
+    '## Inputs',
+    '## Allowed Tools',
+    '## Forbidden Actions',
+    '## Output Contract',
+    '## Stop Conditions',
+    '## Parent Handoff'
+  ];
+
+  for (const role of roleNames) {
+    for (const suffix of ['.md', '.ko.md']) {
+      const file = `${canonical}/rules/agents/${role}${suffix}`;
+      requireFile(file);
+      if (!existsSync(fullPath(file))) continue;
+      const text = readText(file);
+      let previous = -1;
+      for (const section of requiredSections) {
+        const index = text.indexOf(section);
+        if (index === -1) fail(`${file} is missing ${section}`);
+        if (index <= previous) fail(`${file} has role sections out of order`);
+        previous = index;
+      }
+    }
+  }
+
+  for (const file of [
+    `${canonical}/SKILL.md`,
+    `${canonical}/SKILL.ko.md`,
+    `${canonical}/rules/hyper-cloaking-workflow.md`,
+    `${canonical}/rules/hyper-cloaking-workflow.ko.md`
+  ]) {
+    requireText(file, '3A.', 'portable parent-executed routing marker');
+    requireText(file, 'parent-dispatcher.mjs', 'internal parent dispatcher');
+  }
+
+  const schemaFile = `${canonical}/engine/agents/schemas/hyper-cloaking-agent-output.schema.json`;
+  const schema = parseJson(schemaFile);
+  if (schema.$schema !== 'https://json-schema.org/draft/2020-12/schema')
+    fail(`${schemaFile} must use JSON Schema 2020-12`);
+  if (schema.unevaluatedProperties !== false)
+    fail(`${schemaFile} root must set unevaluatedProperties=false`);
+  if (schema.properties?.schemaVersion?.const !== 1)
+    fail(`${schemaFile} agent protocol schemaVersion must be integer 1`);
+  if (expectedVersion !== '0.0.1') fail('engine release/config version must remain 0.0.1');
+
+  const expectedExclusions = ['.git', '.gjc', '.impeccable', '.omc', '.omx', 'node_modules'];
+  if (JSON.stringify(MANAGED_EXCLUDED_SEGMENTS) !== JSON.stringify(expectedExclusions)) {
+    fail('managed mirror exclusion policy changed unexpectedly');
+  }
+  if (new Set(OWNED_CANONICAL_MANIFEST).size !== OWNED_CANONICAL_MANIFEST.length) {
+    fail('owned canonical manifest contains duplicates');
+  }
+  for (const relative of OWNED_CANONICAL_MANIFEST) {
+    if (relative.includes('*') || path.isAbsolute(relative) || relative.startsWith('..')) {
+      fail(`owned canonical manifest contains unsafe path ${relative}`);
+    }
+    requireFile(`${canonical}/${relative}`);
+  }
+
+  if (!packageManifest.dependencies?.ajv || !packageManifest.dependencies.ajv.startsWith('^8.')) {
+    fail('package.json must include Ajv 8 as a production dependency');
+  }
+  const lockedAjv =
+    packageLock.packages?.['node_modules/ajv']?.version || packageLock.dependencies?.ajv?.version;
+  if (!lockedAjv || !String(lockedAjv).startsWith('8.')) {
+    fail('package-lock.json must lock Ajv 8');
   }
 }
 function requireText(file, needle, label = needle) {
@@ -331,6 +416,7 @@ function validateClientSupportSurfaces() {
 }
 
 const packageManifest = parseJson('package.json');
+const packageLock = parseJson('package-lock.json');
 const claudeMarketplace = parseJson('.claude-plugin/marketplace.json');
 const codexMarketplace = parseJson('.agents/plugins/marketplace.json');
 const claudePlugin = parseJson(`${pluginRoot}/.claude-plugin/plugin.json`);
@@ -361,6 +447,7 @@ validateSkillPaths(
   claudeMarketplace.plugins?.[0]?.skills
 );
 validateSkillPaths(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin.skills);
+validateAgentContracts(packageManifest, packageLock);
 
 for (const helper of [
   'engine/config.mjs',
@@ -379,6 +466,24 @@ for (const helper of [
   'engine/recon-scope.mjs',
   'engine/run-shapes.mjs',
   'engine/cli-integration.test.mjs',
+  'engine/agents/setup-agent.mjs',
+  'engine/agents/setup-agent.test.mjs',
+  'engine/agents/browser-task-agent.mjs',
+  'engine/agents/browser-task-agent.test.mjs',
+  'engine/agents/diagnostics-agent.mjs',
+  'engine/agents/diagnostics-agent.test.mjs',
+  'engine/agents/parent-dispatcher.mjs',
+  'engine/agents/parent-verify.mjs',
+  'engine/agents/parent-verify.test.mjs',
+  'engine/agents/evidence-writer.mjs',
+  'engine/agents/evidence-writer.test.mjs',
+  'engine/agents/routing.test.mjs',
+  'engine/agents/lib/allowed-origin-guard.mjs',
+  'engine/agents/lib/allowed-origin-guard.test.mjs',
+  'engine/agents/lib/sync-mirror.mjs',
+  'engine/agents/lib/sync-mirror.test.mjs',
+  'engine/agents/schemas/hyper-cloaking-agent-output.schema.json',
+  'engine/agents/schemas/hyper-cloaking-agent-output.ko.md',
   'engine/outcome-diagnostics-boundary.test.mjs',
   'engine/recon-run-shapes.test.mjs',
   'engine/target-safety.test.mjs',
@@ -386,7 +491,20 @@ for (const helper of [
   'engine/providers/registry.mjs',
   'engine/providers/generic.mjs',
   'engine/providers/naver.mjs',
-  'engine/providers/reddit.mjs',
+  'engine/providers/session.mjs',
+  'engine/providers/reddit/index.mjs',
+  'engine/providers/reddit/metadata.mjs',
+  'engine/providers/reddit/selectors.mjs',
+  'engine/providers/reddit/session.mjs',
+  'engine/providers/reddit/actions/ids.mjs',
+  'engine/providers/reddit/actions/listing.mjs',
+  'engine/providers/reddit/actions/post.mjs',
+  'engine/providers/reddit/actions/user.mjs',
+  'engine/providers/reddit/actions/analyze.mjs',
+  'engine/providers/reddit/actions/reactions.mjs',
+  'engine/providers/reddit/actions/analyze.test.mjs',
+  'engine/providers/reddit/actions/reads.test.mjs',
+  'engine/providers/reddit/reddit-actions.test.mjs',
   'engine/providers/instagram/index.mjs',
   'engine/providers/instagram/metadata.mjs',
   'engine/providers/instagram/selectors.mjs',
@@ -401,7 +519,19 @@ for (const helper of [
   'engine/action-runtime/guardrails.mjs',
   'engine/action-runtime/action-result.mjs',
   'engine/action-runtime/guardrails.test.mjs',
-  'engine/providers/youtube.mjs',
+  'engine/providers/youtube/index.mjs',
+  'engine/providers/youtube/metadata.mjs',
+  'engine/providers/youtube/selectors.mjs',
+  'engine/providers/youtube/session.mjs',
+  'engine/providers/youtube/actions/ids.mjs',
+  'engine/providers/youtube/actions/search.mjs',
+  'engine/providers/youtube/actions/video.mjs',
+  'engine/providers/youtube/actions/channel.mjs',
+  'engine/providers/youtube/actions/analyze.mjs',
+  'engine/providers/youtube/actions/reactions.mjs',
+  'engine/providers/youtube/actions/analyze.test.mjs',
+  'engine/providers/youtube/actions/reads.test.mjs',
+  'engine/providers/youtube/youtube-actions.test.mjs',
   'engine/providers/x.mjs',
   'engine/providers/index.mjs',
   'engine/providers/provider-registry.test.mjs',
@@ -426,12 +556,12 @@ assertDirectorySame(hyperCanonicalDir, '.agents/skills/hyper-cloaking');
 assertDirectorySame(hyperCanonicalDir, '.claude/skills/hyper-cloaking');
 assertDirectorySame(hyperCanonicalDir, 'skills/hyper-cloaking');
 
-const expectedSkillDirs = [...skillNames].sort();
+const expectedSkillDirs = [...skillNames].toSorted();
 for (const dir of [`${pluginRoot}/skills`, '.agents/skills', '.claude/skills', 'skills']) {
   const actualSkillDirs = readdirSync(fullPath(dir), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
-    .sort();
+    .toSorted();
   if (JSON.stringify(actualSkillDirs) !== JSON.stringify(expectedSkillDirs)) {
     fail(
       `${dir} directories ${JSON.stringify(actualSkillDirs)} do not match expected ${JSON.stringify(expectedSkillDirs)}`

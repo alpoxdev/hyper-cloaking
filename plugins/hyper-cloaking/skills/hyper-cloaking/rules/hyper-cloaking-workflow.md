@@ -106,6 +106,18 @@ Do not run `playwright install chromium` as the default CloakBrowser setup path.
 
 If install or `npx` download fails because of network, sandbox, or registry access, follow the active environment's escalation policy. If escalation is unavailable, report that precise blocker and provide the command/config that will work after setup.
 
+## 3A. Portable Parent-Executed Role Routing
+
+Use the role contracts under `rules/agents/` only through the internal `engine/agents/parent-dispatcher.mjs` dispatcher:
+
+| Trigger | Role | Boundary | Parent action |
+| --- | --- | --- | --- |
+| Setup or MCP configuration | `setup` | No browser launch, safe sandbox config only | Verify the setup envelope; stop or request separately authorized setup on blockers |
+| Authorized live verification | `browser-task` | One verification-only navigation, exact origins, bounded redirects | Require verified cleanup before publishing staged evidence |
+| Completed setup/browser failure | `diagnostics` | Read-only evidence classification, no retry or write | Verify and optionally publish the in-memory report |
+
+The parent owns target authorization, role selection, schema verification, final evidence publication, and recovery journals. Roles never call the evidence writer or mirror synchronizer. `native_unavailable`, `spawn_failed`, and `contract_failure` are terminal no-fallback routes. Do not expose these engine-local roles as a restored `scripts/` wrapper or host-native agent surface.
+
 ## 4. Run Shape Gate
 
 Use the `run-shapes.mjs` contract to label the run before verification:

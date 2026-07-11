@@ -218,10 +218,13 @@ Los directorios de skill se mantienen replicados byte a byte. Valida la paridad 
 npm run validate      # comprobaciones de estructura y paridad de mirrors
 npm run lint          # oxlint sobre plugins y scripts
 npm run format        # escritura con prettier
+npm test              # pruebas E2E raíz y del motor canónico
+npm run ci            # comprobación de CI local completa
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # autoverificación del motor (sin red)
 ```
 
-Las pruebas son archivos `*.test.mjs` coubicados bajo `engine/`, ejecutables con `node --test`.
+`npm test` ejecuta la suite E2E raíz y las pruebas canónicas de `skills/hyper-cloaking/engine`. `npm run validate` demuestra la paridad byte a byte entre los directorios de skill replicados.
+Después de la primera ejecución correcta de GitHub Actions, configura un Ruleset para la rama `main` solo tras confirmar que las comprobaciones de trabajo requeridas se llaman `quality` y `Node 20 compatibility`; este repositorio no aplica esa configuración automáticamente.
 
 ---
 

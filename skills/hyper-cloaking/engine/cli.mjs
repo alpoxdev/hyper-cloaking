@@ -43,7 +43,9 @@ import {
 } from './evidence-boundary.mjs';
 import {
   classifyEvidenceScope,
-  makeEvidencePlan
+  isOriginApproved,
+  makeEvidencePlan,
+  normalizeOrigin
 } from './recon-scope.mjs';
 import {
   appendRunShape,
@@ -70,21 +72,30 @@ function parseArgs(argv) {
 
     const inline = arg.indexOf('=');
     if (inline !== -1) {
-      options[arg.slice(2, inline)] = arg.slice(inline + 1);
+      assignOption(options, arg.slice(2, inline), arg.slice(inline + 1));
       continue;
     }
 
     const key = arg.slice(2);
     const next = argv[index + 1];
     if (!next || next.startsWith('--')) {
-      options[key] = true;
+      assignOption(options, key, true);
       continue;
     }
 
-    options[key] = next;
+    assignOption(options, key, next);
     index += 1;
   }
   return options;
+}
+
+function assignOption(options, key, value) {
+  if (key !== 'allowed-origin') {
+    options[key] = value;
+    return;
+  }
+  const values = options[key] || [];
+  options[key] = Array.isArray(values) ? [...values, value] : [values, value];
 }
 
 function wantsJson(options) {
@@ -482,26 +493,42 @@ async function newPageFromBrowser(browser) {
   throw new Error('CloakBrowser launch returned no Playwright-compatible page factory');
 }
 
-async function closeBrowserHandle(browser) {
+export async function closeBrowserHandle(browser, timeoutMs = 5_000) {
   if (!browser || typeof browser.close !== 'function') {
-    return { ok: true, closed: false, reason: 'no browser handle' };
+    return { ok: true, closed: false, timedOut: false, blocker: 'no browser handle' };
   }
+  let timer;
   try {
-    await browser.close();
-    return { ok: true, closed: true };
+    await Promise.race([
+      browser.close(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          const error = new Error(`browser close timed out after ${timeoutMs}ms`);
+          error.code = 'HYPER_CLOAKING_CLOSE_TIMEOUT';
+          reject(error);
+        }, timeoutMs);
+      })
+    ]);
+    return { ok: true, closed: true, timedOut: false, blocker: null };
   } catch (error) {
     return {
       ok: false,
       closed: false,
+      timedOut: error?.code === 'HYPER_CLOAKING_CLOSE_TIMEOUT',
       blocker: error instanceof Error ? error.message : String(error)
     };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-async function installNavigationSafety(page, options = {}) {
+export async function installNavigationSafety(page, options = {}) {
   if (!page || typeof page.route !== 'function') {
     return { ok: false, blocker: 'Playwright route interception is unavailable; unsafe redirects cannot be blocked before request dispatch' };
   }
+  const allowedOrigins = normalizedAllowedOrigins(options.allowedOrigins || []);
+  const maxRedirects = normalizeMaxRedirects(options.maxRedirects);
+  const state = { documentUrls: [], violations: [], maxRedirects };
   await page.route('**/*', async (route) => {
     const request = route.request();
     const isNavigation = typeof request.isNavigationRequest === 'function'
@@ -512,30 +539,61 @@ async function installNavigationSafety(page, options = {}) {
       return;
     }
     const url = request.url();
+    state.documentUrls.push(url);
+    const aboutBlankAllowed = options.allowAboutBlank === true && url === 'about:blank';
+    const publicDocumentCount = state.documentUrls.filter((item) => item !== 'about:blank').length;
+    const redirectCount = Math.max(0, publicDocumentCount - 1);
+    const originAllowed = aboutBlankAllowed || isOriginApproved(url, allowedOrigins);
     const safety = classifyTargetUrl(url, options);
-    if (safety.disposition !== 'ok') {
+    if (!originAllowed || redirectCount > maxRedirects || safety.disposition !== 'ok') {
+      const reason = !originAllowed ? 'origin-not-allowed' : redirectCount > maxRedirects ? 'max-redirects-exceeded' : safety.reason;
+      state.violations.push(`${reason}:${url}`);
       await route.abort('blockedbyclient');
       return;
     }
     await route.continue();
   });
   Object.defineProperty(page, '__hyperCloakingNavigationSafety', {
-    value: true,
+    value: state,
     configurable: true
   });
-  return { ok: true };
+  return { ok: true, state };
+}
+
+function normalizedAllowedOrigins(values) {
+  const list = Array.isArray(values) ? values : [values];
+  const normalized = list.filter((value) => value !== undefined && value !== null && value !== true).map((value) => normalizeOrigin(value));
+  if (normalized.some((value) => value === null)) throw new Error('allowed origin is invalid or opaque');
+  if (new Set(normalized).size !== normalized.length) throw new Error('allowed origins contain duplicates');
+  return normalized;
+}
+
+function normalizeMaxRedirects(value) {
+  const parsed = value === undefined ? 5 : Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 5) throw new Error('maxRedirects must be an integer from 0 to 5');
+  return parsed;
 }
 
 async function readPageTextSignal(page) {
   if (!page) return '';
-  try {
-    if (typeof page.locator === 'function') {
+  const failures = [];
+  if (typeof page.locator === 'function') {
+    try {
       const body = page.locator('body');
       if (body && typeof body.innerText === 'function') return await body.innerText({ timeout: 1_000 });
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
     }
-    if (typeof page.textContent === 'function') return await page.textContent('body', { timeout: 1_000 }) || '';
-  } catch {
-    return '';
+  }
+  if (typeof page.textContent === 'function') {
+    try {
+      return await page.textContent('body', { timeout: 1_000 }) || '';
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(`page text signal unavailable: ${failures.join('; ')}`);
   }
   return '';
 }
@@ -556,15 +614,29 @@ async function withTemporaryEnv(envPatch, fn) {
   }
 }
 
-async function gotoAndClassify(page, fromUrl, toUrl, options = {}) {
-  if (page?.__hyperCloakingNavigationSafety !== true) {
+export async function gotoAndClassify(page, fromUrl, toUrl, options = {}) {
+  const navigationState = page?.__hyperCloakingNavigationSafety;
+  if (!navigationState || typeof navigationState !== 'object') {
     const error = new Error('Navigation safety route interception must be installed before page.goto');
     error.code = 'HYPER_CLOAKING_NAVIGATION_SAFETY_NOT_INSTALLED';
+    throw error;
+  }
+  const aboutBlankAllowed = options.allowAboutBlank === true && toUrl === 'about:blank';
+  const allowedOrigins = normalizedAllowedOrigins(options.allowedOrigins || []);
+  if (!aboutBlankAllowed && !isOriginApproved(toUrl, allowedOrigins)) {
+    const error = new Error(`Navigation origin is not authorized: ${toUrl}`);
+    error.code = 'HYPER_CLOAKING_ORIGIN_NOT_ALLOWED';
     throw error;
   }
   assertNavigationAllowed(toUrl, options);
   await page.goto(toUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
   const finalUrl = typeof page.url === 'function' ? page.url() : toUrl;
+  const finalAboutBlankAllowed = options.allowAboutBlank === true && finalUrl === 'about:blank';
+  if (!finalAboutBlankAllowed && !isOriginApproved(finalUrl, allowedOrigins)) {
+    const error = new Error(`Navigation redirected to unauthorized origin: ${finalUrl}`);
+    error.code = 'HYPER_CLOAKING_ORIGIN_NOT_ALLOWED';
+    throw error;
+  }
   const redirectSafety = classifyRedirect(fromUrl, finalUrl, options);
   if (redirectSafety.disposition !== 'ok') {
     const error = new Error(`Navigation redirected to unsafe target: ${redirectSafety.reason}`);
@@ -572,7 +644,7 @@ async function gotoAndClassify(page, fromUrl, toUrl, options = {}) {
     error.classification = redirectSafety;
     throw error;
   }
-  return { finalUrl, redirectSafety };
+  return { finalUrl, redirectSafety, documentUrls: [...navigationState.documentUrls], violations: [...navigationState.violations] };
 }
 
 async function captureLiveEvidence(page, evidenceDir) {
@@ -695,15 +767,34 @@ function buildCookieSelection(options, providerInfo, matchedViaNavigationOnlyAli
   };
 }
 
-async function liveCommand(options, env = process.env) {
+export async function runLiveVerification(options, deps = {}) {
+  const runtimeEnv = deps.env ?? process.env;
+  const importPackage = deps.tryImportPackage ?? tryImportPackage;
+  const findExecutables = deps.executableCandidates ?? executableCandidates;
+  const buildMcpConfig = deps.generateMcpConfig ?? generateMcpConfig;
+  const launchBrowser = deps.launchCloakBrowser ?? launchCloakBrowser;
+  const createPage = deps.newPageFromBrowser ?? newPageFromBrowser;
+  const installSafety = deps.installNavigationSafety ?? installNavigationSafety;
+  const navigate = deps.gotoAndClassify ?? gotoAndClassify;
+  const readTextSignal = deps.readPageTextSignal ?? readPageTextSignal;
+  const captureEvidence = deps.captureLiveEvidence ?? captureLiveEvidence;
+  const closeBrowser = deps.closeBrowserHandle ?? closeBrowserHandle;
+  const runWithTemporaryEnv = deps.withTemporaryEnv ?? withTemporaryEnv;
   const home = resolveHome(options.home || DEFAULT_HOME);
   const target = String(options.target || 'about:blank');
   const publicTarget = String(options['public-target'] || 'https://example.com');
   const navigationTarget = target === 'about:blank' ? publicTarget : target;
+  const requestedOrigins = options.allowedOrigins || options['allowed-origin'];
+  const allowedOrigins = normalizedAllowedOrigins(
+    requestedOrigins === undefined ? [normalizeOrigin(navigationTarget)] : requestedOrigins
+  );
+  if (!isOriginApproved(navigationTarget, allowedOrigins)) {
+    throw new Error(`Navigation target origin is not in allowedOrigins: ${navigationTarget}`);
+  }
+  const maxRedirects = normalizeMaxRedirects(options.maxRedirects ?? options['max-redirects']);
   const targetSafety = targetSafetyFor(target);
   const navigationTargetSafety = targetSafetyFor(navigationTarget);
   const contentBoundary = sampleContentBoundary(target);
-
   // Provider resolution happens alongside target computation, before any
   // cookie/browser/package work. An explicit unknown --provider (or an
   // invalid/ambiguous inferred host) fails closed here.
@@ -752,7 +843,7 @@ async function liveCommand(options, env = process.env) {
     liveLaunch: 'pending-preflight'
   });
   if (learningEnabled) await appendRunShape(homePath(home, 'state'), runShape, { learning: true });
-  const childEnv = containedEnv(home, env);
+  const childEnv = containedEnv(home, runtimeEnv);
   const containmentEntries = [
     ['HOME', childEnv.HOME],
     ['HYPER_CLOAKING_HOME', childEnv.HYPER_CLOAKING_HOME],
@@ -779,15 +870,15 @@ async function liveCommand(options, env = process.env) {
 
   const packageChecks = [];
   for (const packageName of [CLOAKBROWSER_PACKAGE, PLAYWRIGHT_CORE_PACKAGE]) {
-    const check = await withTemporaryEnv(childEnv, () => tryImportPackage(packageName));
+    const check = await runWithTemporaryEnv(childEnv, () => importPackage(packageName));
     packageChecks.push(check);
     if (!check.ok) blockers.push(`${packageName} unavailable: ${check.blocker.reason}`);
   }
 
-  const mcpExecutablePath = (await executableCandidates(homePath(home, 'cache', 'cloakbrowser')))[0];
+  const mcpExecutablePath = (await findExecutables(homePath(home, 'cache', 'cloakbrowser')))[0];
   if (!mcpExecutablePath) blockers.push(`No executable found under ${homePath(home, 'cache', 'cloakbrowser')}`);
   const mcpConfig = mcpExecutablePath
-    ? generateMcpConfig({
+    ? buildMcpConfig({
       client: 'json',
       executablePath: mcpExecutablePath,
       headless: wantsHeadless(options)
@@ -886,22 +977,43 @@ async function liveCommand(options, env = process.env) {
   let browser;
   let page;
   const attempted = ['target classification', 'containment audit', 'Node runtime check', 'package import checks', 'CloakBrowser JS launch'];
+  const parentStaged = options.publicationMode === 'parent-staged';
+  const evidenceDir = parentStaged
+    ? path.resolve(String(options.agentStagingRoot || ''))
+    : homePath(home, 'evidence');
+  if (parentStaged && (!options.agentStagingRoot || !path.isAbsolute(evidenceDir))) {
+    throw new Error('parent-staged live verification requires an absolute agentStagingRoot');
+  }
   try {
-    const launched = await withTemporaryEnv(childEnv, () => launchCloakBrowser({ workspace: home, headless: wantsHeadless(options) }));
+    const launched = await runWithTemporaryEnv(childEnv, () => launchBrowser({ workspace: home, headless: wantsHeadless(options) }));
     browser = launched.browser;
-    page = await newPageFromBrowser(browser);
-    const routeSafety = await installNavigationSafety(page, { allowAboutBlank: true, context: 'setup' });
+    page = await createPage(browser);
+    const routeSafety = await installSafety(page, {
+      allowAboutBlank: true,
+      context: 'setup',
+      allowedOrigins,
+      maxRedirects
+    });
     if (!routeSafety.ok) {
       const error = new Error(routeSafety.blocker);
       error.code = 'HYPER_CLOAKING_REDIRECT_INTERCEPTION_UNAVAILABLE';
       throw error;
     }
     attempted.push('about:blank navigation');
-    await gotoAndClassify(page, 'about:blank', 'about:blank', { allowAboutBlank: true, context: 'setup' });
+    await navigate(page, 'about:blank', 'about:blank', {
+      allowAboutBlank: true,
+      context: 'setup',
+      allowedOrigins,
+      maxRedirects
+    });
     attempted.push('safe public navigation');
-    const navigation = await gotoAndClassify(page, target, navigationTarget, { allowAboutBlank: true });
+    const navigation = await navigate(page, target, navigationTarget, {
+      allowAboutBlank: true,
+      allowedOrigins,
+      maxRedirects
+    });
     const title = typeof page.title === 'function' ? await page.title() : '';
-    const bodyText = await readPageTextSignal(page);
+    const bodyText = await readTextSignal(page);
     const challenge = classifyChallengeObservation({
       url: navigation.finalUrl,
       title,
@@ -913,9 +1025,9 @@ async function liveCommand(options, env = process.env) {
       error.challenge = challenge;
       throw error;
     }
-    const evidenceRefs = await captureLiveEvidence(page, homePath(home, 'evidence'));
-    const cleanup = await closeBrowserHandle(browser);
-    browser = null;
+    const evidenceRefs = await captureEvidence(page, evidenceDir);
+    const cleanup = await closeBrowser(browser);
+    if (cleanup.closed) browser = null;
     const outcome = safeOutcome(
       {
         url: navigation.finalUrl,
@@ -939,10 +1051,12 @@ async function liveCommand(options, env = process.env) {
       evidence: 'launchCloakBrowser configuration requests humanize:true; runtime telemetry is unavailable',
       blocker: 'runtime humanization telemetry unavailable'
     };
-    const livePassed = outcome.passed && humanization.ok;
+    const cleanupVerified = cleanup.ok === true && cleanup.closed === true && cleanup.timedOut === false;
+    const livePassed = outcome.passed && humanization.ok && cleanupVerified;
     const liveBlockers = [
       ...outcome.failedCriteria.map((criterion) => `${criterion.id} failed`),
-      ...(humanization.ok ? [] : [humanization.blocker])
+      ...(humanization.ok ? [] : [humanization.blocker]),
+      ...(cleanupVerified ? [] : [cleanup.blocker || 'browser cleanup could not be verified'])
     ];
 
     return makeResult('live', {
@@ -957,8 +1071,14 @@ async function liveCommand(options, env = process.env) {
         target: navigationTarget,
         ok: livePassed,
         finalUrl: navigation.finalUrl,
-        redirectSafety: navigation.redirectSafety
+        redirectSafety: navigation.redirectSafety,
+        documentUrls: navigation.documentUrls,
+        violations: navigation.violations,
+        allowedOrigins,
+        maxRedirects
       },
+      publicationMode: parentStaged ? 'parent-staged' : 'legacy-final',
+      evidenceRefs,
       humanization,
       mcpFeasibility: {
         ok: Boolean(mcpConfig),
@@ -969,7 +1089,7 @@ async function liveCommand(options, env = process.env) {
       ...completionFields({
         targetSafety: navigation.redirectSafety,
         outcome,
-        failure: livePassed ? null : blockedFailure('live-outcome', liveBlockers, attempted),
+        failure: livePassed ? null : blockedFailure(cleanupVerified ? 'live-outcome' : 'browser-cleanup-unverified', liveBlockers, attempted),
         contentBoundary,
         learning: baseLiveFields.learning
       }),
@@ -977,9 +1097,18 @@ async function liveCommand(options, env = process.env) {
       liveLaunch: 'attempted'
     });
   } catch (error) {
-    const cleanup = await closeBrowserHandle(browser);
+    const cleanup = await closeBrowser(browser);
     const reason = error instanceof Error ? error.message : String(error);
-    const failure = blockedFailure('live-browser-launch-or-navigation', [reason], attempted);
+    const cleanupVerified = cleanup.ok === true && cleanup.closed === true && cleanup.timedOut === false;
+    const catchBlockers = [
+      reason,
+      ...(cleanupVerified ? [] : [cleanup.blocker || 'browser cleanup could not be verified'])
+    ].filter((value, index, values) => values.indexOf(value) === index);
+    const failure = blockedFailure(
+      cleanupVerified ? 'live-browser-launch-or-navigation' : 'browser-cleanup-unverified',
+      catchBlockers,
+      attempted
+    );
     return makeResult('live', {
       ok: false,
       status: 'blocked',
@@ -1005,7 +1134,7 @@ async function liveCommand(options, env = process.env) {
         blocker: mcpConfig ? null : `No executable found under ${homePath(home, 'cache', 'cloakbrowser')}`
       },
       cleanup,
-      blockers: [reason],
+      blockers: catchBlockers,
       ...completionFields({
         targetSafety: error?.classification ?? navigationTargetSafety,
         outcome: safeOutcome(
@@ -1045,7 +1174,7 @@ export async function runCli(argv = process.argv.slice(2), io = {}) {
     } else if (command === 'mcp-config') {
       result = await mcpConfigCommand(options);
     } else if (command === 'live') {
-      result = await liveCommand(options);
+      result = await runLiveVerification(options);
     } else {
       result = { ok: false, status: 'failed', command, error: `Unknown command: ${command}`, ...baseMetadata() };
     }

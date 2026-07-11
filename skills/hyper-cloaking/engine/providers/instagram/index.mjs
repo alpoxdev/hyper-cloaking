@@ -4,10 +4,10 @@
 // provider registry) PLUS an importable actions namespace. The registry only
 // ever sees `instagramProvider`; the action/selector/session modules are sibling
 // exports and are never added to the providers[] array, so the metadata schema's
-// FORBIDDEN_PROVIDER_FIELDS (selectors/automationRecipe) never applies to them.
+// forbidden automation fields never apply to those sibling module exports.
 
 export { instagramProvider } from './metadata.mjs';
-export { buildInstagramSession, OffOriginError, ChallengeBlockedError } from './session.mjs';
+export { buildInstagramSession, OffOriginError, ChallengeBlockedError, TargetSafetyError } from './session.mjs';
 export { instagramSelectors, SELECTORS_VERSION } from './selectors.mjs';
 
 import { getUser } from './actions/user.mjs';

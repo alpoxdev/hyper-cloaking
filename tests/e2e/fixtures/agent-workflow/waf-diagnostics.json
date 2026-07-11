@@ -1,0 +1,6 @@
+{
+  "code": "waf-challenge",
+  "phase": "browser-live",
+  "retryable": false,
+  "observedSignal": "challenge page observed"
+}

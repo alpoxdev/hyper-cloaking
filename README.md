@@ -218,10 +218,13 @@ The skill directories are kept byte-for-byte mirrored. Validate parity and metad
 npm run validate      # structure and mirror-parity checks
 npm run lint          # oxlint over plugins and scripts
 npm run format        # prettier write
+npm test              # root E2E and canonical engine tests
+npm run ci            # complete local CI gate
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # engine self-check (no network)
 ```
 
-Tests are colocated `*.test.mjs` files under `engine/`, runnable with `node --test`.
+`npm test` runs the root E2E suite and the canonical `skills/hyper-cloaking/engine` tests. `npm run validate` proves byte-for-byte parity across the mirrored skill directories.
+After the first successful GitHub Actions run, configure a `main` branch Ruleset only after confirming that the required job checks are named `quality` and `Node 20 compatibility`; this repository does not apply that setting automatically.
 
 ---
 

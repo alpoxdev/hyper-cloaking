@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "agent": "browser-task",
+  "status": "succeeded",
+  "executionMode": "parent",
+  "failure": null,
+  "result": {}
+}

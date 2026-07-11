@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "client": "direct",
+  "workspace": "/tmp/hyper-cloaking-e2e",
+  "headless": true,
+  "sandbox": true
+}

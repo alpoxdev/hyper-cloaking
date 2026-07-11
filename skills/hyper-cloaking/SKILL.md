@@ -98,6 +98,7 @@ Boundary example:
 1. **Run the Target Safety Gate.** Decide whether the user needs setup/config only, a live browser task, troubleshooting, or a reusable MCP config. Classify authorization, allowed origins, disallowed origins, credential/account sensitivity, and whether the request must be refused or narrowed before installing or browsing.
 2. **Load current reference when needed.** Read `references/cloakbrowser-playwright-mcp.md` before changing setup commands, MCP flags, executable path guidance, Node requirements, license/version notes, or safety wording.
 3. **Run the preflight question gate.** Before setup, cookie loading, or browser launch, ask one bundled preflight question through the host's structured question tool when available. Confirm or collect: target URL/site if missing, allowed origins, `headless` mode (`true` by default; `false` only when requested or selected), cookie mode (`use existing cookie.yml`, `provide/update cookie.yml`, or `no cookies`), cookie site/account when needed, whether to keep the browser open after completion, and any profile/account label. If the user already supplied a value in the prompt, do not re-ask it; include it in the preflight summary. Never ask for raw cookie values unless cookies are needed and the user chooses to provide/update them.
+3A. **Route through portable parent-executed roles.** Treat `rules/agents/setup-agent.md`, `rules/agents/browser-task-agent.md`, and `rules/agents/diagnostics-agent.md` as internal role contracts, not host-native agent registrations. The parent selects exactly one trigger through `engine/agents/parent-dispatcher.mjs`, verifies every result with the closed v1 schema, and owns authorization, teardown gating, evidence publication, and mirror/recovery state. `browser-task` is verification-only: it performs no arbitrary action list and cannot succeed without observed humanization telemetry plus verified cleanup. Unsupported native execution returns `native_unavailable`; spawn and contract failures stop without parent fallback or retry.
 4. **Run the activation setup gate.** On every operational run, verify `node --version`, `npm --version`, a writable setup workspace, `cloakbrowser`, `playwright-core`, the ability to run `npx @playwright/mcp@latest`, and a cached CloakBrowser binary. If any required piece is missing, set it up before browser work when the active environment permits it.
 5. **Initialize the runtime workspace.** Use `engine/browser-utils.mjs init` to create `~/.hyper-cloaking/` with `cookie.yml`, `profiles/`, `downloads/`, `evidence/`, `logs/`, and `state/`. Use `HYPER_CLOAKING_HOME` only for sandboxed tests or an explicit alternate workspace.
 6. **Install or update missing setup.** Use `npm install cloakbrowser@latest playwright-core@latest` in the selected Node workspace, or a project-appropriate package manager if one already exists. Use `npx cloakbrowser install` to pre-download the binary and `npx cloakbrowser info` to inspect status. Treat `@playwright/mcp` as npx-provided by default; install it persistently only if the target client requires local package resolution.
@@ -205,9 +206,9 @@ This is an intentional engine-only hard migration, not an accidental omission. T
 
 `engine/cli.mjs live` accepts an optional `--provider ID` (`naver`, `reddit`, `instagram`, `youtube`, `x`, or `generic`). It selects **metadata only** — domain/origin suggestions and cookie/profile/preflight hints — and never authorizes broader origins or bypasses target-safety, recon, or preflight. An unknown `--provider` fails closed (`unknown-provider`) before any cookie or browser work. Without `--provider`, the provider is inferred from the navigation target URL, and unknown hosts fall back to `generic`. Cookie selection stays controlled by `--cookie-site`/`--site` and `--account`; a provider `cookie.siteKey` is only a hint applied after preflight authorization, and redirect shorteners resolve the provider for navigation without seeding a cookie hint.
 
-## Instagram action modules (importable)
+## Provider action modules (importable)
 
-Provider *metadata* stays metadata-only (no selectors/automation — enforced by `engine/providers/schema.mjs`). Reusable Instagram *action* flows live as **sibling modules** so you `import` a tested function instead of hand-writing a flow each session. They are **JS-driver (`live` lane) helpers** — they need a real Playwright `page` from `launchCloakBrowser`/`launchPersistentCloakContext` and are **not usable in Playwright-MCP mode** (no `page` handle there). Provider-agnostic guardrails live at `engine/action-runtime/`.
+Provider *metadata* stays metadata-only (no action/session/selector automation fields — enforced by `engine/providers/schema.mjs`). Reusable Instagram, YouTube, and Reddit *action* flows live as **sibling modules** so you `import` tested functions instead of hand-writing a flow each session. They are **JS-driver (`live` lane) helpers** — they need a real Playwright `page` from `launchCloakBrowser`/`launchPersistentCloakContext` and are **not usable in Playwright-MCP mode** (no `page` handle there). Provider-agnostic guardrails and result shaping live at `engine/action-runtime/`.
 
 ```js
 import { buildInstagramSession, instagramActions } from './engine/providers/instagram/index.mjs';
@@ -227,7 +228,26 @@ await instagramActions.likePost(session, 'https://www.instagram.com/p/ABC/', { d
 await instagramActions.replyToDM(session, threads.content[0], '고마워요!', { dryRun: false });
 ```
 
-**Authorized personal-automation scope.** These modules automate the user's *own* authenticated account for personal management, and are permitted only under the built-in guardrails: writes are dry-run by default; DM replies target **existing** conversations only (an opaque `/direct/t/<id>` handle from `listDMThreads`/`readDMThread`, never a username or `/direct/new/` — no cold outreach); bulk replies are capped, rate-limited via a persisted rolling window, human-confirmed (the confirmation gate cannot be satisfied non-interactively), and resumable so an interrupted run never re-sends. This is an additive allowance; the `<forbidden>` ban on *unauthorized*, mass/unsolicited, or evasive account automation is unchanged. Any challenge/CAPTCHA/rate-limit signal still stops the flow as a diagnostic blocker.
+```js
+import { buildYouTubeSession, youtubeActions } from './engine/providers/youtube/index.mjs';
+import { buildRedditSession, redditActions } from './engine/providers/reddit/index.mjs';
+
+// Reads return untrusted envelopes; pure analyzers consume their structured content.
+const youtube = buildYouTubeSession(page, { allowedOrigins: ['https://www.youtube.com'], stateDir: paths.stateDir });
+const channel = await youtubeActions.getChannel(youtube, '@NASA', { limit: 12 });
+const channelReport = youtubeActions.analyzeChannel(channel.content.videos);
+
+const reddit = buildRedditSession(page, { allowedOrigins: ['https://www.reddit.com'], stateDir: paths.stateDir });
+const listing = await redditActions.getSubreddit(reddit, 'AskReddit', { sort: 'new', limit: 25 });
+const activityReport = redditActions.analyzeActivity(listing.content.posts);
+
+// Every write is dry-run by default. High-abuse writes need a distinct per-action opt-in too.
+await youtubeActions.commentVideo(youtube, 'dQw4w9WgXcQ', 'Thanks!', { dryRun: false });
+await youtubeActions.subscribeChannel(youtube, '@NASA', { dryRun: false, enableSubscribe: true });
+await redditActions.upvotePost(reddit, listing.content.posts[0], { dryRun: false, enableUpvote: true });
+```
+
+**Authorized personal-automation scope.** These modules automate the user's *own* authenticated account for personal management, and are permitted only under the built-in guardrails: writes are dry-run by default; DM/comment replies target **existing** conversations/posts/comments only (opaque handles produced by read actions — no cold outreach); bulk replies are capped, persisted-rate-limited, human-confirmed, and resumable. YouTube subscribe and Reddit upvote are structural blockers unless their distinct `enableSubscribe` / `enableUpvote` opt-in is paired with `dryRun:false`. Guarded navigation can throw `TargetSafetyError` before navigation. Action results distinguish a real transition (`performed:true`, `changed:true`) from an already-satisfied no-op (`ok:true`, `performed:false`, `changed:false`, `alreadySatisfied:true`); blocked results set all three state fields false. This is an additive allowance; the `<forbidden>` ban on *unauthorized*, mass/unsolicited, or evasive account automation is unchanged. Any challenge/CAPTCHA/rate-limit signal still stops the flow as a diagnostic blocker.
 
 <required>
 

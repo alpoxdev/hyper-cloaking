@@ -13,6 +13,7 @@
 // logic is deterministic under test.
 
 import fs from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
 export const DEFAULT_BULK_CAP = 20;
@@ -81,6 +82,160 @@ function rateFilePath(stateDir) {
   return path.join(stateDir, 'action-rate.json');
 }
 
+const RATE_LOCK_RETRY_MS = 10;
+const RATE_LOCK_TIMEOUT_MS = 2_000;
+const RATE_LOCK_STALE_MS = 30_000;
+
+function rateLockPath(stateDir) {
+  return path.join(stateDir, 'action-rate.lock');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function validateRateStore(store) {
+  if (store === null || Array.isArray(store) || typeof store !== 'object') {
+    throw new TypeError('invalid action-rate state: expected an object');
+  }
+
+  for (const [actionType, events] of Object.entries(store)) {
+    if (!Array.isArray(events) || events.some((timestamp) => !Number.isFinite(timestamp))) {
+      throw new TypeError(`invalid action-rate state for "${actionType}": expected finite timestamps`);
+    }
+  }
+
+  return store;
+}
+
+async function readRateStore(file) {
+  try {
+    return validateRateStore(JSON.parse(await fs.readFile(file, 'utf8')));
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return {};
+    }
+    throw error;
+  }
+}
+
+function isProcessAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM';
+  }
+}
+
+async function removeDeadStaleRateLock(lockFile) {
+  let metadata;
+  let stat;
+
+  try {
+    [metadata, stat] = await Promise.all([
+      fs.readFile(lockFile, 'utf8'),
+      fs.stat(lockFile)
+    ]);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return false;
+    }
+    throw error;
+  }
+
+  if (Date.now() - stat.mtimeMs < RATE_LOCK_STALE_MS) {
+    return false;
+  }
+
+  let owner;
+  try {
+    owner = JSON.parse(metadata);
+  } catch {
+    return false;
+  }
+
+  if (!Number.isInteger(owner?.pid) || owner.pid <= 0 || isProcessAlive(owner.pid)) {
+    return false;
+  }
+
+  const staleFile = `${lockFile}.stale-${process.pid}-${randomUUID()}`;
+  try {
+    await fs.rename(lockFile, staleFile);
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return false;
+    }
+    throw error;
+  }
+
+  await fs.unlink(staleFile);
+  return true;
+}
+
+async function acquireRateLock(stateDir) {
+  await fs.mkdir(stateDir, { recursive: true });
+  const lockFile = rateLockPath(stateDir);
+  const deadline = Date.now() + RATE_LOCK_TIMEOUT_MS;
+
+  while (true) {
+    let ownsLock = false;
+
+    try {
+      const handle = await fs.open(lockFile, 'wx');
+      ownsLock = true;
+      try {
+        await handle.writeFile(JSON.stringify({ pid: process.pid }));
+      } finally {
+        await handle.close();
+      }
+
+      return async () => {
+        await fs.unlink(lockFile);
+      };
+    } catch (error) {
+      if (ownsLock) {
+        try {
+          await fs.unlink(lockFile);
+        } catch (cleanupError) {
+          if (cleanupError?.code !== 'ENOENT') {
+            throw new AggregateError([error, cleanupError], 'action-rate lock initialization and cleanup failed');
+          }
+        }
+        throw error;
+      }
+
+      if (error?.code !== 'EEXIST') {
+        throw error;
+      }
+
+      await removeDeadStaleRateLock(lockFile);
+      if (Date.now() >= deadline) {
+        throw new Error(`timed out acquiring action-rate lock at ${lockFile}`);
+      }
+      await sleep(RATE_LOCK_RETRY_MS);
+    }
+  }
+}
+
+async function writeRateStoreAtomically(file, store) {
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+
+  try {
+    await fs.writeFile(temporary, JSON.stringify(store), 'utf8');
+    await fs.rename(temporary, file);
+  } catch (error) {
+    try {
+      await fs.unlink(temporary);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== 'ENOENT') {
+        throw cleanupError;
+      }
+    }
+    throw error;
+  }
+}
+
 async function readJsonSafe(file, fallback) {
   try {
     return JSON.parse(await fs.readFile(file, 'utf8'));
@@ -107,34 +262,56 @@ export async function checkAndRecordAction(stateDir, actionType, opts = {}) {
   const record = opts.record !== false;
 
   const file = rateFilePath(stateDir);
-  const store = await readJsonSafe(file, {});
-  const cutoff = now - windowMs;
-  const recent = (Array.isArray(store[actionType]) ? store[actionType] : []).filter((ts) => ts > cutoff);
+  const releaseLock = await acquireRateLock(stateDir);
+  let result;
+  let operationError;
 
-  if (recent.length >= maxPerWindow) {
-    return {
-      allowed: false,
-      count: recent.length,
-      remaining: 0,
-      windowMs,
-      reason: `rate limit: ${recent.length}/${maxPerWindow} "${actionType}" actions in window`
-    };
+  try {
+    const store = await readRateStore(file);
+    const cutoff = now - windowMs;
+    const recent = (store[actionType] ?? []).filter((timestamp) => timestamp > cutoff);
+
+    if (recent.length >= maxPerWindow) {
+      result = {
+        allowed: false,
+        count: recent.length,
+        remaining: 0,
+        windowMs,
+        reason: `rate limit: ${recent.length}/${maxPerWindow} "${actionType}" actions in window`
+      };
+    } else {
+      if (record) {
+        recent.push(now);
+        store[actionType] = recent;
+        await writeRateStoreAtomically(file, store);
+      }
+
+      result = {
+        allowed: true,
+        count: recent.length,
+        remaining: maxPerWindow - recent.length,
+        windowMs,
+        reason: null
+      };
+    }
+  } catch (error) {
+    operationError = error;
   }
 
-  if (record) {
-    recent.push(now);
-    store[actionType] = recent;
-    await fs.mkdir(stateDir, { recursive: true });
-    await fs.writeFile(file, JSON.stringify(store), 'utf8');
+  try {
+    await releaseLock();
+  } catch (releaseError) {
+    if (operationError) {
+      throw new AggregateError([operationError, releaseError], 'action-rate operation and lock cleanup failed');
+    }
+    throw releaseError;
   }
 
-  return {
-    allowed: true,
-    count: recent.length,
-    remaining: maxPerWindow - recent.length,
-    windowMs,
-    reason: null
-  };
+  if (operationError) {
+    throw operationError;
+  }
+
+  return result;
 }
 
 function ledgerFilePath(stateDir, runId) {

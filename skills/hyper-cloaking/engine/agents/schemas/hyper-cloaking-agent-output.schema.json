@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hyper-cloaking.local/schemas/agent-output/v1",
+  "type": "object",
+  "required": ["schemaVersion", "agent", "status", "executionMode", "failure", "result"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "agent": { "enum": ["setup", "browser-task", "diagnostics"] },
+    "status": { "enum": ["succeeded", "blocked", "failed"] },
+    "executionMode": { "enum": ["parent", "subagent"] },
+    "failure": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/failure" }
+      ]
+    },
+    "result": { "type": "object" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "succeeded" } }, "required": ["status"] },
+      "then": { "properties": { "failure": { "type": "null" } } },
+      "else": { "properties": { "failure": { "$ref": "#/$defs/failure" } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "agent": { "const": "setup" },
+          "status": { "const": "succeeded" }
+        },
+        "required": ["agent", "status"]
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "type": "object",
+            "properties": {
+              "setupStatus": { "const": "ready" },
+              "mcpConfig": { "type": "object" },
+              "executablePath": { "type": "string", "minLength": 1 },
+              "blockers": { "type": "array", "maxItems": 0 }
+            },
+            "required": ["setupStatus", "mcpConfig", "executablePath", "blockers"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "agent": { "const": "setup" },
+          "status": { "enum": ["blocked", "failed"] }
+        },
+        "required": ["agent", "status"]
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "type": "object",
+            "properties": {
+              "setupStatus": { "enum": ["needs_install", "blocked"] }
+            },
+            "required": ["setupStatus"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "agent": { "const": "browser-task" },
+          "status": { "const": "succeeded" }
+        },
+        "required": ["agent", "status"]
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "type": "object",
+            "properties": {
+              "targetSafety": { "const": "allowed" },
+              "outcome": { "const": "verified" },
+              "humanizationProof": {
+                "type": "object",
+                "properties": {
+                  "enabled": { "const": true },
+                  "telemetryAvailable": { "const": true },
+                  "source": { "type": "string", "minLength": 1 },
+                  "blocker": { "type": "null" }
+                },
+                "required": ["enabled", "telemetryAvailable", "source", "blocker"]
+              },
+              "cleanup": {
+                "type": "object",
+                "properties": {
+                  "ok": { "const": true },
+                  "closed": { "const": true },
+                  "timedOut": { "const": false },
+                  "blocker": { "type": "null" }
+                },
+                "required": ["ok", "closed", "timedOut", "blocker"]
+              }
+            },
+            "required": ["targetSafety", "outcome", "humanizationProof", "cleanup"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "agent": { "const": "browser-task" },
+          "status": { "enum": ["blocked", "failed"] }
+        },
+        "required": ["agent", "status"]
+      },
+      "then": {
+        "properties": {
+          "result": {
+            "type": "object",
+            "properties": {
+              "outcome": { "enum": ["not_observed", "blocked"] }
+            },
+            "required": ["outcome"]
+          }
+        }
+      }
+    }
+  ],
+  "oneOf": [
+    {
+      "properties": {
+        "agent": { "const": "setup" },
+        "result": { "$ref": "#/$defs/setupResult" }
+      }
+    },
+    {
+      "properties": {
+        "agent": { "const": "browser-task" },
+        "result": { "$ref": "#/$defs/browserTaskResult" }
+      }
+    },
+    {
+      "properties": {
+        "agent": { "const": "diagnostics" },
+        "result": { "$ref": "#/$defs/diagnosticsResult" }
+      }
+    }
+  ],
+  "unevaluatedProperties": false,
+  "$defs": {
+    "failure": {
+      "type": "object",
+      "required": ["code", "phase", "retryable", "observedSignal"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "phase": { "type": "string", "minLength": 1 },
+        "retryable": { "type": "boolean" },
+        "observedSignal": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "evidenceRef": {
+      "type": "object",
+      "required": ["type", "relPath", "description"],
+      "properties": {
+        "type": { "enum": ["screenshot", "log", "json", "report"] },
+        "relPath": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "setupResult": {
+      "type": "object",
+      "required": ["agentType", "setupStatus", "mcpConfig", "executablePath", "blockers"],
+      "properties": {
+        "agentType": { "const": "setup" },
+        "setupStatus": { "enum": ["ready", "needs_install", "blocked"] },
+        "mcpConfig": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["type", "config"],
+              "properties": {
+                "type": { "type": "string", "minLength": 1 },
+                "config": { "type": "object" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "executablePath": { "type": ["string", "null"] },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["code", "message", "recoverable"],
+            "properties": {
+              "code": { "enum": ["node-version", "network", "permission", "missing-binary"] },
+              "message": { "type": "string", "minLength": 1 },
+              "recoverable": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "browserTaskResult": {
+      "type": "object",
+      "required": ["agentType", "taskMode", "targetSafety", "outcome", "finalUrl", "contentBoundary", "humanizationProof", "cleanup", "evidenceRefs", "learning"],
+      "properties": {
+        "agentType": { "const": "browser-task" },
+        "taskMode": { "const": "verification-only" },
+        "targetSafety": { "enum": ["allowed", "refused", "needs_clarification"] },
+        "outcome": { "enum": ["verified", "not_observed", "blocked"] },
+        "finalUrl": { "type": ["string", "null"] },
+        "contentBoundary": {
+          "type": "object",
+          "required": ["allowedOrigins", "observedOrigin", "redirects", "violations"],
+          "properties": {
+            "allowedOrigins": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+            "observedOrigin": { "type": ["string", "null"] },
+            "redirects": { "type": "array", "items": { "type": "string" } },
+            "violations": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "humanizationProof": {
+          "type": "object",
+          "required": ["enabled", "telemetryAvailable", "source", "blocker"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "telemetryAvailable": { "type": "boolean" },
+            "source": { "type": ["string", "null"] },
+            "blocker": { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "cleanup": {
+          "type": "object",
+          "required": ["ok", "closed", "timedOut", "blocker"],
+          "properties": {
+            "ok": { "type": "boolean" },
+            "closed": { "type": "boolean" },
+            "timedOut": { "type": "boolean" },
+            "blocker": { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "evidenceRefs": { "type": "array", "items": { "$ref": "#/$defs/evidenceRef" } },
+        "learning": {
+          "type": "object",
+          "required": ["summary", "limitations"],
+          "properties": {
+            "summary": { "type": "string" },
+            "limitations": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "diagnosticsResult": {
+      "type": "object",
+      "required": ["agentType", "layer", "observedSignal", "lastSafeAction", "nextAuthorizedStep", "report"],
+      "properties": {
+        "agentType": { "const": "diagnostics" },
+        "layer": { "enum": ["setup", "network", "target_safety", "waf_challenge", "outcome", "unknown"] },
+        "observedSignal": { "type": "string" },
+        "lastSafeAction": { "type": ["string", "null"] },
+        "nextAuthorizedStep": { "enum": ["retry_setup", "clarify_scope", "manual_review", "stop"] },
+        "report": {
+          "type": "object",
+          "required": ["json", "markdown"],
+          "properties": {
+            "json": { "type": "object" },
+            "markdown": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -8,7 +8,7 @@ import {
   resolveProviderForUrl,
   validateProviderRegistry
 } from './index.mjs';
-import { redditProvider } from './reddit.mjs';
+import { redditProvider } from './reddit/metadata.mjs';
 import {
   buildProviderRegistry,
   hostMatchesDomain,

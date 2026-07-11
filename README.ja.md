@@ -218,10 +218,13 @@ scripts/validate.mjs            # 構造 + ミラー一致検証
 npm run validate      # 構造とミラー一致のチェック
 npm run lint          # plugins・scripts に対する oxlint
 npm run format        # prettier フォーマット
+npm test              # ルート E2E と正規エンジンのテスト
+npm run ci            # ローカル CI ゲート一式
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # エンジンの自己チェック（ネットワークなし）
 ```
 
-テストは `engine/` 以下に併置された `*.test.mjs` ファイルで、`node --test` で実行します。
+`npm test` はルート E2E スイートと正規の `skills/hyper-cloaking/engine` テストを実行します。`npm run validate` はミラーされたスキルディレクトリがバイト単位で一致することを検証します。
+GitHub Actions の初回成功後、必須ジョブチェック名が `quality` と `Node 20 compatibility` であることを確認してから `main` ブランチの Ruleset を設定します。このリポジトリはその設定を自動適用しません。
 
 ---
 

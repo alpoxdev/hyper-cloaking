@@ -116,6 +116,18 @@ Validation tier를 구분합니다. validate/smoke는 no-network/no-browser-laun
 
 Reliability helper contract는 역할별로 해석합니다: `target-safety.mjs`는 Target Safety Gate, `outcome.mjs`는 Outcome Validation Gate, `diagnostics.mjs`는 Structured Failure Gate, `evidence-boundary.mjs`는 Untrusted Browser Content Boundary, `recon-scope.mjs`는 Authorized Recon/Evidence Scope, `run-shapes.mjs`는 validate/smoke/live tier와 mandatory report shape를 담당합니다. Helper가 unavailable한 환경에서는 같은 field를 수동으로 보고하되 성공을 가장하지 않습니다.
 
+## 3A. Portable Parent-Executed 역할 라우팅
+
+`rules/agents/` 역할 계약은 내부 `engine/agents/parent-dispatcher.mjs` dispatcher를 통해서만 사용합니다.
+
+| Trigger | 역할 | 경계 | 부모 동작 |
+| --- | --- | --- | --- |
+| Setup 또는 MCP config | `setup` | browser launch 금지, safe sandbox config만 허용 | setup envelope를 검증하고 blocker에서는 중단하거나 별도 승인된 setup을 요청 |
+| 승인된 live verification | `browser-task` | verification-only navigation 1회, exact origin, bounded redirect | cleanup 검증 후에만 staged evidence 게시 |
+| 완료된 setup/browser 실패 | `diagnostics` | read-only evidence 분류, retry/write 금지 | 검증 후 memory report를 선택적으로 게시 |
+
+부모가 target authorization, 역할 선택, schema 검증, final evidence 게시, recovery journal을 소유합니다. 역할은 evidence writer나 mirror synchronizer를 직접 호출하지 않습니다. `native_unavailable`, `spawn_failed`, `contract_failure`는 fallback 없는 terminal route입니다. 이 engine-local 역할을 제거된 `scripts/` wrapper 또는 host-native agent surface로 노출하지 않습니다.
+
 ## 4. Runtime Workspace and Cookie Rules
 
 - CloakBrowser run의 default runtime workspace는 `~/.hyper-cloaking/`입니다.

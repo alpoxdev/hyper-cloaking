@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { mkdtemp } from 'node:fs/promises';
+import { access, mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { runCli } from './cli.mjs';
+import { closeBrowserHandle, gotoAndClassify, installNavigationSafety, runCli, runLiveVerification } from './cli.mjs';
 import { generateMcpConfig, mcpCommand } from './mcp-config.mjs';
 import { buildNoSandboxWarningSafeCloakOptions } from './browser-utils.mjs';
 
@@ -128,4 +128,202 @@ test('live --json blocks without fake success and still reports completion shape
   assert.equal(json.liveLaunch, 'not-attempted');
   assert.ok(Array.isArray(json.blockers));
   assertCompletionShape(json);
+});
+
+function fakeRoute(url, { navigation = true } = {}) {
+  const state = { continued: 0, aborted: 0 };
+  return {
+    state,
+    request() {
+      return {
+        url: () => url,
+        isNavigationRequest: () => navigation,
+        resourceType: () => navigation ? 'document' : 'script'
+      };
+    },
+    async continue() { state.continued += 1; },
+    async abort() { state.aborted += 1; }
+  };
+}
+
+test('document navigation uses exact origins while subresources bypass the document guard', async () => {
+  let handler;
+  const page = { async route(_pattern, value) { handler = value; } };
+  await installNavigationSafety(page, { allowedOrigins: ['https://example.com'], maxRedirects: 2, allowAboutBlank: true });
+
+  const subresource = fakeRoute('https://cdn.example.net/script.js', { navigation: false });
+  await handler(subresource);
+  assert.deepEqual(subresource.state, { continued: 1, aborted: 0 });
+
+  const allowed = fakeRoute('https://example.com/path');
+  await handler(allowed);
+  assert.deepEqual(allowed.state, { continued: 1, aborted: 0 });
+
+  const refused = fakeRoute('https://example.com.evil.test/');
+  await handler(refused);
+  assert.deepEqual(refused.state, { continued: 0, aborted: 1 });
+});
+
+test('redirect bounds are enforced before request dispatch', async () => {
+  let handler;
+  const page = { async route(_pattern, value) { handler = value; } };
+  await installNavigationSafety(page, { allowedOrigins: ['https://example.com'], maxRedirects: 0, allowAboutBlank: true });
+  await handler(fakeRoute('about:blank'));
+  const firstPublic = fakeRoute('https://example.com/');
+  await handler(firstPublic);
+  assert.equal(firstPublic.state.continued, 1);
+  const redirect = fakeRoute('https://example.com/next');
+  await handler(redirect);
+  assert.equal(redirect.state.aborted, 1);
+});
+
+test('final redirected URL is checked even after an allowed request', async () => {
+  let handler;
+  let current = 'about:blank';
+  const page = {
+    async route(_pattern, value) { handler = value; },
+    async goto(url) {
+      const route = fakeRoute(url);
+      await handler(route);
+      current = 'https://evil.example.net/';
+    },
+    url() { return current; }
+  };
+  await installNavigationSafety(page, { allowedOrigins: ['https://example.com'], maxRedirects: 2, allowAboutBlank: true });
+  await assert.rejects(
+    () => gotoAndClassify(page, 'about:blank', 'https://example.com/', { allowedOrigins: ['https://example.com'], maxRedirects: 2 }),
+    /unauthorized origin/
+  );
+});
+
+test('browser close rejection and timeout are explicit cleanup blockers', async () => {
+  const rejected = await closeBrowserHandle({ async close() { throw new Error('close failed'); } }, 20);
+  assert.deepEqual(rejected, { ok: false, closed: false, timedOut: false, blocker: 'close failed' });
+  const timedOut = await closeBrowserHandle({ close() { return new Promise(() => {}); } }, 10);
+  assert.equal(timedOut.ok, false);
+  assert.equal(timedOut.timedOut, true);
+});
+
+function injectableLiveDependencies({ textFailure = null, closeFailure = null } = {}) {
+  let handler;
+  let currentUrl = 'about:blank';
+  const page = {
+    async route(_pattern, value) {
+      handler = value;
+    },
+    async goto(url) {
+      const route = fakeRoute(url);
+      await handler(route);
+      if (route.state.aborted > 0) throw new Error(`navigation aborted: ${url}`);
+      currentUrl = url;
+    },
+    url() {
+      return currentUrl;
+    },
+    async title() {
+      return 'Example Domain';
+    },
+    locator() {
+      return {
+        async innerText() {
+          if (textFailure) throw new Error(textFailure);
+          return 'Example Domain verification page';
+        }
+      };
+    },
+    async screenshot({ path: screenshotPath }) {
+      await writeFile(screenshotPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+    }
+  };
+  const browser = {
+    async newPage() {
+      return page;
+    },
+    async close() {
+      if (closeFailure) throw new Error(closeFailure);
+    }
+  };
+  return {
+    tryImportPackage: async (packageName) => ({ ok: true, package: packageName }),
+    executableCandidates: async () => ['/tmp/fake-cloakbrowser'],
+    generateMcpConfig: () => ({ command: 'fake-mcp', args: ['--sandbox'] }),
+    launchCloakBrowser: async () => ({ browser })
+  };
+}
+
+function liveOptions(home, extra = {}) {
+  return {
+    home,
+    target: 'https://example.com/',
+    'public-target': 'https://example.com/',
+    allowedOrigins: ['https://example.com'],
+    maxRedirects: 2,
+    headless: true,
+    ...extra
+  };
+}
+
+test('injectable parent-staged live verification writes only to its staging root', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hyper-live-'));
+  const home = path.join(root, 'home');
+  const staging = path.join(root, 'agent-stage');
+  const result = await runLiveVerification(
+    liveOptions(home, {
+      publicationMode: 'parent-staged',
+      agentStagingRoot: staging
+    }),
+    injectableLiveDependencies()
+  );
+  assert.equal(result.publicationMode, 'parent-staged');
+  assert.equal(result.ok, false);
+  assert.match(result.blockers.join(' '), /humanization telemetry unavailable/);
+  assert.equal(result.cleanup.ok, true);
+  assert.equal(result.cleanup.closed, true);
+  assert.equal(result.evidenceRefs.length, 1);
+  assert.ok(result.evidenceRefs[0].path.startsWith(`${staging}${path.sep}`));
+  await access(result.evidenceRefs[0].path);
+  await assert.rejects(() => access(path.join(home, 'evidence')), { code: 'ENOENT' });
+});
+
+test('injectable legacy live verification keeps the existing home evidence destination', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hyper-live-'));
+  const home = path.join(root, 'home');
+  const result = await runLiveVerification(
+    liveOptions(home),
+    injectableLiveDependencies()
+  );
+  assert.equal(result.publicationMode, 'legacy-final');
+  assert.equal(result.evidenceRefs.length, 1);
+  assert.ok(result.evidenceRefs[0].path.startsWith(`${path.join(home, 'evidence')}${path.sep}`));
+  await access(result.evidenceRefs[0].path);
+});
+
+test('live verification preserves text-extraction and close failures as blockers', async () => {
+  const textRoot = await mkdtemp(path.join(os.tmpdir(), 'hyper-live-'));
+  const textFailure = await runLiveVerification(
+    liveOptions(path.join(textRoot, 'home')),
+    injectableLiveDependencies({ textFailure: 'body unavailable' })
+  );
+  assert.match(textFailure.blockers.join(' '), /page text signal unavailable: body unavailable/);
+
+  const closeRoot = await mkdtemp(path.join(os.tmpdir(), 'hyper-live-'));
+  const closeFailure = await runLiveVerification(
+    liveOptions(path.join(closeRoot, 'home')),
+    injectableLiveDependencies({ closeFailure: 'close rejected' })
+  );
+  assert.equal(closeFailure.cleanup.ok, false);
+  assert.equal(closeFailure.cleanup.closed, false);
+  assert.match(closeFailure.blockers.join(' '), /close rejected/);
+
+  const combinedRoot = await mkdtemp(path.join(os.tmpdir(), 'hyper-live-'));
+  const combinedFailure = await runLiveVerification(
+    liveOptions(path.join(combinedRoot, 'home')),
+    injectableLiveDependencies({
+      textFailure: 'body unavailable',
+      closeFailure: 'close rejected after navigation failure'
+    })
+  );
+  assert.match(combinedFailure.blockers.join(' '), /body unavailable/);
+  assert.match(combinedFailure.blockers.join(' '), /close rejected after navigation failure/);
+  assert.equal(combinedFailure.failure.stage, 'browser-cleanup-unverified');
 });

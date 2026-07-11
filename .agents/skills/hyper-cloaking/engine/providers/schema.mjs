@@ -16,6 +16,8 @@ export const FORBIDDEN_PROVIDER_FIELDS = Object.freeze([
   'stealthRecipe',
   'rateLimitBypass',
   'selectors',
+  'actions',
+  'session',
   'automationRecipe'
 ]);
 

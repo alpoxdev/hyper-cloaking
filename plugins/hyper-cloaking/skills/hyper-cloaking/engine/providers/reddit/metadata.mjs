@@ -1,8 +1,5 @@
-// Reddit provider template: metadata, domain/origin hints, and safe defaults
-// only. No proxy/fingerprint/bypass/evasion recipes.
-//
-// `redd.it` is a redirect shortener, not a first-party cookie destination:
-// it is a navigation-only alias and must never seed cookie.siteKey.
+// Reddit provider metadata only. The registry imports this module without loading actions.
+// `redd.it` is navigation-only and must never seed a cookie site key.
 
 export const redditProvider = {
   id: 'reddit',

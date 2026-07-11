@@ -27,6 +27,9 @@ export function untrustedContentBoundary(untrustedSources = 1) {
  * @param {object|null} [params.rateLimit] Rate-limit snapshot from guardrails.
  * @param {object} [params.targetSafety] Target-safety classification.
  * @param {object|null} [params.failure] Structured failure, if any.
+ * @param {boolean} [params.performed] Override whether the action was performed.
+ * @param {boolean} [params.changed] Override whether the action changed state.
+ * @param {boolean} [params.alreadySatisfied] Mark a verified no-op as already satisfied.
  * @returns {object} Structured action result.
  */
 export function makeActionResult({
@@ -36,10 +39,20 @@ export function makeActionResult({
   criteria = [],
   rateLimit = null,
   targetSafety,
-  failure = null
+  failure = null,
+  performed: performedOverride,
+  changed: changedOverride,
+  alreadySatisfied: alreadySatisfiedOverride
 } = {}) {
   const outcome = evaluateOutcome(observation, criteria);
-  const performed = !dryRun && outcome.passed && !failure;
+  const eligibleForPerformed = !dryRun && outcome.passed && !failure;
+  const performed = performedOverride === undefined
+    ? eligibleForPerformed
+    : performedOverride === true && eligibleForPerformed;
+  const changed = changedOverride === undefined
+    ? performed
+    : changedOverride === true && performed;
+  const alreadySatisfied = alreadySatisfiedOverride === true;
   const report = makeOutcomeReport({
     targetSafety,
     outcome,
@@ -49,9 +62,11 @@ export function makeActionResult({
   });
   return {
     action,
-    ok: performed || (dryRun && outcome.passed && !failure),
+    ok: outcome.passed && !failure,
     dryRun,
     performed,
+    changed,
+    alreadySatisfied,
     rateLimit,
     ...report
   };
@@ -80,6 +95,8 @@ export function makeBlockedResult(action, reason, opts = {}) {
     ok: false,
     dryRun: opts.dryRun === true,
     performed: false,
+    changed: false,
+    alreadySatisfied: false,
     blocked: true,
     reason,
     rateLimit: opts.rateLimit || null,
