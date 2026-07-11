@@ -60,9 +60,25 @@ import {
   resolveProviderForUrl,
   validateProviderRegistry
 } from './providers/index.mjs';
+import { buildProviderSession } from './providers/session.mjs';
+import {
+  importCredentialProfile,
+  initCredentialStore,
+  inspectCredentialProfile,
+  listCredentialProfiles,
+  parseCredentialJson,
+  profileFromEnvironment,
+  profileFromSecureSource,
+  reconcileCredentialOperation,
+  removeCredentialProfile,
+  resolveCredentialProfile,
+  setDefaultCredentialProfile
+} from './credentials.mjs';
+
+const OPTION_OCCURRENCES = Symbol('optionOccurrences');
 
 function parseArgs(argv) {
-  const options = { _: [] };
+  const options = { _: [], [OPTION_OCCURRENCES]: new Map() };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (!arg.startsWith('--')) {
@@ -90,6 +106,7 @@ function parseArgs(argv) {
 }
 
 function assignOption(options, key, value) {
+  options[OPTION_OCCURRENCES].set(key, (options[OPTION_OCCURRENCES].get(key) || 0) + 1);
   if (key !== 'allowed-origin') {
     options[key] = value;
     return;
@@ -109,9 +126,12 @@ function wantsHeadless(options) {
 }
 
 function usage() {
-  return `Usage: hyper-cloaking <validate|smoke|mcp-config|live> [--json] [--home DIR]\n\nCommands:\n  validate    Check local engine metadata without network or package probes.\n  smoke       Create/check a sandbox home and render fake-executable MCP configs.\n  mcp-config  Render MCP config for direct, codex, json, claude-code, gajae-code, openclaw, hermes, or hermes-agent.\n  live        Run local live verification after containment, package, and target-safety preflight.
+  return `Usage: hyper-cloaking <validate|smoke|mcp-config|live|credentials> [--json] [--home DIR]\n\nCommands:\n  validate    Check local engine metadata without network or package probes.\n  smoke       Create/check a sandbox home and render fake-executable MCP configs.\n  mcp-config  Render MCP config for direct, codex, json, claude-code, gajae-code, openclaw, hermes, or hermes-agent.\n  live        Run local live verification after containment, package, and target-safety preflight.
               Options: --provider ID (explicit provider metadata, fails closed on unknown id),
-              --cookie-site SITE / --site SITE (cookie selection), --account ACCOUNT.`;
+              --cookie-site SITE / --site SITE (cookie selection), --account ACCOUNT.
+  credentials Manage owner-only provider profiles: init, list, inspect, import, remove,
+              set-default, validate, reconcile, resolve-profile. Import secrets only
+              through piped stdin, --source, or --env-prefix; secret argv is rejected.`;
 }
 
 function jsonResult(result) {
@@ -281,7 +301,7 @@ async function validateCommand() {
 }
 
 async function smokeCommand(options) {
-  const home = options.home ? resolveHome(options.home) : await fs.mkdtemp(path.join(os.tmpdir(), 'hyper-cloaking-smoke-'));
+  const home = resolveHome(options.home);
   const directories = [
     home,
     homePath(home, 'cache'),
@@ -367,7 +387,7 @@ async function executableCandidates(cacheRoot) {
 }
 
 async function mcpConfigCommand(options) {
-  const home = resolveHome(options.home || DEFAULT_HOME);
+  const home = resolveHome(options.home);
   const client = options.client || 'direct';
   const explicitExecutable = options.executable ? path.resolve(expandHome(String(options.executable))) : null;
   const executablePath = explicitExecutable || (await executableCandidates(homePath(home, 'cache', 'cloakbrowser')))[0];
@@ -708,12 +728,14 @@ function resolveProviderInfo(options, navigationTarget) {
     if (!resolution.ok) {
       return {
         provider: emptyProviderField('explicit'),
+        resolvedProvider: null,
         providerError: { ...resolution.error, source: 'explicit' },
         matchedViaNavigationOnlyAlias: false
       };
     }
     return {
       provider: providerField(resolution.provider, { source: 'explicit' }),
+      resolvedProvider: resolution.provider,
       providerError: null,
       matchedViaNavigationOnlyAlias: false
     };
@@ -723,6 +745,7 @@ function resolveProviderInfo(options, navigationTarget) {
   if (!resolution.ok) {
     return {
       provider: emptyProviderField('url'),
+      resolvedProvider: null,
       providerError: { ...resolution.error, source: 'url' },
       matchedViaNavigationOnlyAlias: false
     };
@@ -733,6 +756,7 @@ function resolveProviderInfo(options, navigationTarget) {
       fallbackUsed: resolution.fallbackUsed,
       matchedDomain: resolution.matchedDomain
     }),
+    resolvedProvider: resolution.provider,
     providerError: null,
     matchedViaNavigationOnlyAlias: Boolean(resolution.matchedViaNavigationOnlyAlias)
   };
@@ -776,11 +800,12 @@ export async function runLiveVerification(options, deps = {}) {
   const createPage = deps.newPageFromBrowser ?? newPageFromBrowser;
   const installSafety = deps.installNavigationSafety ?? installNavigationSafety;
   const navigate = deps.gotoAndClassify ?? gotoAndClassify;
+  const buildSession = deps.buildProviderSession ?? buildProviderSession;
   const readTextSignal = deps.readPageTextSignal ?? readPageTextSignal;
   const captureEvidence = deps.captureLiveEvidence ?? captureLiveEvidence;
   const closeBrowser = deps.closeBrowserHandle ?? closeBrowserHandle;
   const runWithTemporaryEnv = deps.withTemporaryEnv ?? withTemporaryEnv;
-  const home = resolveHome(options.home || DEFAULT_HOME);
+  const home = resolveHome(options.home);
   const target = String(options.target || 'about:blank');
   const publicTarget = String(options['public-target'] || 'https://example.com');
   const navigationTarget = target === 'about:blank' ? publicTarget : target;
@@ -1007,11 +1032,37 @@ export async function runLiveVerification(options, deps = {}) {
       maxRedirects
     });
     attempted.push('safe public navigation');
-    const navigation = await navigate(page, target, navigationTarget, {
-      allowAboutBlank: true,
-      allowedOrigins,
-      maxRedirects
-    });
+    let navigation;
+    if (providerResolution.resolvedProvider?.id && providerResolution.resolvedProvider.id !== 'generic') {
+      const strictSession = buildSession(page, {
+        provider: providerResolution.resolvedProvider,
+        ...(requestedOrigins === undefined ? {} : { allowedOrigins }),
+        targetSafety: navigationTargetSafety,
+        stateDir: homePath(home, 'state'),
+        interactive: false
+      });
+      const strictNavigation = await strictSession.navigateGuardedForRead(
+        navigationTarget,
+        { waitUntil: 'domcontentloaded', timeout: 30_000 }
+      );
+      const routeState = page?.__hyperCloakingNavigationSafety;
+      navigation = {
+        finalUrl: strictNavigation.url,
+        status: strictNavigation.status,
+        redirectSafety: classifyRedirect(navigationTarget, strictNavigation.url, {
+          allowedOrigins: strictSession.strictAllowedOrigins,
+          maxRedirects
+        }),
+        documentUrls: Array.isArray(routeState?.documentUrls) ? [...routeState.documentUrls] : [strictNavigation.url],
+        violations: Array.isArray(routeState?.violations) ? [...routeState.violations] : []
+      };
+    } else {
+      navigation = await navigate(page, target, navigationTarget, {
+        allowAboutBlank: true,
+        allowedOrigins,
+        maxRedirects
+      });
+    }
     const title = typeof page.title === 'function' ? await page.title() : '';
     const bodyText = await readTextSignal(page);
     const challenge = classifyChallengeObservation({
@@ -1151,6 +1202,163 @@ export async function runLiveVerification(options, deps = {}) {
   }
 }
 
+const MAX_CREDENTIAL_STDIN_BYTES = 1024 * 1024;
+
+async function readCredentialStdin() {
+  if (process.stdin.isTTY) throw new Error('credential import requires piped stdin, --source, or --env-prefix');
+  let input = '';
+  let bytes = 0;
+  process.stdin.setEncoding('utf8');
+  for await (const chunk of process.stdin) {
+    bytes += Buffer.byteLength(chunk);
+    if (bytes > MAX_CREDENTIAL_STDIN_BYTES) throw new Error('credential import stdin exceeds the size limit');
+    input += chunk;
+  }
+  if (!input.trim()) throw new Error('credential import stdin was empty');
+  return parseCredentialJson(input);
+}
+
+function credentialCommandResult(operation, fields = {}) {
+  const targetSafety = targetSafetyFor('about:blank');
+  const outcome = safeOutcome(
+    { text: `credential-${operation}-complete no-network`, operation },
+    [{ type: 'textIncludes', expected: `credential-${operation}-complete` }]
+  );
+  return makeResult('credentials', {
+    ok: true,
+    status: 'ok',
+    operation,
+    ...fields,
+    ...completionFields({
+      targetSafety,
+      outcome,
+      contentBoundary: sampleContentBoundary('about:blank'),
+      learning: false
+    }),
+    network: 'not-used'
+  });
+}
+
+const CREDENTIAL_OPTIONS = Object.freeze({
+  init: Object.freeze([]),
+  list: Object.freeze(['provider']),
+  inspect: Object.freeze(['profile-id']),
+  import: Object.freeze(['profile-id', 'source', 'env-prefix', 'provider', 'kind']),
+  remove: Object.freeze(['profile-id']),
+  'set-default': Object.freeze(['provider', 'profile-id']),
+  validate: Object.freeze([]),
+  reconcile: Object.freeze(['operation-id']),
+  'resolve-profile': Object.freeze(['provider', 'profile-id', 'scopes'])
+});
+
+async function credentialsCommand(options) {
+  const operation = options._[1] || 'list';
+  const home = resolveHome(options.home);
+  const forbidden = Object.keys(options).filter((key) => (
+    key !== '_'
+    && /(?:secret|token|password|api-key|access-key|credential)/i.test(key)
+  ));
+  if (forbidden.length > 0) {
+    throw new Error(`credential values must not be supplied as command arguments: ${forbidden.join(', ')}`);
+  }
+  const repeated = [...options[OPTION_OCCURRENCES]]
+    .filter(([, count]) => count > 1)
+    .map(([key]) => key);
+  if (repeated.length > 0) {
+    throw new Error(`Credential options must not be repeated: ${repeated.join(', ')}`);
+  }
+  const allowed = CREDENTIAL_OPTIONS[operation];
+  if (!allowed) throw new Error(`Unknown credentials operation: ${operation}`);
+  if (options._.length > 2) throw new Error('credentials command does not accept extra positional arguments');
+  const unknown = Object.keys(options).filter((key) => (
+    key !== '_'
+    && key !== 'home'
+    && key !== 'json'
+    && !allowed.includes(key)
+  ));
+  if (unknown.length > 0) throw new Error(`Unknown credentials option: ${unknown.join(', ')}`);
+
+  if (operation === 'init') {
+    return credentialCommandResult(operation, await initCredentialStore({ home }));
+  }
+  if (operation === 'list') {
+    const profiles = await listCredentialProfiles({ home, provider: typeof options.provider === 'string' ? options.provider : undefined });
+    return credentialCommandResult(operation, { profiles });
+  }
+  if (operation === 'inspect') {
+    const profile = await inspectCredentialProfile({ home, profileId: options['profile-id'] });
+    if (!profile) throw new Error('credential profile was not found');
+    return credentialCommandResult(operation, { profile });
+  }
+  if (operation === 'import') {
+    const hasSource = Object.hasOwn(options, 'source');
+    const hasEnvironment = Object.hasOwn(options, 'env-prefix');
+    if (hasSource && hasEnvironment) {
+      throw new Error('credential import requires exactly one source: stdin, --source, or --env-prefix');
+    }
+    let profile;
+    if (hasSource) {
+      if (typeof options.source !== 'string') throw new Error('credential import --source requires a file path');
+      profile = await profileFromSecureSource({ file: options.source });
+    } else if (hasEnvironment) {
+      if (typeof options['env-prefix'] !== 'string') throw new Error('credential import --env-prefix requires a value');
+      profile = profileFromEnvironment({
+        provider: options.provider,
+        kind: options.kind,
+        prefix: options['env-prefix']
+      });
+    } else {
+      profile = await readCredentialStdin();
+    }
+    const receipt = await importCredentialProfile({
+      home,
+      profileId: options['profile-id'],
+      profile
+    });
+    return credentialCommandResult(operation, receipt);
+  }
+  if (operation === 'remove') {
+    return credentialCommandResult(operation, await removeCredentialProfile({
+      home,
+      profileId: options['profile-id']
+    }));
+  }
+  if (operation === 'set-default') {
+    return credentialCommandResult(operation, await setDefaultCredentialProfile({
+      home,
+      provider: options.provider,
+      profileId: options['profile-id']
+    }));
+  }
+  if (operation === 'validate') {
+    const profiles = await listCredentialProfiles({ home });
+    return credentialCommandResult(operation, { valid: true, profileCount: profiles.length });
+  }
+  if (operation === 'reconcile') {
+    return credentialCommandResult(operation, await reconcileCredentialOperation({
+      home,
+      operationId: options['operation-id']
+    }));
+  }
+  if (operation === 'resolve-profile') {
+    const requiredScopes = typeof options.scopes === 'string'
+      ? options.scopes.split(',').map((scope) => scope.trim()).filter(Boolean)
+      : [];
+    const resolved = await resolveCredentialProfile({
+      home,
+      provider: options.provider,
+      profileId: typeof options['profile-id'] === 'string' ? options['profile-id'] : undefined,
+      requiredScopes
+    });
+    if (resolved.status !== 'selected') return credentialCommandResult(operation, resolved);
+    const profile = await inspectCredentialProfile({ home, profileId: resolved.profileId });
+    return credentialCommandResult(operation, {
+      resolutionStatus: resolved.status,
+      profile
+    });
+  }
+  throw new Error(`Unknown credentials operation: ${operation}`);
+}
 export async function runCli(argv = process.argv.slice(2), io = {}) {
   const options = parseArgs(argv);
   const command = options._[0];
@@ -1169,6 +1377,8 @@ export async function runCli(argv = process.argv.slice(2), io = {}) {
     let result;
     if (command === 'validate') {
       result = await validateCommand(options);
+    } else if (command === 'credentials') {
+      result = await credentialsCommand(options);
     } else if (command === 'smoke') {
       result = await smokeCommand(options);
     } else if (command === 'mcp-config') {

@@ -3,6 +3,7 @@
 export { redditProvider } from './metadata.mjs';
 export { buildRedditSession, OffOriginError, ChallengeBlockedError, TargetSafetyError } from './session.mjs';
 export { redditSelectors, SELECTORS_VERSION, resolveRedditSelector } from './selectors.mjs';
+export { executeRedditRead, redditReadPromotions } from './network.mjs';
 
 import { getSubreddit } from './actions/listing.mjs';
 import { getPost } from './actions/post.mjs';

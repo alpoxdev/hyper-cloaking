@@ -203,11 +203,13 @@ skill-local `scripts/*.mjs` helper surface는 제거되었습니다. runtime hel
 
 ## Provider 메타데이터 (선택)
 
-`engine/cli.mjs live`는 선택적 `--provider ID`(`naver`, `reddit`, `instagram`, `youtube`, `x`, `generic`)를 받습니다. 이는 **메타데이터만** 선택합니다 — domain/origin 제안과 cookie/profile/preflight hint이며, 더 넓은 origin을 승인하거나 target-safety/recon/preflight를 우회하지 않습니다. unknown `--provider`는 cookie나 browser 작업 전에 fail-closed(`unknown-provider`)됩니다. `--provider`가 없으면 navigation target URL에서 provider를 추론하고, unknown host는 `generic`으로 fallback합니다. cookie 선택은 계속 `--cookie-site`/`--site`와 `--account`가 제어하며, provider `cookie.siteKey`는 preflight 승인 이후에만 적용되는 hint일 뿐입니다. redirect shortener는 provider를 navigation용으로만 매칭하고 cookie hint를 seed하지 않습니다.
+`engine/cli.mjs live`는 선택적 `--provider ID`(`naver`, `reddit`, `instagram`, `youtube`, `x`, `coupang`, `tiktok`, `generic`)를 받습니다. 이는 **메타데이터만** 선택합니다 — domain/origin 제안과 cookie/profile/preflight hint이며, 더 넓은 origin을 승인하거나 target-safety/recon/preflight를 우회하지 않습니다. unknown `--provider`는 cookie나 browser 작업 전에 fail-closed(`unknown-provider`)됩니다. `--provider`가 없으면 navigation target URL에서 provider를 추론하고, unknown host는 `generic`으로 fallback합니다. cookie 선택은 계속 `--cookie-site`/`--site`와 `--account`가 제어하며, provider `cookie.siteKey`는 preflight 승인 이후에만 적용되는 hint일 뿐입니다. redirect shortener(`t.co`, `link.coupang.com`, `vm.tiktok.com`, `vt.tiktok.com`, `redd.it`, `youtu.be`)는 provider를 navigation용으로만 매칭하고 cookie hint를 seed하지 않습니다. Naver 액션 origin은 search/blog/cafe로 좁혀지며(`nid.naver.com`은 인증 전용), X 액션 origin은 bare `https://x.com`을 포함합니다.
 
 ## Provider 액션 모듈 (import 사용)
 
-provider *메타데이터*는 메타데이터 전용을 유지합니다(action/session/selector 자동화 필드 없음 — `engine/providers/schema.mjs`가 강제). 재사용 가능한 Instagram, YouTube, Reddit *액션* 플로우는 **형제(sibling) 모듈**로 존재하므로 매 세션 플로우를 직접 작성하는 대신 검증된 함수를 `import`합니다. 이들은 **JS 드라이버(`live` 레인) 헬퍼**입니다 — `launchCloakBrowser`/`launchPersistentCloakContext`가 만든 실제 Playwright `page`가 필요하며 **Playwright-MCP 모드에서는 사용할 수 없습니다**(`page` 핸들이 없음). provider 무관 가드레일과 결과 형식은 `engine/action-runtime/`에 있습니다.
+provider *메타데이터*는 메타데이터 전용을 유지합니다(action/session/selector 자동화 필드 없음 — `engine/providers/schema.mjs`가 강제). 재사용 가능한 Instagram, YouTube, Reddit, Coupang, TikTok, Naver, X *액션* 플로우는 **형제(sibling) 모듈**로 존재하므로 매 세션 플로우를 직접 작성하는 대신 검증된 함수를 `import`합니다. 이들은 **JS 드라이버(`live` 레인) 헬퍼**입니다 — `launchCloakBrowser`/`launchPersistentCloakContext`가 만든 실제 Playwright `page`가 필요하며 **Playwright-MCP 모드에서는 사용할 수 없습니다**(`page` 핸들이 없음). provider 무관 가드레일과 결과 형식은 `engine/action-runtime/`에 있습니다.
+
+조회는 기본적으로 fail-closed DOM 추출을 사용하며, 근거 게이트 기반 network-first 경로(문서화된 공식 클라이언트, 모듈 소유 격리 same-origin GET, 액션 범위 observed-private GET replay, 또는 상관된 자격 브라우저 응답)로는 **액션별로**, 해당 액션이 sanitized fixtures·오프라인 전체결과/거부 parity·1회 승인된 라이브 관찰을 통과한 **이후에만** 승격합니다. 강제 전략은 절대 조용히 fallback하지 않습니다. 모든 조회는 동일한 untrusted envelope `{trusted:false, instructionAuthority:'none', source:{url,kind}, content}`를 반환합니다. 선택적 공식 API 호출은 `~/.hyper-cloaking/secrets/` 아래 소유자 전용으로 보관되는 런타임 credential profile을 쓰며 redact된 `engine/credentials.mjs` CLI(`init/list/inspect/import/remove/set-default/validate/reconcile/resolve-profile`)로 관리합니다. 선언된 scope는 권한을 부여하지 않고 원격 검증된 scope만 부여합니다. guarded write는 단일 dispatch 전에 잠긴 `guarded-actions-v1.json`에 rate 슬롯 1개와 idempotency claim 1개를 atomic하게 예약한 뒤 claim을 `verified`/`ambiguous`로 확정하며, 크래시가 pending claim을 자동 해제하지 않습니다.
 
 ```js
 import { buildInstagramSession, instagramActions } from './engine/providers/instagram/index.mjs';
@@ -246,7 +248,33 @@ await youtubeActions.subscribeChannel(youtube, '@NASA', { dryRun: false, enableS
 await redditActions.upvotePost(reddit, listing.content.posts[0], { dryRun: false, enableUpvote: true });
 ```
 
-**승인된 개인 자동화 범위.** 이 모듈들은 사용자 *본인*의 인증된 계정을 개인 관리 목적으로 자동화하며 내장 가드레일 하에서만 허용됩니다: 쓰기는 기본 dry-run; DM/댓글 답장은 조회 액션이 만든 **기존** 대화·게시물·댓글의 불투명 핸들만 사용합니다(cold outreach 불가); 대량 답장은 상한, 영구 rate limit, 사람 확인, 중단 후 idempotent 재개를 적용합니다. YouTube 구독과 Reddit upvote는 `dryRun:false`와 액션별 `enableSubscribe` / `enableUpvote` opt-in이 함께 없으면 구조적으로 차단됩니다. guarded navigation은 이동 전에 `TargetSafetyError`를 던질 수 있습니다. 액션 결과는 실제 전환(`performed:true`, `changed:true`)과 이미 충족된 no-op(`ok:true`, `performed:false`, `changed:false`, `alreadySatisfied:true`)을 구분하며, blocked 결과는 세 상태 필드를 모두 false로 둡니다. 이는 *추가* 허용이며, *비승인*·대량/무단·회피성 계정 자동화 금지는 그대로입니다. challenge/CAPTCHA/rate-limit 신호는 여전히 진단 blocker로 플로우를 중단합니다.
+```js
+// 새 guarded provider 표면도 동일한 dry-run 기본, 액션별 enable 플래그,
+// atomic 예약, 단일 dispatch, 정확한 postcondition 계약을 따릅니다.
+import { buildCoupangSession, coupangActions } from './engine/providers/coupang/index.mjs';
+import { buildTikTokSession, tiktokActions } from './engine/providers/tiktok/index.mjs';
+import { buildNaverSession, naverActions } from './engine/providers/naver/index.mjs';
+import { buildXSession, xActions } from './engine/providers/x/index.mjs';
+
+// Coupang: 상품 탐색 + 본인 장바구니/찜/본인주문리뷰 쓰기.
+const coupang = buildCoupangSession(page, { stateDir: paths.stateDir });
+const products = await coupangActions.searchProducts(coupang, 'ssd', { limit: 20 });
+await coupangActions.setSavedState(coupang, products.content.products[0], true, { dryRun: false, enableSetSavedState: true, runId: 'save-1' });
+
+// TikTok: 조회 + 원하는 상태 인게이지먼트, 인바운드 전용 DM 답장, 확인 후 게시.
+const tiktok = buildTikTokSession(page, { stateDir: paths.stateDir, accountId: 'me' });
+await tiktokActions.setLiked(tiktok, { handle: 'nasa', videoId: '123' }, true, { dryRun: false, enableLike: true, runId: 'like-1' });
+
+// Naver: search/blog/cafe 조회 + guarded blog/cafe 쓰기(닫힌 visibility/media 스키마).
+const naver = buildNaverSession(page, { stateDir: paths.stateDir });
+const blogHits = await naverActions.searchBlog(naver, '캠핑', { limit: 20 });
+
+// X: 조회 + 단일 대상 guarded like/repost/reply/quote/create 및 인바운드 DM.
+const x = buildXSession(page, { stateDir: paths.stateDir, accountId: 'me' });
+await xActions.setLiked(x, { handle: 'nasa', postId: '1' }, true, { dryRun: false, enableLike: true, runId: 'like-1' });
+```
+
+**승인된 개인 자동화 범위.** 이 모듈들은 사용자 *본인*의 인증된 계정을 개인 관리 목적으로 자동화하며 내장 가드레일 하에서만 허용됩니다: 쓰기는 기본 dry-run; DM/댓글 답장은 조회 액션이 만든 **기존** 대화·게시물·댓글의 불투명 핸들만 사용합니다(cold outreach 불가); 대량 답장은 상한, 영구 rate limit, 사람 확인, 중단 후 idempotent 재개를 적용합니다. YouTube 구독과 Reddit upvote는 `dryRun:false`와 액션별 `enableSubscribe` / `enableUpvote` opt-in이 함께 없으면 구조적으로 차단됩니다. 모든 신규 provider 쓰기(Coupang 장바구니/수량/찜/본인주문리뷰; TikTok 인게이지먼트/댓글/답글/인바운드-DM/업로드-초안/게시; Naver 블로그·카페 반응/댓글/초안/게시/카페글; X 좋아요/북마크/리포스트/팔로우/답글/인용/작성/인바운드-DM)도 동일하게 기본 dry-run이며 추가로 정확한 액션별 enable 플래그, 영구 `stateDir`, 안전한 명시적 `runId`가 필요합니다. 게시/리뷰/대량 등 고영향 액션은 대화형 확인 게이트도 필요합니다. 로컬 미디어 업로드는 `O_NOFOLLOW`·비심볼릭·확장자+매직바이트·dispatch 직전 TOCTOU 검사와 함께 닫힌 개수/크기/유형 스키마를 강제합니다. cold/대량 메시징, 결제/체크아웃/주문, 계정/보안/모더레이션/광고 등 범위 밖 작업은 구조적으로 차단됩니다. guarded navigation은 이동 전에 `TargetSafetyError`를 던질 수 있습니다. 액션 결과는 실제 전환(`performed:true`, `changed:true`)과 이미 충족된 no-op(`ok:true`, `performed:false`, `changed:false`, `alreadySatisfied:true`)을 구분하며, blocked 결과는 세 상태 필드를 모두 false로 둡니다. 이는 *추가* 허용이며, *비승인*·대량/무단·회피성 계정 자동화 금지는 그대로입니다. challenge/CAPTCHA/rate-limit 신호는 여전히 진단 blocker로 플로우를 중단합니다.
 
 <required>
 

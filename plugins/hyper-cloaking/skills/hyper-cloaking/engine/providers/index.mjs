@@ -5,6 +5,7 @@ import { genericProvider } from './generic.mjs';
 // Import the provider metadata directly (not the action barrel) so building the
 // registry stays lean — it must not eager-load the browser-automation/fs action
 // stack. Action consumers import the provider-specific `<provider>/index.mjs`.
+import { coupangProvider } from './coupang/metadata.mjs';
 import { instagramProvider } from './instagram/metadata.mjs';
 import { naverProvider } from './naver.mjs';
 import { redditProvider } from './reddit/metadata.mjs';
@@ -17,6 +18,7 @@ import {
   validateProviderRegistry as validateProviderRegistryFromRegistry
 } from './registry.mjs';
 import { xProvider } from './x.mjs';
+import { tiktokProvider } from './tiktok/metadata.mjs';
 import { youtubeProvider } from './youtube/metadata.mjs';
 
 export const providers = [
@@ -25,6 +27,8 @@ export const providers = [
   redditProvider,
   instagramProvider,
   youtubeProvider,
+  coupangProvider,
+  tiktokProvider,
   xProvider
 ];
 

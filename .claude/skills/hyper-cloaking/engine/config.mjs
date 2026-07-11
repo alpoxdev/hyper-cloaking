@@ -23,8 +23,24 @@ export function defaultHome(homeDirectory = os.homedir()) {
   return expandHome(DEFAULT_HOME, homeDirectory);
 }
 
-export function resolveHome(home) {
-  return path.resolve(expandHome(home || DEFAULT_HOME));
+export function resolveHome(home, {
+  env = process.env,
+  homeDirectory = os.homedir()
+} = {}) {
+  let source;
+  if (home !== undefined && home !== null) {
+    if (typeof home !== 'string' || home.trim() === '') {
+      throw new TypeError('home must be a non-empty string when provided');
+    }
+    source = home;
+  } else if (typeof env?.HYPER_CLOAKING_HOME === 'string' && env.HYPER_CLOAKING_HOME.trim() !== '') {
+    source = env.HYPER_CLOAKING_HOME;
+  } else {
+    source = DEFAULT_HOME;
+  }
+
+  if (source.includes('\0')) throw new TypeError('home must not contain NUL bytes');
+  return path.resolve(expandHome(source, homeDirectory));
 }
 
 export function homePath(home, ...segments) {

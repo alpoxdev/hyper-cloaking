@@ -2,14 +2,24 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { genericProvider } from './generic.mjs';
+import { coupangProvider } from './coupang/metadata.mjs';
 import { redditProvider } from './reddit/metadata.mjs';
+import { naverProvider } from './naver/metadata.mjs';
 import { FORBIDDEN_PROVIDER_FIELDS, validateProviderSchema } from './schema.mjs';
 import { validateProviderRegistry as validateProviderRegistryFromRegistry } from './registry.mjs';
 import { xProvider } from './x.mjs';
+import { tiktokProvider } from './tiktok/metadata.mjs';
 import { buildProviderSession, OffOriginError } from './session.mjs';
 
 test('valid built-in providers pass schema validation', () => {
-  for (const provider of [genericProvider, redditProvider, xProvider]) {
+  for (const provider of [
+    genericProvider,
+    coupangProvider,
+    naverProvider,
+    redditProvider,
+    tiktokProvider,
+    xProvider
+  ]) {
     const result = validateProviderSchema(provider);
     assert.equal(result.ok, true, JSON.stringify(result.errors));
   }
@@ -447,4 +457,161 @@ test('cross-provider alias/domain ambiguity validation catches overlapping fixtu
   const result = validateProviderRegistryFromRegistry([genericProvider, providerA, providerB]);
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.code === 'provider-ambiguous-host'));
+});
+
+function strictProvider() {
+  return {
+    id: 'strict-fixture',
+    label: 'Strict Fixture',
+    domains: {
+      allowedOrigins: ['https://strict.test', 'https://www.strict.test']
+    }
+  };
+}
+
+function strictPage({
+  startUrl = 'about:blank',
+  routeUrls,
+  finalUrl,
+  status = 200,
+  serviceWorkers = [],
+  subresourceWithoutFallback = false
+} = {}) {
+  const mainFrame = {};
+  const dispatched = [];
+  let currentUrl = startUrl;
+  let handler = null;
+  let installedPattern = null;
+  let removed = false;
+  let fallbackCount = 0;
+
+  return {
+    dispatched,
+    get fallbackCount() { return fallbackCount; },
+    get removed() { return removed; },
+    url: () => currentUrl,
+    mainFrame: () => mainFrame,
+    context: () => ({ serviceWorkers: () => serviceWorkers }),
+    async route(pattern, callback) {
+      installedPattern = pattern;
+      handler = callback;
+    },
+    async unroute(pattern, callback) {
+      assert.equal(pattern, installedPattern);
+      assert.equal(callback, handler);
+      removed = true;
+      handler = null;
+    },
+    async goto(targetUrl) {
+      for (const url of routeUrls || [targetUrl]) {
+        let aborted = false;
+        const request = {
+          url: () => url,
+          isNavigationRequest: () => true,
+          frame: () => mainFrame
+        };
+        await handler({
+          request: () => request,
+          fallback: async () => {
+            fallbackCount += 1;
+            dispatched.push(url);
+          },
+          abort: async () => {
+            aborted = true;
+          }
+        });
+        if (aborted) throw new Error(`aborted ${url}`);
+      }
+      if (subresourceWithoutFallback) {
+        const request = {
+          url: () => 'https://strict.test/script.js',
+          isNavigationRequest: () => false,
+          frame: () => mainFrame
+        };
+        await handler({
+          request: () => request,
+          abort: async () => {}
+        });
+      }
+      currentUrl = finalUrl || (routeUrls || [targetUrl]).at(-1);
+      return {
+        status: () => status,
+        statusText: () => String(status)
+      };
+    },
+    async evaluate() {
+      return { title: '', labels: [] };
+    }
+  };
+}
+
+test('strict provider navigation composes routes and returns typed final status evidence', async () => {
+  const page = strictPage();
+  const session = buildProviderSession(page, { provider: strictProvider() });
+  const result = await session.navigateGuardedForRead('https://strict.test/path');
+
+  assert.deepEqual(result, { url: 'https://strict.test/path', status: 200 });
+  assert.equal(page.fallbackCount, 1);
+  assert.equal(page.removed, true);
+  assert.equal(session.targetSafety.disposition, 'ok');
+});
+
+test('strict provider navigation aborts an off-origin redirect before dispatch', async () => {
+  const page = strictPage({
+    routeUrls: ['https://strict.test/start', 'https://outside.test/redirect']
+  });
+  const session = buildProviderSession(page, { provider: strictProvider() });
+
+  await assert.rejects(
+    session.navigateGuardedForRead('https://strict.test/start'),
+    (error) => error instanceof OffOriginError && error.url === 'https://outside.test/redirect'
+  );
+  assert.deepEqual(page.dispatched, ['https://strict.test/start']);
+  assert.equal(page.removed, true);
+});
+test('strict provider navigation rejects a recorded route failure even when goto resolves', async () => {
+  const page = strictPage({ subresourceWithoutFallback: true });
+  const session = buildProviderSession(page, { provider: strictProvider() });
+  await assert.rejects(
+    session.navigateGuardedForRead('https://strict.test/path'),
+    (error) => error.code === 'strict-navigation-fallback-unavailable'
+  );
+  assert.equal(page.removed, true);
+});
+
+test('strict provider origins reject widening overrides and active service workers before goto', async () => {
+  const widenedPage = strictPage();
+  const widened = buildProviderSession(widenedPage, {
+    provider: strictProvider(),
+    allowedOrigins: ['https://outside.test']
+  });
+  await assert.rejects(
+    widened.navigateGuardedForRead('https://strict.test/path'),
+    (error) => error instanceof OffOriginError
+  );
+  assert.equal(widenedPage.dispatched.length, 0);
+
+  const workerPage = strictPage({ serviceWorkers: [{}] });
+  const workerSession = buildProviderSession(workerPage, { provider: strictProvider() });
+  await assert.rejects(
+    workerSession.navigateGuardedForWrite('https://strict.test/path'),
+    (error) => error.code === 'strict-navigation-service-worker'
+  );
+  assert.equal(workerPage.dispatched.length, 0);
+});
+
+test('strict provider navigation rejects non-success and empty final statuses after cleanup', async () => {
+  for (const [status, expectedCode] of [
+    [204, 'empty-navigation-response'],
+    [401, 'network-auth'],
+    [500, 'network-http-status']
+  ]) {
+    const page = strictPage({ status });
+    const session = buildProviderSession(page, { provider: strictProvider() });
+    await assert.rejects(
+      session.navigateGuardedForRead('https://strict.test/path'),
+      (error) => error.code === expectedCode
+    );
+    assert.equal(page.removed, true);
+  }
 });

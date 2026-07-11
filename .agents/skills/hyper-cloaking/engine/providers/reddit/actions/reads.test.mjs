@@ -7,6 +7,7 @@ import { getPost } from './post.mjs';
 import { getUserProfile } from './user.mjs';
 import { assertExistingCommentRef } from './ids.mjs';
 import { redditSelectors, resolveRedditSelector } from '../selectors.mjs';
+import { NetworkReadError } from '../../network.mjs';
 
 function textNode(text, attributes = {}) {
   return {
@@ -74,7 +75,7 @@ function mockSession(page, { challengeError = null } = {}) {
     throwOnChallenge: () => {
       if (challengeError) throw challengeError;
     },
-    async navigateGuarded(url, opts) {
+    async navigateGuardedForRead(url, opts) {
       await page.goto(url, opts);
       const text = await page.evaluate(() => document.body?.innerText || '');
       this.throwOnChallenge({ text });
@@ -100,10 +101,12 @@ test('getPost rejects invalid references before navigation with InvalidPostRefEr
   await assert.rejects(getPost(mockSession(page), 'not-a-post'), (error) => error.code === 'invalid-post-ref');
 });
 
-test('listing rejects off-origin post links rather than emitting canonical handles', async () => {
+test('listing rejects off-origin post links instead of laundering them into an empty read', async () => {
   const page = mockPage([activityNode({ href: 'https://reddit.example/r/node/comments/abc123/title/' })]);
-  const read = await getSubreddit(mockSession(page), 'node');
-  assert.deepEqual(read.content.posts, []);
+  await assert.rejects(
+    getSubreddit(mockSession(page), 'node'),
+    /invalid post reference/
+  );
 });
 
 test('listing reads compose directly with analyzeActivity', async () => {
@@ -209,4 +212,150 @@ test('getPost does not combine accessible and Shreddit comment wrappers', async 
 
   assert.equal(read.content.comments.length, 1);
   assert.equal(evaluationArgs.find((arg) => arg?.comment)?.comment, primary);
+});
+
+test('Reddit reads stay DOM-default until complete promotion evidence exists', async () => {
+  let directCalls = 0;
+  const post = activityNode({ href: '/r/node/comments/abc123/title/' });
+  const read = await getSubreddit(mockSession(mockPage([post])), 'node', {
+    readHandlers: {
+      direct: async () => {
+        directCalls += 1;
+        return { posts: [] };
+      }
+    }
+  });
+  assert.equal(directCalls, 0);
+  assert.equal(read.content.count, 1);
+});
+
+test('forced Reddit network reads preserve whole-result parity and reject without DOM fallback', async () => {
+  const post = activityNode({ href: '/r/node/comments/abc123/title/' });
+  const domRead = await getSubreddit(mockSession(mockPage([post])), 'node');
+  const networkRead = await getSubreddit({}, 'node', {
+    readStrategy: 'direct',
+    readHandlers: { direct: async () => structuredClone(domRead.content) }
+  });
+  assert.deepEqual(networkRead, domRead);
+
+  await assert.rejects(
+    getSubreddit({
+      async navigateGuardedForRead() { throw new Error('DOM must not run'); }
+    }, 'node', {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => {
+          throw new NetworkReadError('reddit-direct-failed', 'failed', { dispatched: true });
+        }
+      }
+    }),
+    (error) => error.code === 'reddit-direct-failed'
+  );
+});
+
+test('Reddit network normalization and strict navigation fail closed', async () => {
+  await assert.rejects(
+    getSubreddit({}, 'node', {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => ({ posts: Array.from({ length: 401 }, () => ({ postId: 'abc123', subreddit: 'node' })) })
+      }
+    }),
+    /at most 400/
+  );
+  await assert.rejects(
+    getPost({
+      async navigateGuardedForRead() { throw new Error('strict read blocked'); }
+    }, '/r/node/comments/abc123/title/'),
+    /strict read blocked/
+  );
+});
+
+test('Reddit post accepts 400 raw comments, rejects 401, and fills unique output after duplicates', async () => {
+  const comment = (commentId) => ({
+    subreddit: 'node',
+    postId: 'abc123',
+    commentId,
+    author: 'user',
+    text: commentId
+  });
+  const duplicateHeavy = [
+    ...Array.from({ length: 200 }, () => comment('dup')),
+    ...Array.from({ length: 200 }, (_, index) => comment(`c${index.toString(36).padStart(2, '0')}`))
+  ];
+  const read = await getPost({}, '/r/node/comments/abc123/title/', {
+    readStrategy: 'direct',
+    readHandlers: {
+      direct: async () => ({
+        title: 'Title',
+        comments: duplicateHeavy
+      })
+    }
+  });
+  assert.equal(read.content.comments.length, 100);
+  assert.equal(read.content.comments[0].commentId, 'dup');
+  assert.equal(read.content.comments[99].commentId, `c${(98).toString(36).padStart(2, '0')}`);
+
+  await assert.rejects(
+    getPost({}, '/r/node/comments/abc123/title/', {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => ({
+          title: 'Title',
+          comments: Array.from({ length: 401 }, () => comment('dup'))
+        })
+      }
+    }),
+    /at most 400/
+  );
+});
+
+test('Reddit user activity deduplicates post and comment IDs in separate namespaces', async () => {
+  const read = await getUserProfile({}, 'valid-user', {
+    readStrategy: 'direct',
+    readHandlers: {
+      direct: async () => ({
+        displayName: 'User',
+        activity: [
+          { subreddit: 'node', postId: 'abc123', text: 'post' },
+          { subreddit: 'node', postId: 'def456', commentId: 'abc123', text: 'comment' }
+        ]
+      })
+    }
+  });
+  assert.equal(read.content.activity.length, 2);
+  assert.equal(read.content.activity[0].commentId, null);
+  assert.equal(read.content.activity[1].commentId, 'abc123');
+});
+
+test('Reddit network reads require explicit evidence when malformed rows normalize empty', async () => {
+  await assert.rejects(
+    getSubreddit({}, 'node', {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => ({
+          posts: [{ url: 'https://reddit.example/r/node/comments/abc123/title/' }]
+        })
+      }
+    }),
+    /invalid post reference/
+  );
+  await assert.rejects(
+    getUserProfile({}, 'valid-user', {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => ({
+          activity: [{ url: 'https://reddit.example/r/node/comments/abc123/title/' }]
+        })
+      }
+    }),
+    /invalid post or comment reference/
+  );
+  const empty = await getUserProfile({}, 'valid-user', {
+    readStrategy: 'direct',
+    readHandlers: {
+      direct: async () => ({ activity: [], emptyState: true })
+    }
+  });
+  assert.deepEqual(empty.content.activity, []);
 });

@@ -27,22 +27,26 @@ export const instagramSelectors = {
   posts: {
     // Post/reel thumbnails on a profile grid are anchors to /p/ or /reel/.
     gridLink: 'main a[href*="/p/"], main a[href*="/reel/"]',
+    emptyState: 'main h2:has-text("No Posts Yet"), main [role="status"]:has-text("No Posts Yet")',
     reelLink: 'main a[href*="/reel/"]',
-    article: 'article',
-    likeButton: 'article [aria-label="Like"], svg[aria-label="Like"]',
-    unlikeButton: 'article [aria-label="Unlike"], svg[aria-label="Unlike"]',
-    commentField: 'article textarea[aria-label="Add a comment…"], textarea[aria-label="Add a comment…"]',
-    commentSubmit: 'div[role="button"]:has-text("Post"), button[type="submit"]',
-    // Comment list region — used to verify a posted comment appears (not whole-body text).
-    commentsList: 'article ul ul, article [role="list"]',
-    saveButton: 'article [aria-label="Save"], svg[aria-label="Save"]',
-    unsaveButton: 'article [aria-label="Remove"], svg[aria-label="Remove"]',
-    shareButton: 'article [aria-label="Share Post"], svg[aria-label="Share Post"]'
+    article: 'main article',
+    likeButton: 'main article [aria-label="Like"]',
+    unlikeButton: 'main article [aria-label="Unlike"]',
+    commentField: 'main article textarea[aria-label="Add a comment…"]',
+    commentSubmit: 'main article div[role="button"]:has-text("Post"), main article button[type="submit"]:has-text("Post")',
+    // Exact comment-text descendants, excluding author headings.
+    commentText: 'main article ul ul li > span, main article [role="listitem"] > span',
+    saveButton: 'main article [aria-label="Save"]',
+    unsaveButton: 'main article [aria-label="Remove"]',
+    shareButton: 'main article [aria-label="Share Post"]',
+    shareDialog: 'div[role="dialog"][aria-label*="Share"]'
   },
   dm: {
     inboxUrl: 'https://www.instagram.com/direct/inbox/',
     threadListItem: 'div[role="listitem"] a[href*="/direct/t/"], a[href*="/direct/t/"]',
     threadLink: 'a[href*="/direct/t/"]',
+    emptyInboxState: 'main h2:has-text("No messages"), main [role="status"]:has-text("No messages")',
+    emptyThreadState: 'main h2:has-text("No messages yet"), main [role="status"]:has-text("No messages yet")',
     messageList: 'div[role="grid"], div[aria-label*="Messages"]',
     incomingMessage: 'div[role="row"]',
     composer: 'div[role="textbox"][contenteditable="true"], textarea[placeholder="Message…"]',

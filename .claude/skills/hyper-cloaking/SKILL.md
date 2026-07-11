@@ -204,11 +204,13 @@ This is an intentional engine-only hard migration, not an accidental omission. T
 
 ## Provider metadata (optional)
 
-`engine/cli.mjs live` accepts an optional `--provider ID` (`naver`, `reddit`, `instagram`, `youtube`, `x`, or `generic`). It selects **metadata only** — domain/origin suggestions and cookie/profile/preflight hints — and never authorizes broader origins or bypasses target-safety, recon, or preflight. An unknown `--provider` fails closed (`unknown-provider`) before any cookie or browser work. Without `--provider`, the provider is inferred from the navigation target URL, and unknown hosts fall back to `generic`. Cookie selection stays controlled by `--cookie-site`/`--site` and `--account`; a provider `cookie.siteKey` is only a hint applied after preflight authorization, and redirect shorteners resolve the provider for navigation without seeding a cookie hint.
+`engine/cli.mjs live` accepts an optional `--provider ID` (`naver`, `reddit`, `instagram`, `youtube`, `x`, `coupang`, `tiktok`, or `generic`). It selects **metadata only** — domain/origin suggestions and cookie/profile/preflight hints — and never authorizes broader origins or bypasses target-safety, recon, or preflight. An unknown `--provider` fails closed (`unknown-provider`) before any cookie or browser work. Without `--provider`, the provider is inferred from the navigation target URL, and unknown hosts fall back to `generic`. Cookie selection stays controlled by `--cookie-site`/`--site` and `--account`; a provider `cookie.siteKey` is only a hint applied after preflight authorization, and redirect shorteners (`t.co`, `link.coupang.com`, `vm.tiktok.com`, `vt.tiktok.com`, `redd.it`, `youtu.be`) resolve the provider for navigation without seeding a cookie hint. Naver action origins narrow to search/blog/cafe (`nid.naver.com` stays auth-only); X action origins include the bare `https://x.com`.
 
 ## Provider action modules (importable)
 
-Provider *metadata* stays metadata-only (no action/session/selector automation fields — enforced by `engine/providers/schema.mjs`). Reusable Instagram, YouTube, and Reddit *action* flows live as **sibling modules** so you `import` tested functions instead of hand-writing a flow each session. They are **JS-driver (`live` lane) helpers** — they need a real Playwright `page` from `launchCloakBrowser`/`launchPersistentCloakContext` and are **not usable in Playwright-MCP mode** (no `page` handle there). Provider-agnostic guardrails and result shaping live at `engine/action-runtime/`.
+Provider *metadata* stays metadata-only (no action/session/selector automation fields — enforced by `engine/providers/schema.mjs`). Reusable Instagram, YouTube, Reddit, Coupang, TikTok, Naver, and X *action* flows live as **sibling modules** so you `import` tested functions instead of hand-writing a flow each session. They are **JS-driver (`live` lane) helpers** — they need a real Playwright `page` from `launchCloakBrowser`/`launchPersistentCloakContext` and are **not usable in Playwright-MCP mode** (no `page` handle there). Provider-agnostic guardrails and result shaping live at `engine/action-runtime/`.
+
+Reads default to strict fail-closed DOM extraction and only promote to the evidence-gated network-first path (documented official client, module-owned isolated same-origin GET, action-scoped observed-private GET replay, or a correlated qualified browser response) **per action, after** that action passes sanitized fixtures, offline whole-result/rejection parity, and one authorized live observation; forced strategies never silently fall back. Every read returns the same untrusted envelope `{trusted:false, instructionAuthority:'none', source:{url,kind}, content}`. Optional documented-official calls use runtime credential profiles kept owner-only under `~/.hyper-cloaking/secrets/` and managed through the redacted `engine/credentials.mjs` CLI (`init/list/inspect/import/remove/set-default/validate/reconcile/resolve-profile`); declared scopes never authorize, only remotely verified scopes do. Guarded writes reserve one atomic rate slot plus an idempotency claim in a locked `guarded-actions-v1.json` before a single dispatch, then finalize the claim `verified`/`ambiguous`; crashes never auto-clear a pending claim.
 
 ```js
 import { buildInstagramSession, instagramActions } from './engine/providers/instagram/index.mjs';
@@ -247,7 +249,33 @@ await youtubeActions.subscribeChannel(youtube, '@NASA', { dryRun: false, enableS
 await redditActions.upvotePost(reddit, listing.content.posts[0], { dryRun: false, enableUpvote: true });
 ```
 
-**Authorized personal-automation scope.** These modules automate the user's *own* authenticated account for personal management, and are permitted only under the built-in guardrails: writes are dry-run by default; DM/comment replies target **existing** conversations/posts/comments only (opaque handles produced by read actions — no cold outreach); bulk replies are capped, persisted-rate-limited, human-confirmed, and resumable. YouTube subscribe and Reddit upvote are structural blockers unless their distinct `enableSubscribe` / `enableUpvote` opt-in is paired with `dryRun:false`. Guarded navigation can throw `TargetSafetyError` before navigation. Action results distinguish a real transition (`performed:true`, `changed:true`) from an already-satisfied no-op (`ok:true`, `performed:false`, `changed:false`, `alreadySatisfied:true`); blocked results set all three state fields false. This is an additive allowance; the `<forbidden>` ban on *unauthorized*, mass/unsolicited, or evasive account automation is unchanged. Any challenge/CAPTCHA/rate-limit signal still stops the flow as a diagnostic blocker.
+```js
+// New guarded provider surfaces mirror the same dry-run-default, per-action
+// enable-flag, atomic-reservation, one-dispatch, exact-postcondition contract.
+import { buildCoupangSession, coupangActions } from './engine/providers/coupang/index.mjs';
+import { buildTikTokSession, tiktokActions } from './engine/providers/tiktok/index.mjs';
+import { buildNaverSession, naverActions } from './engine/providers/naver/index.mjs';
+import { buildXSession, xActions } from './engine/providers/x/index.mjs';
+
+// Coupang: product discovery + owned cart/save/own-order-review writes.
+const coupang = buildCoupangSession(page, { stateDir: paths.stateDir });
+const products = await coupangActions.searchProducts(coupang, 'ssd', { limit: 20 });
+await coupangActions.setSavedState(coupang, products.content.products[0], true, { dryRun: false, enableSetSavedState: true, runId: 'save-1' });
+
+// TikTok: reads + desired-state engagement, inbound-only DM reply, confirmed publish.
+const tiktok = buildTikTokSession(page, { stateDir: paths.stateDir, accountId: 'me' });
+await tiktokActions.setLiked(tiktok, { handle: 'nasa', videoId: '123' }, true, { dryRun: false, enableLike: true, runId: 'like-1' });
+
+// Naver: search/blog/cafe reads + guarded blog/cafe writes (closed visibility/media schema).
+const naver = buildNaverSession(page, { stateDir: paths.stateDir });
+const blogHits = await naverActions.searchBlog(naver, '캠핑', { limit: 20 });
+
+// X: reads + single-target guarded like/repost/reply/quote/create and inbound DM.
+const x = buildXSession(page, { stateDir: paths.stateDir, accountId: 'me' });
+await xActions.setLiked(x, { handle: 'nasa', postId: '1' }, true, { dryRun: false, enableLike: true, runId: 'like-1' });
+```
+
+**Authorized personal-automation scope.** These modules automate the user's *own* authenticated account for personal management, and are permitted only under the built-in guardrails: writes are dry-run by default; DM/comment replies target **existing** conversations/posts/comments only (opaque handles produced by read actions — no cold outreach); bulk replies are capped, persisted-rate-limited, human-confirmed, and resumable. YouTube subscribe and Reddit upvote are structural blockers unless their distinct `enableSubscribe` / `enableUpvote` opt-in is paired with `dryRun:false`. Every new-provider write (Coupang cart/quantity/save/own-order-review; TikTok engagement/comment/reply/inbound-DM/upload-draft/publish; Naver blog/cafe reactions/comments/drafts/publish/cafe-post; X like/bookmark/repost/follow/reply/quote/create/inbound-DM) is likewise dry-run by default and additionally requires its exact per-action enable flag, a persistent `stateDir`, and a safe explicit `runId`; high-impact publish/review/bulk actions also require an interactive confirmation gate. Local media uploads enforce closed count/size/type schemas with `O_NOFOLLOW`, non-symlink, extension+magic-byte, and pre-dispatch TOCTOU checks. Cold or bulk messaging, payment/checkout/order, account/security/moderation/ads, and other out-of-scope operations are structural blockers. Guarded navigation can throw `TargetSafetyError` before navigation. Action results distinguish a real transition (`performed:true`, `changed:true`) from an already-satisfied no-op (`ok:true`, `performed:false`, `changed:false`, `alreadySatisfied:true`); blocked results set all three state fields false. This is an additive allowance; the `<forbidden>` ban on *unauthorized*, mass/unsolicited, or evasive account automation is unchanged. Any challenge/CAPTCHA/rate-limit signal still stops the flow as a diagnostic blocker.
 
 <required>
 

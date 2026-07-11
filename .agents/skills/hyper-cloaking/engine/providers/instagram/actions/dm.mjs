@@ -22,9 +22,36 @@ import {
   recordBulkProgress
 } from '../../../action-runtime/guardrails.mjs';
 import { makeActionResult, makeBlockedResult, wrapReadPayload } from '../../../action-runtime/action-result.mjs';
+import { executeInstagramRead } from '../network.mjs';
 
-const THREAD_URL_RE = /^https:\/\/(www\.)?instagram\.com\/direct\/t\/\d+\/?$/;
-const THREAD_ID_RE = /^\d+$/;
+const THREAD_ID_RE = /^\d{1,64}$/;
+const THREAD_PATH_RE = /^\/direct\/t\/(\d{1,64})\/?$/;
+
+function threadFromUrl(value) {
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed = new URL(value);
+    const match = parsed.pathname.match(THREAD_PATH_RE);
+    if (
+      parsed.protocol !== 'https:'
+      || !['instagram.com', 'www.instagram.com'].includes(parsed.hostname)
+      || parsed.username
+      || parsed.password
+      || parsed.port
+      || parsed.search
+      || parsed.hash
+      || !match
+    ) {
+      return null;
+    }
+    return {
+      threadId: match[1],
+      url: `https://www.instagram.com/direct/t/${match[1]}/`
+    };
+  } catch {
+    return null;
+  }
+}
 
 export class InvalidThreadRefError extends Error {
   constructor(ref) {
@@ -45,22 +72,20 @@ export class InvalidThreadRefError extends Error {
  */
 export function normalizeThreadRef(ref) {
   if (ref && typeof ref === 'object') {
-    const id = ref.threadId != null ? String(ref.threadId) : null;
-    const url = typeof ref.url === 'string' ? ref.url : null;
-    if (id && THREAD_ID_RE.test(id)) {
-      return { threadId: id, url: url && THREAD_URL_RE.test(url) ? url : `https://www.instagram.com/direct/t/${id}/` };
+    const id = ref.threadId == null ? null : String(ref.threadId);
+    if (id !== null && !THREAD_ID_RE.test(id)) return null;
+
+    if (ref.url !== undefined) {
+      const fromUrl = threadFromUrl(ref.url);
+      if (!fromUrl || (id !== null && fromUrl.threadId !== id)) return null;
+      return fromUrl;
     }
-    if (url && THREAD_URL_RE.test(url)) {
-      const m = url.match(/\/direct\/t\/(\d+)/);
-      return m ? { threadId: m[1], url } : null;
-    }
-    return null;
+
+    return id === null
+      ? null
+      : { threadId: id, url: `https://www.instagram.com/direct/t/${id}/` };
   }
-  if (typeof ref === 'string' && THREAD_URL_RE.test(ref)) {
-    const m = ref.match(/\/direct\/t\/(\d+)/);
-    return m ? { threadId: m[1], url: ref } : null;
-  }
-  return null;
+  return threadFromUrl(ref);
 }
 
 export function isValidThreadRef(ref) {
@@ -73,29 +98,111 @@ export function assertExistingThreadRef(ref) {
   return normalized;
 }
 
+function normalizeThreadList(value, limit) {
+  if (!value || typeof value !== 'object' || !Array.isArray(value.threads) || value.threads.length > 100) {
+    throw new TypeError('Instagram DM thread content must contain at most 100 threads');
+  }
+  if (value.threads.length === 0 && value.emptyState !== true) {
+    throw new TypeError('Instagram empty DM thread content requires explicit empty-state evidence');
+  }
+  const seen = new Set();
+  const threads = [];
+  for (const entry of value.threads) {
+    const normalized = normalizeThreadRef(entry);
+    if (!normalized || seen.has(normalized.threadId)) {
+      if (!normalized) throw new TypeError('Instagram DM thread content contains an invalid thread');
+      continue;
+    }
+    seen.add(normalized.threadId);
+    threads.push(normalized);
+    if (threads.length >= limit) break;
+  }
+  return threads;
+}
+
+function normalizeThreadContent(value, { thread, limit }) {
+  if (!value || typeof value !== 'object' || !Array.isArray(value.messages) || value.messages.length > 100) {
+    throw new TypeError('Instagram DM message content must contain at most 100 messages');
+  }
+  if (value.messages.length === 0 && value.emptyState !== true) {
+    throw new TypeError('Instagram empty DM message content requires explicit empty-state evidence');
+  }
+  const messages = value.messages
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object' || !['in', 'out'].includes(entry.direction)) {
+        throw new TypeError('Instagram DM messages require an in/out direction');
+      }
+      const text = String(entry.text ?? '').trim();
+      if (!text || text.length > 10_000) throw new TypeError('Instagram DM message text is invalid');
+      return { direction: entry.direction, text };
+    })
+    .slice(-limit);
+  return { threadId: thread.threadId, messages };
+}
+
 /**
  * Lists existing DM threads (read). Returns opaque handles usable as threadRefs.
  */
 export async function listDMThreads(session, opts = {}) {
-  const limit = Number.isInteger(opts.limit) && opts.limit > 0 ? opts.limit : 20;
-  await session.page.goto(instagramSelectors.dm.inboxUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  session.requireInstagramOrigin();
-  session.throwOnChallenge({ text: await safeBodyText(session.page) });
+  const limit = Number.isInteger(opts.limit) && opts.limit > 0 ? Math.min(opts.limit, 100) : 20;
+  const dom = async () => {
+    await session.navigateGuardedForRead(instagramSelectors.dm.inboxUrl, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000
+    });
+    const hrefs = await session.page.$$eval(
+      instagramSelectors.dm.threadLink,
+      (nodes) => nodes.slice(0, 100).map((node) => node.getAttribute('href')).filter(Boolean)
+    );
+    if (hrefs.length === 0) {
+      const emptyCount = await session.page.locator(instagramSelectors.dm.emptyInboxState).count();
+      if (emptyCount === 0) throw new Error('Instagram DM inbox state could not be proven');
+    }
+    return {
+      emptyState: hrefs.length === 0,
+      threads: hrefs.map((href) => ({
+        url: String(href).startsWith('http')
+          ? String(href)
+          : `https://www.instagram.com${href}`
+      }))
+    };
+  };
+  const { value } = await executeInstagramRead({
+    action: 'listDMThreads',
+    requested: opts.readStrategy,
+    promotion: opts.readPromotion,
+    handlers: opts.readHandlers,
+    observer: opts.readObserver,
+    dom,
+    normalize: (content) => normalizeThreadList(content, limit)
+  });
+  return wrapReadPayload({
+    url: instagramSelectors.dm.inboxUrl,
+    content: value,
+    kind: 'instagram-dm-threads'
+  });
+}
 
-  const hrefs = await session.page.$$eval(
-    instagramSelectors.dm.threadLink,
-    (nodes) => nodes.map((n) => n.getAttribute('href')).filter(Boolean)
+async function extractThreadMessages(session, { limit = 100 } = {}) {
+  const rows = await session.page.$$eval(
+    instagramSelectors.dm.incomingMessage,
+    (nodes, rowLimit) => nodes.slice(-rowLimit).map((node) => ({
+      messageId: node.getAttribute('data-message-id'),
+      text: (node.textContent || '').trim(),
+      outgoing: node.getAttribute('data-outgoing') === 'true'
+    })),
+    limit
   );
-  const seen = new Set();
-  const threads = [];
-  for (const href of hrefs) {
-    const m = String(href).match(/\/direct\/t\/(\d+)/);
-    if (!m || seen.has(m[1])) continue;
-    seen.add(m[1]);
-    threads.push({ threadId: m[1], url: `https://www.instagram.com/direct/t/${m[1]}/` });
-    if (threads.length >= limit) break;
+  const messages = rows.filter((row) => row.text).map((row) => ({
+    messageId: row.messageId || null,
+    direction: row.outgoing ? 'out' : 'in',
+    text: row.text
+  }));
+  if (messages.length === 0) {
+    const emptyCount = await session.page.locator(instagramSelectors.dm.emptyThreadState).count();
+    if (emptyCount === 0) throw new Error('Instagram DM thread state could not be proven');
   }
-  return wrapReadPayload({ url: instagramSelectors.dm.inboxUrl, content: threads, kind: 'instagram-dm-threads' });
+  return messages;
 }
 
 /**
@@ -103,55 +210,109 @@ export async function listDMThreads(session, opts = {}) {
  */
 export async function readDMThread(session, threadRef, opts = {}) {
   const thread = assertExistingThreadRef(threadRef);
-  const limit = Number.isInteger(opts.limit) && opts.limit > 0 ? opts.limit : 30;
-  await session.page.goto(thread.url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  session.requireInstagramOrigin();
-  session.throwOnChallenge({ text: await safeBodyText(session.page) });
-
-  const rows = await session.page.$$eval(
-    instagramSelectors.dm.incomingMessage,
-    (nodes) => nodes.slice(-200).map((n) => ({
-      text: (n.textContent || '').trim(),
-      // A message the current user sent is typically right-aligned; expose a best-effort direction hint.
-      outgoing: n.getAttribute('data-outgoing') === 'true'
-    }))
-  ).catch(() => []);
-  const messages = rows.filter((r) => r.text).slice(-limit).map((r) => ({
-    direction: r.outgoing ? 'out' : 'in',
-    text: r.text
-  }));
-  return wrapReadPayload({ url: thread.url, content: { threadId: thread.threadId, messages }, kind: 'instagram-dm-thread' });
-}
-
-async function safeBodyText(page) {
-  try {
-    return await page.evaluate(() => document.body?.innerText || '');
-  } catch {
-    return '';
-  }
-}
-
-/**
- * Confirms the thread has >=1 inbound message (invariant #2). Reuses readDMThread.
- */
-async function threadHasInbound(session, thread) {
-  const read = await readDMThread(session, thread, { limit: 50 });
-  const messages = read?.content?.messages || [];
-  return messages.some((m) => m.direction === 'in');
+  const limit = Number.isInteger(opts.limit) && opts.limit > 0 ? Math.min(opts.limit, 100) : 30;
+  const dom = async () => {
+    await session.navigateGuardedForRead(thread.url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000
+    });
+    const messages = (await extractThreadMessages(session)).map(({ direction, text }) => ({
+      direction,
+      text
+    }));
+    return { threadId: thread.threadId, emptyState: messages.length === 0, messages };
+  };
+  const { value } = await executeInstagramRead({
+    action: 'readDMThread',
+    requested: opts.readStrategy,
+    promotion: opts.readPromotion,
+    handlers: opts.readHandlers,
+    observer: opts.readObserver,
+    dom,
+    normalize: (content) => normalizeThreadContent(content, { thread, limit })
+  });
+  return wrapReadPayload({
+    url: thread.url,
+    content: value,
+    kind: 'instagram-dm-thread'
+  });
 }
 
 /**
- * Sends a message and verifies it appears as the last outbound message
- * (invariant #3) before reporting performed:true.
+ * Confirms the already-open thread has >=1 inbound message (invariant #2).
  */
-async function sendAndVerify(session, thread, message) {
+async function threadHasInbound(session) {
+  const messages = await extractThreadMessages(session, { limit: 100 });
+  return messages.some((message) => message.direction === 'in');
+}
+
+/**
+ * Sends a message and proves a newly appended exact outbound message before
+ * reporting success. Bulk callers persist an uncertain marker before dispatch,
+ * so a crash cannot leave an untracked possible send.
+ */
+async function sendAndVerify(session, message, { beforeDispatch } = {}) {
+  const expected = message.trim();
+  const before = await extractThreadMessages(session, { limit: 101 });
   await session.humanType(instagramSelectors.dm.composer, message);
+  if (beforeDispatch) await beforeDispatch();
   await session.humanClick(instagramSelectors.dm.sendButton);
-  // Post-action verification: the sent text must appear as the last message.
-  const read = await readDMThread(session, thread, { limit: 5 });
-  const messages = read?.content?.messages || [];
-  const last = messages[messages.length - 1];
-  return Boolean(last && last.text && last.text.includes(message.trim()));
+
+  const after = await extractThreadMessages(session, { limit: 101 });
+  const previousLast = before[before.length - 1];
+  const last = after[after.length - 1];
+  const sameMessage = (left, right) => Boolean(
+    left
+    && right
+    && (
+      (left.messageId && right.messageId && left.messageId === right.messageId)
+      || (!left.messageId && !right.messageId && left.direction === right.direction && left.text === right.text)
+    )
+  );
+  const changedTail = Boolean(
+    last
+    && (
+      (last.messageId && last.messageId !== previousLast?.messageId)
+      || (
+        !last.messageId
+        && after.length > before.length
+        && before.every((entry, index) => sameMessage(entry, after[index]))
+      )
+    )
+  );
+  return changedTail && last.direction === 'out' && last.text === expected;
+}
+
+async function replyToDMPrepared(session, thread, message, { beforeDispatch } = {}) {
+  const action = 'instagram:replyToDM';
+  if (session.stateDir) {
+    const rate = await checkAndRecordAction(session.stateDir, 'dm-reply', { record: false });
+    if (!rate.allowed) return makeBlockedResult(action, rate.reason, { stage: 'rate-limit', rateLimit: rate });
+  }
+
+  await session.navigateGuardedForWrite(thread.url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  if (!(await threadHasInbound(session))) {
+    return makeBlockedResult(action, 'thread has no inbound message; refusing to send (no cold outreach)', {
+      stage: 'existing-thread-check',
+      requiresUserDecision: true
+    });
+  }
+
+  // Reserve the persisted rate slot before dispatch so verification failures
+  // cannot bypass the rolling limit.
+  const rate = session.stateDir ? await checkAndRecordAction(session.stateDir, 'dm-reply') : null;
+  if (rate && !rate.allowed) {
+    return makeBlockedResult(action, rate.reason, { stage: 'rate-limit', rateLimit: rate });
+  }
+  const verified = await sendAndVerify(session, message, { beforeDispatch });
+  return makeActionResult({
+    action,
+    dryRun: false,
+    observation: { text: verified ? 'dm reply sent and verified' : 'dm reply not verified', threadId: thread.threadId },
+    criteria: [{ type: 'textIncludes', expected: 'dm reply sent and verified' }],
+    rateLimit: rate,
+    failure: null
+  });
 }
 
 /**
@@ -174,29 +335,7 @@ export async function replyToDM(session, threadRef, message, opts = {}) {
     return makeBlockedResult(action, gate.reason, { dryRun: true, stage: 'dry-run' });
   }
 
-  if (session.stateDir) {
-    const rate = await checkAndRecordAction(session.stateDir, 'dm-reply', { record: false });
-    if (!rate.allowed) return makeBlockedResult(action, rate.reason, { stage: 'rate-limit', rateLimit: rate });
-  }
-
-  await session.page.goto(thread.url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  session.requireInstagramOrigin();
-  session.throwOnChallenge({ text: await safeBodyText(session.page) });
-
-  if (!(await threadHasInbound(session, thread))) {
-    return makeBlockedResult(action, 'thread has no inbound message; refusing to send (no cold outreach)', { stage: 'existing-thread-check', requiresUserDecision: true });
-  }
-
-  const verified = await sendAndVerify(session, thread, message);
-  const rate = session.stateDir ? await checkAndRecordAction(session.stateDir, 'dm-reply') : null;
-  return makeActionResult({
-    action,
-    dryRun: false,
-    observation: { text: verified ? 'dm reply sent and verified' : 'dm reply not verified', threadId: thread.threadId },
-    criteria: [{ type: 'textIncludes', expected: 'dm reply sent and verified' }],
-    rateLimit: rate,
-    failure: verified ? null : undefined
-  });
+  return replyToDMPrepared(session, thread, message);
 }
 
 /**
@@ -218,15 +357,23 @@ export async function replyToMany(session, items, opts = {}) {
   const bulk = enforceBulkCap(list, { cap: opts.cap });
   if (!bulk.allowed) return makeBlockedResult(action, bulk.reason, { stage: 'bulk-cap', requiresUserDecision: true });
 
-  // Validate every ref up front; one bad ref blocks the whole batch.
+  // Validate every ref up front; one bad or duplicate target blocks the batch.
   const normalized = [];
+  const recipientIds = new Set();
   for (const item of list) {
-    const t = normalizeThreadRef(item?.threadRef);
-    if (!t) return makeBlockedResult(action, `invalid thread ref in batch: ${JSON.stringify(item?.threadRef)}`, { stage: 'thread-ref-validation', requiresUserDecision: true });
-    if (typeof item.message !== 'string' || !item.message.trim()) {
-      return makeBlockedResult(action, `empty message for thread ${t.threadId}`, { stage: 'input-validation' });
+    const thread = normalizeThreadRef(item?.threadRef);
+    if (!thread) return makeBlockedResult(action, `invalid thread ref in batch: ${JSON.stringify(item?.threadRef)}`, { stage: 'thread-ref-validation', requiresUserDecision: true });
+    if (recipientIds.has(thread.threadId)) {
+      return makeBlockedResult(action, `duplicate thread ref in batch: ${thread.threadId}`, {
+        stage: 'thread-ref-validation',
+        requiresUserDecision: true
+      });
     }
-    normalized.push({ thread: t, message: item.message });
+    if (typeof item.message !== 'string' || !item.message.trim()) {
+      return makeBlockedResult(action, `empty message for thread ${thread.threadId}`, { stage: 'input-validation' });
+    }
+    recipientIds.add(thread.threadId);
+    normalized.push({ thread, message: item.message });
   }
 
   const gate = resolveWriteGate(opts);
@@ -239,18 +386,40 @@ export async function replyToMany(session, items, opts = {}) {
     return makeBlockedResult(action, confirm.reason, { stage: 'confirmation-gate', requiresUserDecision: true });
   }
 
-  const runId = opts.runId || `replyToMany-${normalized.length}`;
-  const ledger = session.stateDir ? await loadBulkLedger(session.stateDir, runId) : { done: new Set() };
+  const runId = opts.runId;
+  if (!session.stateDir) {
+    return makeBlockedResult(action, 'live bulk replies require durable stateDir', {
+      stage: 'bulk-state',
+      requiresUserDecision: true
+    });
+  }
+  if (typeof runId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(runId)) {
+    return makeBlockedResult(action, 'live bulk replies require an explicit safe runId', {
+      stage: 'bulk-run-id',
+      requiresUserDecision: true
+    });
+  }
+
+  const ledger = await loadBulkLedger(session.stateDir, runId);
   const results = [];
   for (const { thread, message } of normalized) {
     if (ledger.done.has(thread.threadId)) {
-      results.push({ threadId: thread.threadId, skipped: 'already-sent' });
+      results.push({ threadId: thread.threadId, skipped: 'already-verified' });
       continue;
     }
-    const single = await replyToDM(session, thread, message, { dryRun: false });
+    const uncertainKey = `uncertain:${thread.threadId}`;
+    if (ledger.done.has(uncertainKey)) {
+      return makeBlockedResult(action, `thread ${thread.threadId} has an unresolved prior dispatch`, {
+        stage: 'dispatch-uncertain',
+        requiresUserDecision: true
+      });
+    }
+
+    const single = await replyToDMPrepared(session, thread, message, {
+      beforeDispatch: () => recordBulkProgress(session.stateDir, runId, uncertainKey)
+    });
     results.push({ threadId: thread.threadId, ok: single.ok, performed: single.performed, blocked: single.blocked || false });
     if (single.blocked || !single.performed) {
-      // Stop the batch on the first failure/challenge; ledger preserves progress.
       return makeActionResult({
         action,
         dryRun: false,

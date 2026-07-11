@@ -4,6 +4,7 @@
 export { youtubeProvider } from './metadata.mjs';
 export { buildYouTubeSession, OffOriginError, ChallengeBlockedError, TargetSafetyError } from './session.mjs';
 export { youtubeSelectors, SELECTORS_VERSION, resolveYouTubeSelector } from './selectors.mjs';
+export { executeYouTubeRead, youtubeReadPromotions } from './network.mjs';
 export {
   normalizeVideoId,
   InvalidVideoRefError,

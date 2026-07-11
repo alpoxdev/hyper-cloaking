@@ -9,10 +9,15 @@ import {
   resolveConfirmationGate,
   enforceBulkCap,
   checkAndRecordAction,
+  reserveGuardedAction,
+  finalizeGuardedAction,
+  inspectGuardedAction,
+  reconcileGuardedAction,
   loadBulkLedger,
   recordBulkProgress,
   DEFAULT_BULK_CAP
 } from './guardrails.mjs';
+import { makeActionResult } from './action-result.mjs';
 
 async function tmpStateDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'hc-guardrails-'));
@@ -141,4 +146,186 @@ test('bulk ledger makes resume idempotent (skip already-sent)', async () => {
   assert.equal(ledger.done.has('111'), true);
   assert.equal(ledger.done.has('222'), true);
   assert.equal(ledger.done.has('333'), false);
+});
+test('bulk ledger fails closed on corruption and preserves concurrent progress', async () => {
+  const corruptDir = await tmpStateDir();
+  await fs.writeFile(path.join(corruptDir, 'bulk-ledger-run.json'), '{bad json', 'utf8');
+  await assert.rejects(loadBulkLedger(corruptDir, 'run'), SyntaxError);
+
+  const concurrentDir = await tmpStateDir();
+  const keys = Array.from({ length: 12 }, (_, index) => `recipient-${index}`);
+  await Promise.all(keys.map((key) => recordBulkProgress(concurrentDir, 'run', key)));
+  const ledger = await loadBulkLedger(concurrentDir, 'run');
+  assert.deepEqual([...ledger.done].sort(), [...keys].sort());
+});
+
+const hash = (character) => character.repeat(64);
+
+function reservationInput(index = 0, overrides = {}) {
+  const digit = (index % 10).toString(16);
+  return {
+    actionType: 'fixture-write',
+    maxPerWindow: 3,
+    windowMs: 1000,
+    idempotencyHash: hash(digit),
+    targetHash: hash('a'),
+    contentHash: hash('b'),
+    runId: 'run-1',
+    now: 1_000_000_000_000 + index,
+    ...overrides
+  };
+}
+
+test('action results enforce exclusive terminal states and sanitized transport evidence', () => {
+  const base = {
+    action: 'fixture:write',
+    dryRun: false,
+    observation: { text: 'verified' },
+    criteria: [{ type: 'textIncludes', expected: 'verified' }]
+  };
+  const already = makeActionResult({
+    ...base,
+    performed: false,
+    changed: false,
+    alreadySatisfied: true,
+    transport: { kind: 'dom', provider: 'fixture', action: 'write' }
+  });
+  assert.equal(already.performed, false);
+  assert.equal(already.changed, false);
+  assert.equal(already.alreadySatisfied, true);
+  assert.deepEqual(already.transport, { kind: 'dom', provider: 'fixture', action: 'write' });
+  assert.throws(() => makeActionResult({ ...base, action: '' }), /action/);
+  assert.throws(() => makeActionResult({ ...base, dryRun: 0 }), /dryRun/);
+  assert.throws(() => makeActionResult({
+    ...base,
+    transport: { kind: 'official', provider: 'fixture', action: 'write', authorization: 'secret' }
+  }), /unsupported fields/);
+
+  assert.throws(() => makeActionResult({ ...base, alreadySatisfied: true, performed: true }), /alreadySatisfied/);
+  assert.throws(() => makeActionResult({ ...base, performed: false, changed: true }), /changed/);
+  assert.throws(() => makeActionResult({
+    ...base,
+    dryRun: true,
+    performed: true
+  }), /performed/);
+  assert.throws(() => makeActionResult({
+    ...base,
+    transport: { kind: 'private', provider: 'fixture', action: 'write' }
+  }), /transport.kind/);
+});
+
+test('atomic guarded reservations enforce both rate and idempotency under concurrency', async () => {
+  const dir = await tmpStateDir();
+  const rateResults = await Promise.all(
+    Array.from({ length: 8 }, (_, index) => reserveGuardedAction(dir, reservationInput(index)))
+  );
+  assert.equal(rateResults.filter((result) => result.status === 'reserved').length, 3);
+  assert.equal(rateResults.filter((result) => result.status === 'rate-limited').length, 5);
+
+  const sameDir = await tmpStateDir();
+  const sameClaim = await Promise.all(
+    Array.from({ length: 8 }, (_, index) => reserveGuardedAction(
+      sameDir,
+      reservationInput(index, { idempotencyHash: hash('c'), maxPerWindow: 10 })
+    ))
+  );
+  assert.equal(sameClaim.filter((result) => result.status === 'reserved').length, 1);
+  assert.equal(sameClaim.filter((result) => result.status === 'claim-pending').length, 7);
+
+  const store = JSON.parse(await fs.readFile(path.join(sameDir, 'guarded-actions-v1.json'), 'utf8'));
+  assert.equal(store.rates['fixture-write'].length, 1);
+  assert.equal(store.claims[hash('c')].state, 'pending');
+
+  const rateStore = JSON.parse(await fs.readFile(path.join(dir, 'guarded-actions-v1.json'), 'utf8'));
+  assert.equal(rateStore.rates['fixture-write'].length, 3);
+  assert.deepEqual(
+    Object.keys(rateStore.claims).sort(),
+    rateResults.filter((result) => result.status === 'reserved').map((result) => result.claim.createdAt - 1_000_000_000_000)
+      .map((index) => hash((index % 10).toString(16)))
+      .sort()
+  );
+
+  const mixedDir = await tmpStateDir();
+  await Promise.all([
+    reserveGuardedAction(mixedDir, reservationInput(1, { actionType: 'like', idempotencyHash: hash('1') })),
+    reserveGuardedAction(mixedDir, reservationInput(2, { actionType: 'comment', idempotencyHash: hash('2') }))
+  ]);
+  const mixedStore = JSON.parse(await fs.readFile(path.join(mixedDir, 'guarded-actions-v1.json'), 'utf8'));
+  assert.equal(mixedStore.rates.like.length, 1);
+  assert.equal(mixedStore.rates.comment.length, 1);
+  assert.deepEqual(Object.keys(mixedStore.claims).sort(), [hash('1'), hash('2')]);
+});
+
+test('guarded claims finalize, block replay, and require interactive reconciliation', async () => {
+  const dir = await tmpStateDir();
+  const input = reservationInput(1, { idempotencyHash: hash('d') });
+  assert.equal((await reserveGuardedAction(dir, input)).status, 'reserved');
+
+  await finalizeGuardedAction(dir, {
+    idempotencyHash: input.idempotencyHash,
+    state: 'ambiguous',
+    now: input.now + 1
+  });
+  assert.equal((await inspectGuardedAction(dir, input.idempotencyHash)).state, 'ambiguous');
+  assert.equal((await reserveGuardedAction(dir, { ...input, now: input.now + 2 })).status, 'claim-ambiguous');
+  await assert.rejects(
+    reconcileGuardedAction(dir, {
+      idempotencyHash: input.idempotencyHash,
+      resolution: 'clear',
+      interactive: false,
+      confirmed: true
+    }),
+    /interactive confirmation/
+  );
+  await assert.rejects(
+    reconcileGuardedAction(dir, {
+      idempotencyHash: input.idempotencyHash,
+      resolution: 'verified',
+      evidenceIdHash: hash('f'),
+      interactive: true,
+      confirmed: true,
+      now: Number.NaN
+    }),
+    /now must be finite/
+  );
+  assert.equal((await inspectGuardedAction(dir, input.idempotencyHash)).state, 'ambiguous');
+  assert.equal(await reconcileGuardedAction(dir, {
+    idempotencyHash: input.idempotencyHash,
+    resolution: 'clear',
+    interactive: true,
+    confirmed: true
+  }), null);
+  assert.equal(await inspectGuardedAction(dir, input.idempotencyHash), null);
+});
+
+test('verified guarded claims require evidence and remain distinguishable on replay', async () => {
+  const dir = await tmpStateDir();
+  const input = reservationInput(2, { idempotencyHash: hash('e') });
+  await reserveGuardedAction(dir, input);
+  await assert.rejects(
+    finalizeGuardedAction(dir, { idempotencyHash: input.idempotencyHash, state: 'verified' }),
+    /evidenceIdHash/
+  );
+  await finalizeGuardedAction(dir, {
+    idempotencyHash: input.idempotencyHash,
+    state: 'verified',
+    evidenceIdHash: hash('f'),
+    now: input.now + 1
+  });
+  const replay = await reserveGuardedAction(dir, { ...input, now: input.now + 2 });
+  assert.equal(replay.status, 'already-verified');
+  assert.equal(replay.claim.evidenceIdHash, hash('f'));
+});
+
+test('guarded-action store corruption fails closed', async () => {
+  const dir = await tmpStateDir();
+  await fs.writeFile(path.join(dir, 'guarded-actions-v1.json'), JSON.stringify({
+    version: 1,
+    rates: { 'fixture-write': ['not-a-number'] },
+    claims: {}
+  }));
+  await assert.rejects(
+    reserveGuardedAction(dir, reservationInput()),
+    /invalid guarded-action rate state/
+  );
 });

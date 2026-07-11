@@ -16,6 +16,32 @@ export function untrustedContentBoundary(untrustedSources = 1) {
   return { trusted: false, instructionAuthority: 'none', untrustedSources, redactions: [] };
 }
 
+function normalizeTransport(transport) {
+  if (transport == null) return null;
+  if (typeof transport !== 'object' || Array.isArray(transport)) {
+    throw new TypeError('transport must be an object when provided');
+  }
+
+  const keys = Object.keys(transport);
+  if (keys.some((key) => !['kind', 'provider', 'action'].includes(key))) {
+    throw new TypeError('transport contains unsupported fields');
+  }
+  if (!['dom', 'official'].includes(transport.kind)) {
+    throw new TypeError('transport.kind must be "dom" or "official"');
+  }
+  for (const key of ['provider', 'action']) {
+    if (typeof transport[key] !== 'string' || transport[key].trim() === '') {
+      throw new TypeError(`transport.${key} must be a non-empty string`);
+    }
+  }
+
+  return Object.freeze({
+    kind: transport.kind,
+    provider: transport.provider,
+    action: transport.action
+  });
+}
+
 /**
  * Builds a successful/failed action result from an observation + criteria.
  *
@@ -30,6 +56,7 @@ export function untrustedContentBoundary(untrustedSources = 1) {
  * @param {boolean} [params.performed] Override whether the action was performed.
  * @param {boolean} [params.changed] Override whether the action changed state.
  * @param {boolean} [params.alreadySatisfied] Mark a verified no-op as already satisfied.
+ * @param {{kind: 'dom'|'official', provider: string, action: string}} [params.transport] Sanitized transport evidence.
  * @returns {object} Structured action result.
  */
 export function makeActionResult({
@@ -42,17 +69,50 @@ export function makeActionResult({
   failure = null,
   performed: performedOverride,
   changed: changedOverride,
-  alreadySatisfied: alreadySatisfiedOverride
+  alreadySatisfied: alreadySatisfiedOverride,
+  transport
 } = {}) {
+  if (typeof action !== 'string' || action.trim() === '') {
+    throw new TypeError('action must be a non-empty string');
+  }
+  if (typeof dryRun !== 'boolean') {
+    throw new TypeError('dryRun must be a boolean');
+  }
   const outcome = evaluateOutcome(observation, criteria);
   const eligibleForPerformed = !dryRun && outcome.passed && !failure;
-  const performed = performedOverride === undefined
-    ? eligibleForPerformed
-    : performedOverride === true && eligibleForPerformed;
-  const changed = changedOverride === undefined
-    ? performed
-    : changedOverride === true && performed;
   const alreadySatisfied = alreadySatisfiedOverride === true;
+
+  for (const [name, value] of [
+    ['performed', performedOverride],
+    ['changed', changedOverride],
+    ['alreadySatisfied', alreadySatisfiedOverride]
+  ]) {
+    if (value !== undefined && typeof value !== 'boolean') {
+      throw new TypeError(`${name} override must be a boolean`);
+    }
+  }
+
+  if (alreadySatisfied && (dryRun || failure || !outcome.passed || performedOverride === true || changedOverride === true)) {
+    throw new TypeError('alreadySatisfied requires a passed, non-dry-run, failure-free no-op');
+  }
+  if (performedOverride === true && !eligibleForPerformed) {
+    throw new TypeError('performed cannot be true for an ineligible action result');
+  }
+
+  const performed = alreadySatisfied
+    ? false
+    : performedOverride === undefined
+      ? eligibleForPerformed
+      : performedOverride;
+  if (changedOverride === true && !performed) {
+    throw new TypeError('changed cannot be true when performed is false');
+  }
+  const changed = alreadySatisfied
+    ? false
+    : changedOverride === undefined
+      ? performed
+      : changedOverride;
+  const normalizedTransport = normalizeTransport(transport);
   const report = makeOutcomeReport({
     targetSafety,
     outcome,
@@ -68,6 +128,7 @@ export function makeActionResult({
     changed,
     alreadySatisfied,
     rateLimit,
+    ...(normalizedTransport ? { transport: normalizedTransport } : {}),
     ...report
   };
 }
@@ -100,6 +161,7 @@ export function makeBlockedResult(action, reason, opts = {}) {
     blocked: true,
     reason,
     rateLimit: opts.rateLimit || null,
+    ...(opts.transport ? { transport: normalizeTransport(opts.transport) } : {}),
     ...makeOutcomeReport({
       targetSafety: opts.targetSafety,
       outcome: { passed: false, criteria: [] },

@@ -9,9 +9,11 @@
  * machine-readable output.
  */
 import fs from 'node:fs/promises';
-import os from 'node:os';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { expandHome as expandConfigHome, resolveHome } from './config.mjs';
 
 export const DEFAULT_WORKSPACE = '~/.hyper-cloaking';
 
@@ -63,10 +65,7 @@ sites:
  * @returns {string | undefined} Expanded path, or the original falsy value.
  */
 export function expandHome(input) {
-  if (!input) return input;
-  if (input === '~') return os.homedir();
-  if (input.startsWith('~/')) return path.join(os.homedir(), input.slice(2));
-  return input;
+  return expandConfigHome(input);
 }
 
 /**
@@ -76,11 +75,7 @@ export function expandHome(input) {
  * @returns {string} Absolute workspace path.
  */
 export function resolveWorkspace(workspace) {
-  return path.resolve(expandHome(
-    workspace ||
-    process.env.HYPER_CLOAKING_HOME ||
-    DEFAULT_WORKSPACE
-  ));
+  return resolveHome(workspace);
 }
 
 /**
@@ -158,9 +153,9 @@ function parseScalar(value) {
 function assignPair(target, source) {
   const index = source.indexOf(':');
   if (index === -1) return;
-  const key = source.slice(0, index).trim();
+  const key = requireSafeCookieKey(source.slice(0, index).trim(), 'cookie property');
   const value = source.slice(index + 1);
-  if (key) target[key] = parseScalar(value);
+  target[key] = parseScalar(value);
 }
 
 /**
@@ -175,7 +170,7 @@ function assignPair(target, source) {
  */
 export function parseCookieYaml(text) {
   const cookies = [];
-  const sites = {};
+  const sites = Object.create(null);
   let inCookies = false;
   let current = null;
   let inSites = false;
@@ -202,8 +197,8 @@ export function parseCookieYaml(text) {
 
     if (inSites) {
       if (indent === 2 && trimmed.endsWith(':')) {
-        siteName = trimmed.slice(0, -1).trim();
-        sites[siteName] = sites[siteName] || { accounts: {} };
+        siteName = requireSafeCookieKey(trimmed.slice(0, -1).trim(), 'site');
+        sites[siteName] = sites[siteName] || { accounts: Object.create(null) };
         accountName = null;
         inAccounts = false;
         inAccountCookies = false;
@@ -212,7 +207,7 @@ export function parseCookieYaml(text) {
       if (!siteName) continue;
       const site = sites[siteName];
       if (indent === 4 && trimmed === 'accounts:') {
-        site.accounts = site.accounts || {};
+        site.accounts = site.accounts || Object.create(null);
         inAccounts = true;
         accountName = null;
         inAccountCookies = false;
@@ -227,7 +222,7 @@ export function parseCookieYaml(text) {
         continue;
       }
       if (indent === 6 && inAccounts && trimmed.endsWith(':')) {
-        accountName = trimmed.slice(0, -1).trim();
+        accountName = requireSafeCookieKey(trimmed.slice(0, -1).trim(), 'account');
         site.accounts[accountName] = site.accounts[accountName] || { cookies: [] };
         inAccountCookies = false;
         continue;
@@ -245,7 +240,7 @@ export function parseCookieYaml(text) {
         continue;
       }
       if (indent === 10 && inAccountCookies && trimmed.startsWith('- ')) {
-        currentCookie = {};
+        currentCookie = Object.create(null);
         account.cookies.push(currentCookie);
         const rest = trimmed.slice(2).trim();
         if (rest) assignPair(currentCookie, rest);
@@ -259,7 +254,7 @@ export function parseCookieYaml(text) {
 
     if (!inCookies) continue;
     if (trimmed.startsWith('- ')) {
-      current = {};
+      current = Object.create(null);
       cookies.push(current);
       const rest = trimmed.slice(2).trim();
       if (rest) assignPair(current, rest);
@@ -278,19 +273,30 @@ export function parseCookieYaml(text) {
  * @returns {ReturnType<typeof parseCookieYaml>} Config with `sites.default`.
  */
 export function withDefaultSite(config) {
+  const sites = Object.create(null);
+  for (const [name, site] of Object.entries(config.sites || {})) {
+    requireSafeCookieKey(name, 'site');
+    const accounts = Object.create(null);
+    for (const [accountName, account] of Object.entries(site?.accounts || {})) {
+      requireSafeCookieKey(accountName, 'account');
+      accounts[accountName] = account;
+    }
+    sites[name] = { ...site, accounts };
+  }
+
   const next = {
     cookies: Array.isArray(config.cookies) ? config.cookies : [],
-    sites: config.sites || {}
+    sites
   };
-  if (!next.sites.default) {
+  if (!Object.hasOwn(next.sites, 'default')) {
     next.sites.default = {
       defaultAccount: 'default',
-      accounts: {
+      accounts: Object.assign(Object.create(null), {
         default: {
           label: 'Default fallback account',
           cookies: next.cookies
         }
-      }
+      })
     };
   }
   return next;
@@ -358,8 +364,8 @@ export function domainMatches(cookie, targetUrl) {
       const cookieUrl = new URL(cookie.url);
       const target = new URL(targetUrl);
       return cookieUrl.origin === target.origin;
-    } catch {
-      return false;
+    } catch (error) {
+      throw new TypeError(`Invalid cookie URL "${cookie.url}"`, { cause: error });
     }
   }
   if (!cookie.domain) return false;
@@ -377,9 +383,11 @@ export function domainMatches(cookie, targetUrl) {
 export async function loadCookieConfig(cookieFile) {
   try {
     const text = await fs.readFile(cookieFile, 'utf8');
-    return withDefaultSite(parseCookieYaml(text));
+    return validateCookieConfig(withDefaultSite(parseCookieYaml(text)));
   } catch (error) {
-    if (error && error.code === 'ENOENT') return withDefaultSite({ cookies: [], sites: {} });
+    if (error && error.code === 'ENOENT') {
+      return validateCookieConfig(withDefaultSite({ cookies: [], sites: {} }));
+    }
     throw error;
   }
 }
@@ -393,12 +401,50 @@ export async function loadCookieConfig(cookieFile) {
  */
 export function inferSiteForUrl(config, targetUrl) {
   if (!config?.sites) return null;
-  for (const [name, site] of Object.entries(config.sites)) {
-    if (name === 'default') continue;
-    const marker = normalizeCookie({ name: '_', value: '_', domain: site.domain, url: site.url });
-    if (marker && domainMatches(marker, targetUrl)) return name;
+  const validatedConfig = validateCookieConfig(withDefaultSite(config));
+
+  let target;
+  try {
+    target = new URL(targetUrl);
+  } catch (error) {
+    throw new TypeError('Target URL for cookie site inference is invalid', { cause: error });
   }
-  return config.sites.default ? 'default' : null;
+
+  const matches = [];
+  for (const [name, site] of Object.entries(validatedConfig.sites)) {
+    if (name === 'default' || !site || typeof site !== 'object') continue;
+
+    if (site.url) {
+      try {
+        const configured = new URL(site.url);
+        if (configured.origin === target.origin) {
+          matches.push({ name, rank: 2, specificity: configured.origin.length });
+          continue;
+        }
+      } catch (error) {
+        throw new TypeError(`Invalid configured cookie site URL for "${name}"`, { cause: error });
+      }
+    }
+
+    if (site.domain) {
+      const domain = String(site.domain).replace(/^\./, '').toLowerCase();
+      const host = target.hostname.toLowerCase();
+      if (domain && (host === domain || host.endsWith(`.${domain}`))) {
+        matches.push({ name, rank: 1, specificity: domain.length });
+      }
+    }
+  }
+
+  matches.sort((left, right) => right.rank - left.rank || right.specificity - left.specificity);
+  if (matches.length === 0) return Object.hasOwn(validatedConfig.sites, 'default') ? 'default' : null;
+  if (
+    matches.length > 1
+    && matches[0].rank === matches[1].rank
+    && matches[0].specificity === matches[1].specificity
+  ) {
+    throw new Error(`Ambiguous cookie site selection for ${target.origin}`);
+  }
+  return matches[0].name;
 }
 
 /**
@@ -417,17 +463,23 @@ export function inferSiteForUrl(config, targetUrl) {
  * }} Selection result.
  */
 export function selectCookieRecords(config, targetUrl, options = {}) {
+  const validatedConfig = validateCookieConfig(withDefaultSite(config || {}));
+  if (targetUrl != null && targetUrl !== '') validateCookieUrl(targetUrl, 'cookie selection target URL');
+
   const requestedSite = options.site;
-  const explicitSite = requestedSite && config.sites?.[requestedSite] ? requestedSite : null;
-  const inferredSite = explicitSite || (requestedSite ? (config.sites?.default ? 'default' : null) : inferSiteForUrl(config, targetUrl));
+  const explicitSite = requestedSite && Object.hasOwn(validatedConfig.sites, requestedSite) ? requestedSite : null;
+  if (requestedSite && !explicitSite) {
+    throw new Error(`Unknown cookie site "${requestedSite}"`);
+  }
+  const inferredSite = explicitSite || inferSiteForUrl(validatedConfig, targetUrl);
   const siteName = inferredSite || null;
-  const fallbackUsed = Boolean(requestedSite && requestedSite !== siteName && siteName === 'default');
-  const site = siteName ? config.sites[siteName] : null;
+  const fallbackUsed = false;
+  const site = siteName ? validatedConfig.sites[siteName] : null;
 
   if (site?.accounts && Object.keys(site.accounts).length > 0) {
     const availableAccounts = Object.keys(site.accounts);
     const selectedAccount = options.account || site.defaultAccount || (availableAccounts.length === 1 ? availableAccounts[0] : null);
-    if (!selectedAccount || !site.accounts[selectedAccount]) {
+    if (!selectedAccount || !Object.hasOwn(site.accounts, selectedAccount)) {
       return { cookies: [], site: siteName, account: null, availableAccounts, needsAccount: true, fallbackUsed };
     }
     const account = site.accounts[selectedAccount];
@@ -443,7 +495,7 @@ export function selectCookieRecords(config, targetUrl, options = {}) {
     };
   }
 
-  const legacyCookies = Array.isArray(config.cookies) ? config.cookies : [];
+  const legacyCookies = Array.isArray(validatedConfig.cookies) ? validatedConfig.cookies : [];
   return {
     cookies: legacyCookies,
     site: siteName,
@@ -527,8 +579,10 @@ export function redactCookies(cookies) {
  */
 export function cookiesFromJsonPayload(payload) {
   if (Array.isArray(payload)) return payload;
-  if (payload && typeof payload === 'object' && Array.isArray(payload.cookies)) return payload.cookies;
-  return [];
+  if (payload && typeof payload === 'object' && !Array.isArray(payload) && Array.isArray(payload.cookies)) {
+    return payload.cookies;
+  }
+  throw new TypeError('Unsupported cookie JSON payload: expected an array or an object with a cookies array');
 }
 
 /**
@@ -599,36 +653,149 @@ export function serializeCookieConfig(config) {
  * }} options Import options.
  * @returns {Promise<{ cookieFile: string, site: string, account: string, count: number, cookies: Array<Record<string, unknown>> }>} Import summary.
  */
+function requireSafeCookieKey(value, label) {
+  if (
+    typeof value !== 'string'
+    || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value)
+    || Object.prototype.hasOwnProperty.call(Object.prototype, value)
+    || Object.prototype.hasOwnProperty.call(Function.prototype, value)
+  ) {
+    throw new TypeError(`${label} must be a safe identifier`);
+  }
+  return value;
+}
+
+function validateCookieUrl(value, label) {
+  if (value == null || value === '') return undefined;
+  let parsed;
+  try {
+    parsed = new URL(String(value));
+  } catch (error) {
+    throw new TypeError(`${label} must be a valid URL`, { cause: error });
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new TypeError(`${label} must use http or https`);
+  }
+  return String(value);
+}
+
+function validateCookieDomain(value, label) {
+  if (value == null || value === '') return undefined;
+  const domain = String(value);
+  const hostname = domain.replace(/^\./, '');
+  const labels = hostname.split('.');
+  if (
+    domain.includes('\0')
+    || hostname.length === 0
+    || hostname.length > 253
+    || labels.some((part) => (
+      part.length === 0
+      || part.length > 63
+      || !/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(part)
+    ))
+  ) {
+    throw new TypeError(`${label} must be a valid cookie domain`);
+  }
+  return domain;
+}
+
+function validateConfiguredCookies(cookies, label, defaults = {}) {
+  if (cookies == null) return;
+  if (!Array.isArray(cookies)) throw new TypeError(`${label} must be an array`);
+  cookies.forEach((cookie, index) => normalizeImportedCookie(cookie, defaults, index));
+}
+
+function validateCookieConfig(config) {
+  validateConfiguredCookies(config.cookies, 'legacy cookies');
+  for (const [siteName, site] of Object.entries(config.sites || {})) {
+    requireSafeCookieKey(siteName, 'site');
+    if (!site || typeof site !== 'object' || Array.isArray(site)) {
+      throw new TypeError(`cookie site "${siteName}" must be an object`);
+    }
+    const url = validateCookieUrl(site.url, `cookie site "${siteName}" URL`);
+    const domain = validateCookieDomain(site.domain, `cookie site "${siteName}" domain`);
+    validateConfiguredCookies(site.cookies, `cookie site "${siteName}" cookies`, { url, domain });
+    for (const [accountName, account] of Object.entries(site.accounts || {})) {
+      requireSafeCookieKey(accountName, 'account');
+      if (!account || typeof account !== 'object' || Array.isArray(account)) {
+        throw new TypeError(`cookie account "${siteName}/${accountName}" must be an object`);
+      }
+      validateConfiguredCookies(
+        account.cookies,
+        `cookie account "${siteName}/${accountName}" cookies`,
+        { url, domain }
+      );
+    }
+  }
+  return config;
+}
+
+function normalizeImportedCookie(raw, defaults, index) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new TypeError(`cookie at index ${index} must be an object`);
+  }
+  const expires = raw.expires ?? raw.expirationDate ?? raw.expiry;
+  if (expires != null && expires !== '' && !Number.isFinite(Number(expires))) {
+    throw new TypeError(`cookie at index ${index} has an invalid expiry`);
+  }
+
+  const cookie = normalizeCookie(raw, defaults);
+  if (!cookie) {
+    throw new TypeError(`cookie at index ${index} is missing name, value, or origin scope`);
+  }
+  if (cookie.url) validateCookieUrl(cookie.url, `cookie at index ${index} URL`);
+  if (cookie.domain) validateCookieDomain(cookie.domain, `cookie at index ${index} domain`);
+  return cookie;
+}
+
 export async function importJsonCookies(payload, options) {
   if (!options?.site) throw new Error('--site is required when importing cookies');
+  const siteKey = requireSafeCookieKey(options.site, 'site');
+  const account = requireSafeCookieKey(options.account || 'default', 'account');
   const paths = workspacePaths(options.workspace);
   const cookieFile = options.cookieFile || paths.cookieFile;
-  const config = await loadCookieConfig(cookieFile);
-  const account = options.account || 'default';
   const rawCookies = cookiesFromJsonPayload(payload);
-  const domain = options.domain || (options.targetUrl ? `.${new URL(options.targetUrl).hostname.replace(/^www\./, '')}` : undefined);
-  const url = options.url;
-  const normalized = rawCookies
-    .map((cookie) => normalizeCookie(cookie, { domain, url }))
-    .filter(Boolean);
+  const targetUrl = options.targetUrl
+    ? validateCookieUrl(options.targetUrl, 'import target URL')
+    : undefined;
+  const domain = validateCookieDomain(
+    options.domain || (targetUrl ? `.${new URL(targetUrl).hostname.replace(/^www\./, '')}` : undefined),
+    'import domain'
+  );
+  const url = validateCookieUrl(options.url, 'import URL');
+  const normalized = rawCookies.map((cookie, index) => normalizeImportedCookie(cookie, { domain, url }, index));
+  const config = await loadCookieConfig(cookieFile);
 
-  config.sites[options.site] = config.sites[options.site] || { accounts: {} };
-  const site = config.sites[options.site];
+  if (!Object.hasOwn(config.sites, siteKey)) config.sites[siteKey] = { accounts: Object.create(null) };
+  const site = config.sites[siteKey];
   if (domain && !site.domain && !site.url) site.domain = domain;
   if (url && !site.url) site.url = url;
   site.defaultAccount = site.defaultAccount || account;
-  site.accounts = site.accounts || {};
+  site.accounts = site.accounts || Object.create(null);
   site.accounts[account] = {
     ...(site.accounts[account] || {}),
-    label: options.label || site.accounts[account]?.label || `${options.site} ${account}`,
+    label: options.label || site.accounts[account]?.label || `${siteKey} ${account}`,
     cookies: normalized
   };
 
   await fs.mkdir(path.dirname(cookieFile), { recursive: true, mode: 0o700 });
-  await fs.writeFile(cookieFile, serializeCookieConfig(config), { mode: 0o600 });
+  const temporary = `${cookieFile}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(temporary, serializeCookieConfig(config), { mode: 0o600 });
+    await fs.rename(temporary, cookieFile);
+  } catch (error) {
+    try {
+      await fs.unlink(temporary);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== 'ENOENT') {
+        throw new AggregateError([error, cleanupError], 'cookie import and temporary-file cleanup failed');
+      }
+    }
+    throw error;
+  }
   return {
     cookieFile,
-    site: options.site,
+    site: siteKey,
     account,
     count: normalized.length,
     cookies: normalized

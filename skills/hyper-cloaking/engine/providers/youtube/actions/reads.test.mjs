@@ -10,6 +10,7 @@ import {
   resolveYouTubeExtractionTier,
   resolveYouTubeSelector
 } from '../selectors.mjs';
+import { NetworkReadError } from '../../network.mjs';
 
 const VIDEO_A = 'aBcDeFgHiJ1';
 const VIDEO_B = 'zYxWvUtSrQ2';
@@ -20,7 +21,7 @@ function sessionFor(page) {
     requireOnOrigin() {},
     throwOnChallenge() {}
   };
-  session.navigateGuarded = async (url, gotoOpts) => {
+  session.navigateGuardedForRead = async (url, gotoOpts) => {
     await page.goto(url, gotoOpts);
     session.requireOnOrigin();
     session.throwOnChallenge({ text: await page.evaluate(() => document.body?.innerText || '') });
@@ -289,4 +290,131 @@ test('resolveYouTubeExtractionTier prefers primary and rejects exhaustion', asyn
 test('body and extraction failures reject rather than return empty success', async () => {
   await assert.rejects(getChannel(sessionFor(pageFor({ failBody: true })), '@fixture'), /body inspection failed/);
   await assert.rejects(searchVideos(sessionFor(pageFor({ failLinks: true })), 'fixture'), /extraction failed/);
+});
+
+test('YouTube reads remain DOM-default until complete promotion evidence exists', async () => {
+  let directCalls = 0;
+  const read = await searchVideos(sessionFor(pageFor({
+    links: [{ href: `/watch?v=${VIDEO_A}`, title: 'DOM', channel: 'Fixture' }]
+  })), 'fixture', {
+    readHandlers: {
+      direct: async () => {
+        directCalls += 1;
+        return { videos: [{ videoId: VIDEO_B, title: 'Direct', channel: 'Other' }] };
+      }
+    }
+  });
+  assert.equal(directCalls, 0);
+  assert.equal(read.content.videos[0].title, 'DOM');
+});
+
+test('forced YouTube network reads preserve whole-result parity and fail without DOM fallback', async () => {
+  const domRead = await searchVideos(sessionFor(pageFor({
+    links: [{ href: `/watch?v=${VIDEO_A}`, title: 'Fixture', channel: 'Channel' }]
+  })), 'fixture');
+  const networkRead = await searchVideos({}, 'fixture', {
+    readStrategy: 'direct',
+    readHandlers: { direct: async () => structuredClone(domRead.content) }
+  });
+  assert.deepEqual(networkRead, domRead);
+
+  await assert.rejects(
+    searchVideos({
+      async navigateGuardedForRead() { throw new Error('DOM must not run'); }
+    }, 'fixture', {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => {
+          throw new NetworkReadError('youtube-direct-failed', 'failed', { dispatched: true });
+        }
+      }
+    }),
+    (error) => error.code === 'youtube-direct-failed'
+  );
+});
+
+test('YouTube network normalization and strict navigation reject malformed reads', async () => {
+  await assert.rejects(
+    searchVideos({}, 'fixture', {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => ({ videos: Array.from({ length: 401 }, () => ({ videoId: VIDEO_A })) })
+      }
+    }),
+    /at most 400/
+  );
+  await assert.rejects(
+    getVideo({
+      async navigateGuardedForRead() { throw new Error('strict read blocked'); }
+    }, VIDEO_A),
+    /strict read blocked/
+  );
+});
+
+test('YouTube normalized-empty and nested-boundary contracts fail closed', async () => {
+  await assert.rejects(
+    searchVideos({}, 'fixture', {
+      readStrategy: 'direct',
+      readHandlers: { direct: async () => ({ videos: [{ videoId: 'invalid' }] }) }
+    }),
+    /normalized empty search/
+  );
+  await assert.rejects(
+    getChannel({}, '@fixture', {
+      readStrategy: 'direct',
+      readHandlers: { direct: async () => ({ videos: [{ videoId: 'invalid' }] }) }
+    }),
+    /normalized empty channel/
+  );
+  await assert.rejects(
+    getChannel({}, '@fixture', {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => ({
+          videos: [{
+            videoId: VIDEO_A,
+            tags: Array.from({ length: 101 }, () => 'tag')
+          }]
+        })
+      }
+    }),
+    /at most 100/
+  );
+});
+
+test('YouTube video network reads canonicalize channel identity and reject malformed channels', async () => {
+  const read = await getVideo({}, VIDEO_A, {
+    readStrategy: 'direct',
+    readHandlers: {
+      direct: async () => ({
+        title: 'Video',
+        channel: { href: '/@fixture', name: 'Fixture channel' },
+        description: null,
+        publishedAt: null,
+        timestamp: null,
+        tags: [],
+        viewCount: 1,
+        likeCount: 2,
+        comments: []
+      })
+    }
+  });
+  assert.deepEqual(read.content.channel, {
+    href: 'https://www.youtube.com/@fixture',
+    name: 'Fixture channel'
+  });
+
+  await assert.rejects(
+    getVideo({}, VIDEO_A, {
+      readStrategy: 'direct',
+      readHandlers: {
+        direct: async () => ({
+          channel: { href: 'https://evil.example/@fixture', name: 'Fixture channel' },
+          tags: [],
+          comments: []
+        })
+      }
+    }),
+    /channel identity is invalid/
+  );
 });

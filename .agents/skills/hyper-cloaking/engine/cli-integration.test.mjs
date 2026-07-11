@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -7,6 +7,8 @@ import test from 'node:test';
 import { closeBrowserHandle, gotoAndClassify, installNavigationSafety, runCli, runLiveVerification } from './cli.mjs';
 import { generateMcpConfig, mcpCommand } from './mcp-config.mjs';
 import { buildNoSandboxWarningSafeCloakOptions } from './browser-utils.mjs';
+import { resolveHome } from './config.mjs';
+import { resolveWorkspace } from './cookie.mjs';
 
 
 async function runJson(args) {
@@ -19,6 +21,43 @@ async function runJson(args) {
   assert.equal(stderr, '');
   return { exitCode, json: JSON.parse(stdout) };
 }
+
+test('runtime home resolution uses explicit, env, then default precedence', () => {
+  const fakeHome = path.join(path.sep, 'tmp', 'user-home');
+  const envHome = path.join(path.sep, 'tmp', 'env-home');
+  const explicitHome = path.join(path.sep, 'tmp', 'explicit-home');
+
+  assert.equal(resolveHome(explicitHome, {
+    env: { HYPER_CLOAKING_HOME: envHome },
+    homeDirectory: fakeHome
+  }), explicitHome);
+  assert.equal(resolveHome(undefined, {
+    env: { HYPER_CLOAKING_HOME: envHome },
+    homeDirectory: fakeHome
+  }), envHome);
+  assert.equal(resolveHome(undefined, {
+    env: {},
+    homeDirectory: fakeHome
+  }), path.join(fakeHome, '.hyper-cloaking'));
+  assert.throws(() => resolveHome('', { env: {}, homeDirectory: fakeHome }), /non-empty string/);
+  assert.throws(() => resolveHome('bad\0home', { env: {}, homeDirectory: fakeHome }), /NUL/);
+});
+
+test('cookie and CLI surfaces honor the canonical environment home when explicit home is absent', { concurrency: false }, async () => {
+  const previous = process.env.HYPER_CLOAKING_HOME;
+  const envHome = await mkdtemp(path.join(os.tmpdir(), 'hyper-cloaking-env-home-'));
+  process.env.HYPER_CLOAKING_HOME = envHome;
+
+  try {
+    assert.equal(resolveWorkspace(), envHome);
+    const { exitCode, json } = await runJson(['mcp-config', '--client', 'json']);
+    assert.equal(exitCode, 1);
+    assert.equal(json.home, envHome);
+  } finally {
+    if (previous === undefined) delete process.env.HYPER_CLOAKING_HOME;
+    else process.env.HYPER_CLOAKING_HOME = previous;
+  }
+});
 
 function assertCompletionShape(payload) {
   for (const key of ['targetSafety', 'outcome', 'failure', 'contentBoundary', 'learning']) {
@@ -51,6 +90,105 @@ test('smoke --json reports samples and mandatory completion shape without live l
   assert.ok(json.contentBoundarySample);
   assert.ok(json.evidenceScopePlan);
   assertCompletionShape(json);
+});
+test('credentials CLI imports only secure sources and returns redacted profiles', async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), 'hyper-cloaking-credentials-cli-'));
+  const source = path.join(home, 'profile.json');
+  await writeFile(source, JSON.stringify({
+    provider: 'youtube',
+    kind: 'oauth2',
+    credentials: { accessToken: 'cli-secret-token' },
+    declaredScopes: ['videos.read'],
+    verifiedScopes: ['videos.read'],
+    verifiedAt: Date.now(),
+    expiresAt: Date.now() + 60_000
+  }), { mode: 0o600 });
+
+  assert.equal((await runJson(['credentials', 'init', '--home', home])).exitCode, 0);
+  const imported = await runJson([
+    'credentials', 'import',
+    '--home', home,
+    '--profile-id', 'yt-cli',
+    '--source', source
+  ]);
+  assert.equal(imported.exitCode, 0);
+  assert.equal(JSON.stringify(imported.json).includes('cli-secret-token'), false);
+  assert.equal(imported.json.profile.credentials, '[redacted]');
+
+  assert.equal((await runJson([
+    'credentials', 'set-default',
+    '--home', home,
+    '--provider', 'youtube',
+    '--profile-id', 'yt-cli'
+  ])).exitCode, 0);
+  const resolved = await runJson([
+    'credentials', 'resolve-profile',
+    '--home', home,
+    '--provider', 'youtube'
+  ]);
+  assert.equal(resolved.exitCode, 0);
+  assert.equal(resolved.json.resolutionStatus, 'selected');
+  assert.equal(resolved.json.profile.credentials, '[redacted]');
+  assert.deepEqual(resolved.json.profile.verifiedScopes, []);
+  assertCompletionShape(resolved.json);
+
+  const unverifiedScope = await runJson([
+    'credentials', 'resolve-profile',
+    '--home', home,
+    '--provider', 'youtube',
+    '--scopes', 'videos.read'
+  ]);
+  assert.equal(unverifiedScope.exitCode, 1);
+  assert.match(unverifiedScope.json.error, /remotely verified scopes/);
+
+  await chmod(source, 0o644);
+  const unsafe = await runJson([
+    'credentials', 'import',
+    '--home', home,
+    '--profile-id', 'unsafe',
+    '--source', source
+  ]);
+  assert.equal(unsafe.exitCode, 1);
+  assert.match(unsafe.json.error, /mode 0600/);
+
+  const argvSecret = await runJson([
+    'credentials', 'list',
+    '--home', home,
+    '--access-token', 'must-not-echo'
+  ]);
+  assert.equal(argvSecret.exitCode, 1);
+  assert.match(argvSecret.json.error, /must not be supplied/);
+  assert.equal(JSON.stringify(argvSecret.json).includes('must-not-echo'), false);
+
+  const ambiguous = await runJson([
+    'credentials', 'import',
+    '--home', home,
+    '--profile-id', 'ambiguous',
+    '--source', source,
+    '--env-prefix', 'YT',
+    '--provider', 'youtube',
+    '--kind', 'oauth2'
+  ]);
+  assert.equal(ambiguous.exitCode, 1);
+  assert.match(ambiguous.json.error, /exactly one source/);
+
+  const unknownOption = await runJson(['credentials', 'list', '--home', home, '--mystery', 'value']);
+  assert.equal(unknownOption.exitCode, 1);
+  assert.match(unknownOption.json.error, /Unknown credentials option/);
+
+  const extraPosition = await runJson(['credentials', 'list', 'extra', '--home', home]);
+  assert.equal(extraPosition.exitCode, 1);
+  assert.match(extraPosition.json.error, /extra positional/);
+
+  for (const args of [
+    ['credentials', 'import', '--profile-id', 'one', '--source', source, '--source', source],
+    ['credentials', 'import', '--profile-id', 'one', '--env-prefix', 'YT', '--env-prefix', 'YT2'],
+    ['credentials', 'inspect', '--profile-id', 'one', '--profile-id', 'two']
+  ]) {
+    const duplicate = await runJson([...args, '--home', home]);
+    assert.equal(duplicate.exitCode, 1);
+    assert.match(duplicate.json.error, /must not be repeated/);
+  }
 });
 
 test('mcp-config --json blocked path reports diagnostics and mandatory completion shape', async () => {
@@ -296,6 +434,38 @@ test('injectable legacy live verification keeps the existing home evidence desti
   assert.equal(result.evidenceRefs.length, 1);
   assert.ok(result.evidenceRefs[0].path.startsWith(`${path.join(home, 'evidence')}${path.sep}`));
   await access(result.evidenceRefs[0].path);
+});
+test('live verification routes a resolved provider through the strict provider session', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'hyper-live-strict-'));
+  let received = null;
+  const dependencies = injectableLiveDependencies();
+  dependencies.buildProviderSession = (_page, options) => {
+    received = options;
+    return {
+      strictAllowedOrigins: ['https://www.youtube.com'],
+      async navigateGuardedForRead(target, gotoOptions) {
+        assert.equal(target, 'https://www.youtube.com/watch?v=abcdefghijk');
+        assert.equal(gotoOptions.waitUntil, 'domcontentloaded');
+        return { url: target, status: 200 };
+      }
+    };
+  };
+
+  const result = await runLiveVerification(
+    liveOptions(path.join(root, 'home'), {
+      provider: 'youtube',
+      target: 'https://www.youtube.com/watch?v=abcdefghijk',
+      'public-target': 'https://www.youtube.com/watch?v=abcdefghijk',
+      allowedOrigins: ['https://www.youtube.com']
+    }),
+    dependencies
+  );
+
+  assert.equal(received.provider.id, 'youtube');
+  assert.equal(received.targetSafety.disposition, 'ok');
+  assert.equal(result.provider.id, 'youtube');
+  assert.equal(result.finalUrl, 'https://www.youtube.com/watch?v=abcdefghijk');
+  assert.equal(result.publicNavigation.redirectSafety.disposition, 'ok');
 });
 
 test('live verification preserves text-extraction and close failures as blockers', async () => {

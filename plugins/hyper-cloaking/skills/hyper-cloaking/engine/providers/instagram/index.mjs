@@ -9,6 +9,7 @@
 export { instagramProvider } from './metadata.mjs';
 export { buildInstagramSession, OffOriginError, ChallengeBlockedError, TargetSafetyError } from './session.mjs';
 export { instagramSelectors, SELECTORS_VERSION } from './selectors.mjs';
+export { executeInstagramRead, instagramReadPromotions } from './network.mjs';
 
 import { getUser } from './actions/user.mjs';
 import { getUserPosts } from './actions/posts.mjs';

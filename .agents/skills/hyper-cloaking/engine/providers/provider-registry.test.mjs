@@ -8,6 +8,7 @@ import {
   resolveProviderForUrl,
   validateProviderRegistry
 } from './index.mjs';
+import { coupangProvider } from './coupang/metadata.mjs';
 import { redditProvider } from './reddit/metadata.mjs';
 import {
   buildProviderRegistry,
@@ -16,6 +17,7 @@ import {
   validateProviderRegistry as validateProviderRegistryFromRegistry
 } from './registry.mjs';
 import { xProvider } from './x.mjs';
+import { tiktokProvider } from './tiktok/metadata.mjs';
 
 test('validateProviderRegistry passes for the built-in provider set', () => {
   const result = validateProviderRegistry();
@@ -32,6 +34,11 @@ test('known aliases resolve to the correct provider', () => {
     ['https://oauth.reddit.com', 'reddit'],
     ['https://m.instagram.com', 'instagram'],
     ['https://music.youtube.com', 'youtube'],
+    ['https://www.coupang.com', 'coupang'],
+    ['https://m.tiktok.com', 'tiktok'],
+    ['https://x.com', 'x'],
+    ['https://blog.naver.com', 'naver'],
+    ['https://cafe.naver.com', 'naver'],
     ['https://twitter.com', 'x'],
     ['https://www.x.com', 'x']
   ];
@@ -75,6 +82,8 @@ test('known explicit provider id resolves', () => {
 test('lookalike hosts do not match unrelated providers', () => {
   assert.equal(hostMatchesDomain('evilreddit.com', 'reddit.com'), false);
   assert.equal(hostMatchesDomain('notx.com', 'x.com'), false);
+  assert.equal(hostMatchesDomain('evilcoupang.com', 'coupang.com'), false);
+  assert.equal(hostMatchesDomain('nottiktok.com', 'tiktok.com'), false);
 
   const evilReddit = resolveProviderForUrl('https://evilreddit.com');
   assert.equal(evilReddit.ok, true);
@@ -116,11 +125,25 @@ test('navigation-only alias hosts resolve but are flagged so cookie hints are ne
   assert.equal(x.provider.id, 'x');
   assert.equal(x.matchedViaNavigationOnlyAlias, true);
 
+  const coupang = resolveProviderForUrl('https://link.coupang.com/a/example');
+  assert.equal(coupang.ok, true);
+  assert.equal(coupang.provider.id, 'coupang');
+  assert.equal(coupang.matchedViaNavigationOnlyAlias, true);
+
+  for (const url of ['https://vm.tiktok.com/example', 'https://vt.tiktok.com/example']) {
+    const tiktok = resolveProviderForUrl(url);
+    assert.equal(tiktok.ok, true);
+    assert.equal(tiktok.provider.id, 'tiktok');
+    assert.equal(tiktok.matchedViaNavigationOnlyAlias, true);
+  }
+
   const naver = resolveProviderForUrl('https://www.naver.com');
   assert.equal(naver.matchedViaNavigationOnlyAlias, false);
 
-  for (const provider of [redditProvider, xProvider]) {
-    assert.ok(!provider.domains.aliases.includes('redd.it') && !provider.domains.aliases.includes('t.co'));
+  for (const provider of [redditProvider, coupangProvider, tiktokProvider, xProvider]) {
+    for (const navigationOnly of provider.domains.navigationOnlyAliases || []) {
+      assert.ok(!provider.domains.aliases.includes(navigationOnly));
+    }
   }
 });
 
