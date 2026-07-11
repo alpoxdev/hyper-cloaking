@@ -201,8 +201,8 @@ await instagramActions.likePost(session, 'https://www.instagram.com/p/ABC/', { d
 ## リポジトリ構成
 
 ```
-skills/hyper-cloaking/          # 正規スキル (SKILL.md, engine, rules, references)
-plugins/hyper-cloaking/         # マーケットプレイス用のプラグインパッケージのコピー
+plugins/hyper-cloaking/skills/hyper-cloaking/ # 正規スキル (SKILL.md, engine, rules, references)
+skills/hyper-cloaking/                # 正規スキルのルートミラー
 .claude/skills/hyper-cloaking/  # Claude Code スキルミラー
 .agents/skills/hyper-cloaking/  # AgentSkills ミラー
 .claude-plugin/marketplace.json # Claude Code マーケットプレイスマニフェスト
@@ -216,14 +216,14 @@ scripts/validate.mjs            # 構造 + ミラー一致検証
 
 ```bash
 npm run validate      # 構造とミラー一致のチェック
-npm run lint          # plugins・scripts に対する oxlint
+npm run lint          # plugins・scripts・tests に対する oxlint
 npm run format        # prettier フォーマット
-npm test              # ルート E2E と正規エンジンのテスト
+npm test              # ルート E2E とエンジン単体テスト
 npm run ci            # ローカル CI ゲート一式
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # エンジンの自己チェック（ネットワークなし）
 ```
 
-`npm test` はルート E2E スイートと正規の `skills/hyper-cloaking/engine` テストを実行します。`npm run validate` はミラーされたスキルディレクトリがバイト単位で一致することを検証します。
+`npm test` はルート E2E スイート（`tests/e2e/`）と、`tests/unit/engine/` に移設されたエンジン単体テスト（正規の `plugins/hyper-cloaking/skills/hyper-cloaking/engine/` ソースをインポート）を実行します。`npm run validate` はミラーされたスキルディレクトリがバイト単位で一致することを検証します。
 GitHub Actions の初回成功後、必須ジョブチェック名が `quality` と `Node 20 compatibility` であることを確認してから `main` ブランチの Ruleset を設定します。このリポジトリはその設定を自動適用しません。
 
 ---

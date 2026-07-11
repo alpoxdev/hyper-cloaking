@@ -305,6 +305,48 @@ function validateEngineOnlyMigration() {
     }
   }
 }
+// Deliberate-bump tripwire: the number of *.test.mjs files expected under
+// tests/unit/engine/. Bump this constant only when engine unit tests are
+// intentionally added or removed, so an accidental drop is caught here.
+const TESTS_BASELINE = 30;
+
+function countTestFiles(start) {
+  if (!existsSync(fullPath(start))) return 0;
+  let count = 0;
+  for (const entry of readdirSync(fullPath(start), { withFileTypes: true })) {
+    const file = path.join(start, entry.name);
+    if (entry.isDirectory()) {
+      count += countTestFiles(file);
+    } else if (entry.isFile() && entry.name.endsWith('.test.mjs')) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function validateEngineTestRelocation() {
+  // Enumerated named roots only — NEVER a repo-root **/engine glob, which would
+  // also match the relocated tests/unit/engine tree and permanently fail this guard.
+  const engineRoots = [
+    `${pluginRoot}/skills/hyper-cloaking/engine`,
+    '.agents/skills/hyper-cloaking/engine',
+    '.claude/skills/hyper-cloaking/engine',
+    'skills/hyper-cloaking/engine'
+  ];
+  for (const engineRoot of engineRoots) {
+    const count = countTestFiles(engineRoot);
+    if (count > 0) {
+      fail(`${engineRoot} must not contain colocated *.test.mjs files (found ${count})`);
+    }
+  }
+
+  const unitEngineCount = countTestFiles('tests/unit/engine');
+  if (unitEngineCount !== TESTS_BASELINE) {
+    fail(
+      `tests/unit/engine must contain exactly ${TESTS_BASELINE} *.test.mjs files (found ${unitEngineCount})`
+    );
+  }
+}
 function validateAgentContracts(packageManifest, packageLock) {
   const canonical = `${pluginRoot}/skills/hyper-cloaking`;
   const roleNames = ['setup-agent', 'browser-task-agent', 'diagnostics-agent'];
@@ -465,28 +507,16 @@ for (const helper of [
   'engine/evidence-boundary.mjs',
   'engine/recon-scope.mjs',
   'engine/run-shapes.mjs',
-  'engine/cli-integration.test.mjs',
   'engine/agents/setup-agent.mjs',
-  'engine/agents/setup-agent.test.mjs',
   'engine/agents/browser-task-agent.mjs',
-  'engine/agents/browser-task-agent.test.mjs',
   'engine/agents/diagnostics-agent.mjs',
-  'engine/agents/diagnostics-agent.test.mjs',
   'engine/agents/parent-dispatcher.mjs',
   'engine/agents/parent-verify.mjs',
-  'engine/agents/parent-verify.test.mjs',
   'engine/agents/evidence-writer.mjs',
-  'engine/agents/evidence-writer.test.mjs',
-  'engine/agents/routing.test.mjs',
   'engine/agents/lib/allowed-origin-guard.mjs',
-  'engine/agents/lib/allowed-origin-guard.test.mjs',
   'engine/agents/lib/sync-mirror.mjs',
-  'engine/agents/lib/sync-mirror.test.mjs',
   'engine/agents/schemas/hyper-cloaking-agent-output.schema.json',
   'engine/agents/schemas/hyper-cloaking-agent-output.ko.md',
-  'engine/outcome-diagnostics-boundary.test.mjs',
-  'engine/recon-run-shapes.test.mjs',
-  'engine/target-safety.test.mjs',
   'engine/providers/schema.mjs',
   'engine/providers/registry.mjs',
   'engine/providers/generic.mjs',
@@ -502,9 +532,6 @@ for (const helper of [
   'engine/providers/reddit/actions/user.mjs',
   'engine/providers/reddit/actions/analyze.mjs',
   'engine/providers/reddit/actions/reactions.mjs',
-  'engine/providers/reddit/actions/analyze.test.mjs',
-  'engine/providers/reddit/actions/reads.test.mjs',
-  'engine/providers/reddit/reddit-actions.test.mjs',
   'engine/providers/instagram/index.mjs',
   'engine/providers/instagram/metadata.mjs',
   'engine/providers/instagram/selectors.mjs',
@@ -514,11 +541,8 @@ for (const helper of [
   'engine/providers/instagram/actions/analyze.mjs',
   'engine/providers/instagram/actions/reactions.mjs',
   'engine/providers/instagram/actions/dm.mjs',
-  'engine/providers/instagram/actions/analyze.test.mjs',
-  'engine/providers/instagram/instagram-actions.test.mjs',
   'engine/action-runtime/guardrails.mjs',
   'engine/action-runtime/action-result.mjs',
-  'engine/action-runtime/guardrails.test.mjs',
   'engine/providers/youtube/index.mjs',
   'engine/providers/youtube/metadata.mjs',
   'engine/providers/youtube/selectors.mjs',
@@ -529,9 +553,6 @@ for (const helper of [
   'engine/providers/youtube/actions/channel.mjs',
   'engine/providers/youtube/actions/analyze.mjs',
   'engine/providers/youtube/actions/reactions.mjs',
-  'engine/providers/youtube/actions/analyze.test.mjs',
-  'engine/providers/youtube/actions/reads.test.mjs',
-  'engine/providers/youtube/youtube-actions.test.mjs',
   'engine/providers/coupang/index.mjs',
   'engine/providers/coupang/metadata.mjs',
   'engine/providers/coupang/selectors.mjs',
@@ -541,7 +562,6 @@ for (const helper of [
   'engine/providers/coupang/actions/reads.mjs',
   'engine/providers/coupang/actions/analyze.mjs',
   'engine/providers/coupang/actions/writes.mjs',
-  'engine/providers/coupang/coupang-actions.test.mjs',
   'engine/providers/tiktok/index.mjs',
   'engine/providers/tiktok/metadata.mjs',
   'engine/providers/tiktok/selectors.mjs',
@@ -551,7 +571,6 @@ for (const helper of [
   'engine/providers/tiktok/actions/reads.mjs',
   'engine/providers/tiktok/actions/analyze.mjs',
   'engine/providers/tiktok/actions/writes.mjs',
-  'engine/providers/tiktok/tiktok-actions.test.mjs',
   'engine/providers/naver.mjs',
   'engine/providers/naver/index.mjs',
   'engine/providers/naver/metadata.mjs',
@@ -562,7 +581,6 @@ for (const helper of [
   'engine/providers/naver/actions/reads.mjs',
   'engine/providers/naver/actions/analyze.mjs',
   'engine/providers/naver/actions/writes.mjs',
-  'engine/providers/naver/naver-actions.test.mjs',
   'engine/providers/x/index.mjs',
   'engine/providers/x/metadata.mjs',
   'engine/providers/x/selectors.mjs',
@@ -572,11 +590,8 @@ for (const helper of [
   'engine/providers/x/actions/reads.mjs',
   'engine/providers/x/actions/analyze.mjs',
   'engine/providers/x/actions/writes.mjs',
-  'engine/providers/x/x-actions.test.mjs',
   'engine/providers/x.mjs',
-  'engine/providers/index.mjs',
-  'engine/providers/provider-registry.test.mjs',
-  'engine/providers/schema.test.mjs'
+  'engine/providers/index.mjs'
 ]) {
   requireFile(`${pluginRoot}/skills/hyper-cloaking/${helper}`);
   requireFile(`skills/hyper-cloaking/${helper}`);
@@ -615,6 +630,7 @@ validateClientSupportSurfaces();
 validateNoStalePublicIdentity();
 
 validateEngineOnlyMigration();
+validateEngineTestRelocation();
 
 if (errors.length > 0) {
   console.error(errors.map((error) => `- ${error}`).join('\n'));

@@ -201,8 +201,8 @@ await instagramActions.likePost(session, 'https://www.instagram.com/p/ABC/', { d
 ## 저장소 구조
 
 ```
-skills/hyper-cloaking/          # 정본 스킬 (SKILL.md, engine, rules, references)
-plugins/hyper-cloaking/         # 마켓플레이스용 플러그인 패키지 사본
+plugins/hyper-cloaking/skills/hyper-cloaking/ # 정본 스킬 (SKILL.md, engine, rules, references)
+skills/hyper-cloaking/                # 정본 스킬의 루트 미러
 .claude/skills/hyper-cloaking/  # Claude Code 스킬 미러
 .agents/skills/hyper-cloaking/  # AgentSkills 미러
 .claude-plugin/marketplace.json # Claude Code 마켓플레이스 매니페스트
@@ -216,14 +216,14 @@ scripts/validate.mjs            # 구조 + 미러 일치 검증
 
 ```bash
 npm run validate      # 구조 및 미러 일치 검사
-npm run lint          # plugins·scripts에 대한 oxlint
+npm run lint          # plugins·scripts·tests에 대한 oxlint
 npm run format        # prettier 포매팅
-npm test              # 루트 E2E 및 정본 엔진 테스트
+npm test              # 루트 E2E 및 엔진 단위 테스트
 npm run ci            # 전체 로컬 CI 검사
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # 엔진 자체 점검 (네트워크 없음)
 ```
 
-`npm test`는 루트 E2E 테스트와 정본 `skills/hyper-cloaking/engine` 테스트를 실행합니다. `npm run validate`는 미러링된 스킬 디렉터리가 바이트 단위로 동일한지 검증합니다.
+`npm test`는 루트 E2E 스위트(`tests/e2e/`)와 `tests/unit/engine/`으로 이전된 엔진 단위 테스트(정본 `plugins/hyper-cloaking/skills/hyper-cloaking/engine/` 소스를 가져옴)를 실행합니다. `npm run validate`는 미러링된 스킬 디렉터리가 바이트 단위로 동일한지 검증합니다.
 첫 GitHub Actions 실행이 성공한 뒤 필수 작업 검사 이름이 `quality`와 `Node 20 compatibility`인지 확인한 후에만 `main` 브랜치 Ruleset을 설정합니다. 이 저장소는 해당 설정을 자동으로 적용하지 않습니다.
 
 ---

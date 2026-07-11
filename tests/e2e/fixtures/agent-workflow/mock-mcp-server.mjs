@@ -9,6 +9,7 @@ export async function startMockMcpServer() {
   const address = server.address();
   return {
     origin: `http://127.0.0.1:${address.port}`,
-    close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
+    close: () =>
+      new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())))
   };
 }

@@ -201,8 +201,8 @@ All runtime state lives under `~/.hyper-cloaking/` (override with `HYPER_CLOAKIN
 ## Repository layout
 
 ```
-skills/hyper-cloaking/          # canonical skill (SKILL.md, engine, rules, references)
-plugins/hyper-cloaking/         # plugin-packaged copy for marketplaces
+plugins/hyper-cloaking/skills/hyper-cloaking/ # canonical skill (SKILL.md, engine, rules, references)
+skills/hyper-cloaking/                # root mirror of the canonical skill
 .claude/skills/hyper-cloaking/  # Claude Code skill mirror
 .agents/skills/hyper-cloaking/  # AgentSkills mirror
 .claude-plugin/marketplace.json # Claude Code marketplace manifest
@@ -216,14 +216,14 @@ The skill directories are kept byte-for-byte mirrored. Validate parity and metad
 
 ```bash
 npm run validate      # structure and mirror-parity checks
-npm run lint          # oxlint over plugins and scripts
+npm run lint          # oxlint over plugins, scripts, and tests
 npm run format        # prettier write
-npm test              # root E2E and canonical engine tests
+npm test              # root E2E and engine unit tests
 npm run ci            # complete local CI gate
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # engine self-check (no network)
 ```
 
-`npm test` runs the root E2E suite and the canonical `skills/hyper-cloaking/engine` tests. `npm run validate` proves byte-for-byte parity across the mirrored skill directories.
+`npm test` runs the root E2E suite (`tests/e2e/`) and the engine unit tests relocated to `tests/unit/engine/` (importing the canonical `plugins/hyper-cloaking/skills/hyper-cloaking/engine/` source). `npm run validate` proves byte-for-byte parity across the mirrored skill directories.
 After the first successful GitHub Actions run, configure a `main` branch Ruleset only after confirming that the required job checks are named `quality` and `Node 20 compatibility`; this repository does not apply that setting automatically.
 
 ---

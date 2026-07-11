@@ -201,8 +201,8 @@ Todo el estado en tiempo de ejecución vive bajo `~/.hyper-cloaking/` (sobrescri
 ## Estructura del repositorio
 
 ```
-skills/hyper-cloaking/          # skill canónica (SKILL.md, engine, rules, references)
-plugins/hyper-cloaking/         # copia empaquetada como plugin para marketplaces
+plugins/hyper-cloaking/skills/hyper-cloaking/ # skill canónica (SKILL.md, engine, rules, references)
+skills/hyper-cloaking/                # mirror raíz de la skill canónica
 .claude/skills/hyper-cloaking/  # mirror de skill de Claude Code
 .agents/skills/hyper-cloaking/  # mirror de AgentSkills
 .claude-plugin/marketplace.json # manifiesto de marketplace de Claude Code
@@ -216,14 +216,14 @@ Los directorios de skill se mantienen replicados byte a byte. Valida la paridad 
 
 ```bash
 npm run validate      # comprobaciones de estructura y paridad de mirrors
-npm run lint          # oxlint sobre plugins y scripts
+npm run lint          # oxlint sobre plugins, scripts y tests
 npm run format        # escritura con prettier
-npm test              # pruebas E2E raíz y del motor canónico
+npm test              # pruebas E2E raíz y pruebas unitarias del motor
 npm run ci            # comprobación de CI local completa
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # autoverificación del motor (sin red)
 ```
 
-`npm test` ejecuta la suite E2E raíz y las pruebas canónicas de `skills/hyper-cloaking/engine`. `npm run validate` demuestra la paridad byte a byte entre los directorios de skill replicados.
+`npm test` ejecuta la suite E2E raíz (`tests/e2e/`) y las pruebas unitarias del motor reubicadas en `tests/unit/engine/` (que importan el código fuente canónico `plugins/hyper-cloaking/skills/hyper-cloaking/engine/`). `npm run validate` demuestra la paridad byte a byte entre los directorios de skill replicados.
 Después de la primera ejecución correcta de GitHub Actions, configura un Ruleset para la rama `main` solo tras confirmar que las comprobaciones de trabajo requeridas se llaman `quality` y `Node 20 compatibility`; este repositorio no aplica esa configuración automáticamente.
 
 ---

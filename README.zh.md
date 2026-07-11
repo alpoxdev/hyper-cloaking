@@ -201,8 +201,8 @@ await instagramActions.likePost(session, 'https://www.instagram.com/p/ABC/', { d
 ## 仓库结构
 
 ```
-skills/hyper-cloaking/          # 规范技能 (SKILL.md, engine, rules, references)
-plugins/hyper-cloaking/         # 用于市场的插件打包副本
+plugins/hyper-cloaking/skills/hyper-cloaking/ # 规范技能 (SKILL.md, engine, rules, references)
+skills/hyper-cloaking/                # 规范技能的根目录镜像
 .claude/skills/hyper-cloaking/  # Claude Code 技能镜像
 .agents/skills/hyper-cloaking/  # AgentSkills 镜像
 .claude-plugin/marketplace.json # Claude Code 市场清单
@@ -216,14 +216,14 @@ scripts/validate.mjs            # 结构 + 镜像一致性验证
 
 ```bash
 npm run validate      # 结构与镜像一致性检查
-npm run lint          # 对 plugins 与 scripts 运行 oxlint
+npm run lint          # 对 plugins、scripts 和 tests 运行 oxlint
 npm run format        # prettier 格式化
-npm test              # 根目录 E2E 与规范引擎测试
+npm test              # 根目录 E2E 与引擎单元测试
 npm run ci            # 完整的本地 CI 检查
 node skills/hyper-cloaking/engine/cli.mjs validate --json   # 引擎自检（无网络）
 ```
 
-`npm test` 会运行根目录 E2E 套件和规范的 `skills/hyper-cloaking/engine` 测试。`npm run validate` 会验证各技能镜像目录逐字节一致。
+`npm test` 会运行根目录 E2E 套件（`tests/e2e/`）以及迁移至 `tests/unit/engine/` 的引擎单元测试（导入规范的 `plugins/hyper-cloaking/skills/hyper-cloaking/engine/` 源码）。`npm run validate` 会验证各技能镜像目录逐字节一致。
 首次成功运行 GitHub Actions 后，确认必需的作业检查名称为 `quality` 和 `Node 20 compatibility`，再为 `main` 分支配置 Ruleset；本仓库不会自动应用该设置。
 
 ---

@@ -7,14 +7,14 @@
   "scripts": {
     "validate": "node scripts/validate.mjs",
     "skills:list": "npx skills add . --list",
-    "lint": "oxlint plugins scripts",
-    "lint:fix": "oxlint --fix plugins scripts",
-    "test": "node --test tests/e2e/*.test.mjs && cd skills/hyper-cloaking/engine && node --test",
+    "lint": "oxlint plugins scripts tests",
+    "lint:fix": "oxlint --fix plugins scripts tests",
+    "test": "node --test tests/e2e/*.test.mjs && cd tests/unit/engine && node --test",
     "engine:validate": "node skills/hyper-cloaking/engine/cli.mjs validate --json",
     "ci": "npm run validate && npm run lint && npm run format:check && npm test && npm run engine:validate",
     "ci:compat": "npm test && npm run engine:validate",
-    "format": "prettier --write \"plugins/**/*.mjs\" \"scripts/**/*.mjs\" \".github/workflows/ci.yml\"",
-    "format:check": "prettier --check \"plugins/**/*.mjs\" \"scripts/**/*.mjs\" \".github/workflows/ci.yml\""
+    "format": "prettier --write \"plugins/**/*.mjs\" \"scripts/**/*.mjs\" \"tests/**/*.mjs\" \".github/workflows/ci.yml\"",
+    "format:check": "prettier --check \"plugins/**/*.mjs\" \"scripts/**/*.mjs\" \"tests/**/*.mjs\" \".github/workflows/ci.yml\""
   },
   "dependencies": {
     "ajv": "^8.20.0",
