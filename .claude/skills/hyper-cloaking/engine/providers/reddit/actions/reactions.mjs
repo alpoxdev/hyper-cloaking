@@ -1,5 +1,8 @@
-// Reddit write reactions. Writes validate refs before any gate or navigation and
-// report performed:true only after an observable Reddit UI state is confirmed.
+/**
+ * Guarded Reddit write actions with reference validation, rate-state checks, and
+ * observable UI verification. These operations never report a write as complete
+ * without confirming the corresponding Reddit state.
+ */
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -269,6 +272,13 @@ function ownershipFailure(session, action, url, expected, target) {
     verificationFailure(action, `requested ${target} ownership region or control was not uniquely found`, [`located canonical ${target} root and owned controls`]));
 }
 
+/**
+ * Upvote a Reddit post after policy, ownership, and persistent rate checks.
+ * @param {object} session Guarded Reddit session.
+ * @param {object|string} postRef Canonical Reddit post reference.
+ * @param {object} [opts] Write policy options; real writes require explicit opt-in.
+ * @returns {Promise<object>} Structured action result with verification evidence.
+ */
 export async function upvotePost(session, postRef, opts = {}) {
   const action = 'reddit:upvotePost';
   try { assertPostRef(postRef); } catch (error) {
@@ -300,6 +310,14 @@ export async function upvotePost(session, postRef, opts = {}) {
   );
 }
 
+/**
+ * Add a top-level comment to a Reddit post and verify the resulting comment text.
+ * @param {object} session Guarded Reddit session.
+ * @param {object|string} postRef Canonical Reddit post reference.
+ * @param {string} text Comment body to submit.
+ * @param {object} [opts] Write policy and rate-limit options.
+ * @returns {Promise<object>} Structured action result describing observed state.
+ */
 export async function commentPost(session, postRef, text, opts = {}) {
   const action = 'reddit:commentPost';
   if (typeof text !== 'string' || !text.trim()) return makeBlockedResult(action, 'empty comment', { stage: 'input-validation' });
@@ -329,6 +347,14 @@ export async function commentPost(session, postRef, text, opts = {}) {
   );
 }
 
+/**
+ * Reply to an existing Reddit comment and verify the resulting reply text.
+ * @param {object} session Guarded Reddit session.
+ * @param {object|string} commentRef Canonical existing-comment reference.
+ * @param {string} text Reply body to submit.
+ * @param {object} [opts] Write policy and rate-limit options.
+ * @returns {Promise<object>} Structured action result describing observed state.
+ */
 export async function replyToComment(session, commentRef, text, opts = {}) {
   const action = 'reddit:replyToComment';
   if (typeof text !== 'string' || !text.trim()) return makeBlockedResult(action, 'empty reply', { stage: 'input-validation' });
@@ -361,6 +387,13 @@ export async function replyToComment(session, commentRef, text, opts = {}) {
   );
 }
 
+/**
+ * Save a Reddit post and verify that its owned save control reflects the change.
+ * @param {object} session Guarded Reddit session.
+ * @param {object|string} postRef Canonical Reddit post reference.
+ * @param {object} [opts] Write policy and rate-limit options.
+ * @returns {Promise<object>} Structured action result with verification evidence.
+ */
 export async function savePost(session, postRef, opts = {}) {
   const action = 'reddit:savePost';
   const pre = await beginWrite(session, action, postRef, opts, 'reddit-save');

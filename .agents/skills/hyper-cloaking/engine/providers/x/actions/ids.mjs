@@ -1,3 +1,4 @@
+/** Validate and normalize X user, post, and DM-thread references. */
 const HANDLE_RE = /^[A-Za-z0-9_]{1,15}$/;
 const POST_ID_RE = /^\d{1,32}$/;
 const OPAQUE_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
@@ -14,6 +15,7 @@ function ownedUrl(value) {
   }
 }
 
+/** Error thrown when an X resource reference fails validation. */
 export class InvalidXRefError extends Error {
   constructor(kind, ref) {
     super(`Invalid X ${kind} reference: ${JSON.stringify(ref)}`);
@@ -23,6 +25,7 @@ export class InvalidXRefError extends Error {
   }
 }
 
+/** Normalize a user handle or owned X profile URL. */
 export function normalizeUserRef(ref) {
   const raw = typeof ref === 'string'
     ? ref
@@ -39,12 +42,14 @@ export function normalizeUserRef(ref) {
   return match ? { handle: match[1], url: `https://x.com/${match[1]}` } : null;
 }
 
+/** Normalize a user reference, throwing on invalid input. */
 export function assertUserRef(ref) {
   const value = normalizeUserRef(ref);
   if (!value) throw new InvalidXRefError('user', ref);
   return value;
 }
 
+/** Normalize a post handle/ID or owned X status URL. */
 export function normalizePostRef(ref) {
   const suppliedId = ref && typeof ref === 'object' && ref.postId != null ? String(ref.postId) : null;
   const rawUrl = typeof ref === 'string' ? ref : ref && typeof ref === 'object' ? ref.url || ref.href : null;
@@ -58,12 +63,14 @@ export function normalizePostRef(ref) {
   return { handle, postId, url: `https://x.com/${handle}/status/${postId}` };
 }
 
+/** Normalize a post reference, throwing on invalid input. */
 export function assertPostRef(ref) {
   const value = normalizePostRef(ref);
   if (!value) throw new InvalidXRefError('post', ref);
   return value;
 }
 
+/** Normalize a DM thread reference bound to an account. */
 export function normalizeThreadRef(ref, { accountId } = {}) {
   if (!ref || typeof ref !== 'object' || Array.isArray(ref)) return null;
   const threadId = String(ref.threadId ?? '');
@@ -86,6 +93,7 @@ export function normalizeThreadRef(ref, { accountId } = {}) {
   };
 }
 
+/** Normalize a DM thread reference, throwing on invalid input. */
 export function assertThreadRef(ref, options) {
   const value = normalizeThreadRef(ref, options);
   if (!value) throw new InvalidXRefError('dm-thread', ref);

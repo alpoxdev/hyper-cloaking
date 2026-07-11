@@ -1,3 +1,7 @@
+/**
+ * Canonical target trust-boundary classification for navigation and redirects.
+ * Classification is local and must be enforced before browser dispatch.
+ */
 import net from 'node:net';
 
 const OK = 'ok';
@@ -12,6 +16,7 @@ const UNSAFE_PROTOCOLS = new Set([
   'devtools:'
 ]);
 
+/** @param {string} protocol @returns {boolean} Whether the protocol is unsafe. */
 export function isUnsafeScheme(protocol) {
   const normalized = String(protocol || '').toLowerCase();
   if (!normalized) return true;
@@ -19,6 +24,7 @@ export function isUnsafeScheme(protocol) {
   return !['http:', 'https:', 'about:'].includes(normalized);
 }
 
+/** @param {string|URL} url @returns {boolean} Whether URL userinfo is present. */
 export function hasEmbeddedCredentials(url) {
   const parsed = parseUrl(url);
   if (!parsed.url) return false;
@@ -33,11 +39,16 @@ export function normalizeOrigin(url) {
   return parsed.url.origin.toLowerCase();
 }
 
+/** @param {string} host @returns {boolean} Whether the IP is private/loopback. */
 export function isPrivateIpLiteral(host) {
   const classification = classifyIpLiteral(host);
   return classification?.scope === 'private' || classification?.scope === 'loopback';
 }
 
+/**
+ * @param {string} host
+ * @returns {boolean} Whether the hostname is internal.
+ */
 export function isInternalHostname(host) {
   const normalized = normalizeHost(host);
   if (!normalized) return false;
@@ -47,6 +58,10 @@ export function isInternalHostname(host) {
     || normalized.endsWith('.local')
     || !normalized.includes('.');
 }
+/**
+ * Classifies a target without I/O; callers must enforce the disposition.
+ * @param {string|URL} input @param {object} [options] @returns {object} Classification.
+ */
 
 export function classifyTargetUrl(input, options = {}) {
   const parsed = parseUrl(input);

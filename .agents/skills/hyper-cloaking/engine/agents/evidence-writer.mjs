@@ -7,6 +7,26 @@ const ALLOWED_TYPES = new Set(['screenshot', 'log', 'json', 'report']);
 const RESERVED_SEGMENTS = new Set(['.git', '.gjc', 'node_modules', '.env', 'cookies', 'cookie', 'credentials', 'tokens']);
 const SECRET_PATTERN = /(cookie|authorization|bearer|token|password|credential)\s*[:=]\s*([^\s,"'}]+)/gi;
 
+/**
+ * Publishes validated agent and parent-private artifacts into an invocation-scoped
+ * evidence directory and returns its durable publication receipt.
+ *
+ * @param {object} options
+ * @param {string} options.agentStagingRoot Absolute, non-symlink agent staging directory.
+ * @param {string} options.parentPrivateStagingRoot Absolute, non-symlink parent-private staging directory.
+ * @param {string} [options.evidenceId] UUID naming the evidence publication.
+ * @param {string} [options.invocationToken] UUID binding publication and recovery.
+ * @param {Array<{type:'screenshot'|'log'|'json'|'report',relPath:string,destination?:string,description?:string}>} [options.evidenceRefs=[]] Agent artifacts to publish.
+ * @param {*} [options.diagnosticReport=null] Optional diagnostic value serialized as JSON.
+ * @param {*} [options.failure=null] Optional failure value serialized as JSON.
+ * @param {{ok?:boolean,closed?:boolean,timedOut?:boolean}|null} [options.cleanup=null] Verified browser-cleanup result required when publishing refs.
+ * @param {string} options.homeDir Absolute parent-authorized output root.
+ * @param {boolean} [options.redactSecrets=true] Whether generated JSON reports have secret-like values redacted.
+ * @param {boolean} [options.cleanupStaging=true] Whether owned staging roots are removed after publication.
+ * @returns {Promise<{evidenceId:string,invocationToken:string,persistedPaths:string[],sha256:string,timestamp:string}>} Publication receipt.
+ * @throws {Error|AggregateError} If validation, secure publication, integrity checks, or cleanup fails.
+ * @sideeffects Creates and fsyncs the evidence tree and removes owned staging contents when enabled.
+ */
 export async function persistEvidence({
   agentStagingRoot,
   parentPrivateStagingRoot,
@@ -111,6 +131,17 @@ export async function persistEvidence({
   return receipt;
 }
 
+/**
+ * Validates and optionally removes an interrupted evidence publication.
+ *
+ * @param {object} options
+ * @param {string} options.finalDir Evidence publication directory.
+ * @param {string} options.invocationToken Token expected in the publication marker.
+ * @param {boolean} [options.removeIncomplete=false] Remove an incomplete publication after validation.
+ * @returns {Promise<{status:'complete',marker:object}|{status:'removed'}|{status:'incomplete',marker:object,present:string[]}>} Recovery status and marker details.
+ * @throws {Error} If the marker, manifest, paths, file types, sizes, or hashes are invalid.
+ * @sideeffects Reads publication files and, when requested, deletes the incomplete publication.
+ */
 export async function recoverEvidencePublication({ finalDir, invocationToken, removeIncomplete = false }) {
   validateUuid(invocationToken, 'invocationToken');
   const markerPath = path.join(finalDir, '.publication.json');

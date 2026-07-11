@@ -1,3 +1,4 @@
+/** Summarize bounded Coupang product records for comparison and ranking. */
 function finite(value) {
   return Number.isFinite(Number(value)) ? Number(value) : null;
 }
@@ -7,6 +8,10 @@ function average(values) {
   return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
 }
 
+/**
+ * Analyze up to 100 products, returning aggregate metrics, category counts,
+ * and the highest-reviewed and highest-rated records.
+ */
 export function analyzeProducts(records) {
   const products = Array.isArray(records) ? records.slice(0, 100) : [];
   const categories = new Map();

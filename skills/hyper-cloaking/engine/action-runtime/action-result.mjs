@@ -1,3 +1,7 @@
+/**
+ * Provider-neutral action result and untrusted-content boundary contracts.
+ * Browser-derived content never receives instruction authority.
+ */
 // Provider-agnostic action-result shaping.
 //
 // Every importable action returns a consistent structured result so completion

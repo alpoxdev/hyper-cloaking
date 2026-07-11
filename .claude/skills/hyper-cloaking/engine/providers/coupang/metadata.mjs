@@ -1,3 +1,7 @@
+/**
+ * Canonical Coupang provider descriptor. Domains, origins, cookie policy, and
+ * safety hints are declarative inputs for registry and session guards.
+ */
 // Coupang provider metadata only. The registry imports this module without loading actions.
 // link.coupang.com is navigation-only and must never seed a cookie site key.
 

@@ -31,6 +31,13 @@ export const OWNED_CANONICAL_MANIFEST = Object.freeze([
   'rules/hyper-cloaking-workflow.md'
 ].sort());
 
+/**
+ * Capture a parity-checked mirror baseline and owned-file manifest.
+ * @param {{canonicalDir:string,mirrorDirs:string[],ownedManifest?:string[],excludedSegments?:string[],invocationToken?:string,dirtyLedgerSha256?:string|null}} options
+ * @returns {Promise<object>} Frozen baseline with paths, inventories, manifests, and baselineSha256.
+ * @throws {Error} If directories, topology, manifest, or initial managed parity is invalid.
+ * @sideeffects Reads canonical/mirror trees and computes file metadata/digests.
+ */
 export async function captureMirrorBaseline({ canonicalDir, mirrorDirs, ownedManifest = OWNED_CANONICAL_MANIFEST, excludedSegments = MANAGED_EXCLUDED_SEGMENTS, invocationToken = crypto.randomUUID(), dirtyLedgerSha256 = null }) {
   validateManifest(ownedManifest);
   const canonicalRealpath = await secureDirectory(canonicalDir);
@@ -69,6 +76,13 @@ export async function captureMirrorBaseline({ canonicalDir, mirrorDirs, ownedMan
   return Object.freeze({ ...baseline, baselineSha256: digestJson(baseline) });
 }
 
+/**
+ * Prepare a deterministic set of copy/remove operations from a validated baseline.
+ * @param {{baseline:object}} options
+ * @returns {Promise<object>} Frozen prepared transaction with canonicalFinal, operations, and preparedSha256.
+ * @throws {Error} If mirror drift or unowned canonical changes are detected.
+ * @sideeffects Reads canonical and mirror trees; does not mutate them.
+ */
 export async function prepareMirrorSync({ baseline }) {
   validateBaseline(baseline);
   const canonical = await inventory(baseline.canonicalRealpath, baseline.excludedSegments);
@@ -118,6 +132,13 @@ export async function prepareMirrorSync({ baseline }) {
   return Object.freeze({ ...prepared, preparedSha256: digestJson(prepared) });
 }
 
+/**
+ * Apply a prepared mirror transaction with lock, journal, staging, backup, rollback, and parity verification.
+ * @param {{baseline:object,prepared:object,recoveryRoot:string,lockPath?:string,testFaultAfterEvent?:Function|null}} options
+ * @returns {Promise<{ok:boolean,journalPath:string,operations:number}>} Commit result.
+ * @throws {Error|AggregateError} On lock, validation, copy, parity, rollback, or cleanup failure.
+ * @sideeffects Mutates mirror files, creates recovery journal/backups, and removes temporary stages.
+ */
 export async function applyMirrorSync({
   baseline,
   prepared,

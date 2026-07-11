@@ -1,5 +1,6 @@
 import { classifyTargetUrl, normalizeOrigin } from '../../target-safety.mjs';
 
+/** Normalize and validate a non-empty unique allowlist of origins. @param {string[]} allowedOrigins @returns {ReadonlyArray<string>} Canonical origins. @throws {Error} For non-array, empty, invalid, opaque, or duplicate origins. */
 export function normalizeAllowedOrigins(allowedOrigins) {
   if (!Array.isArray(allowedOrigins) || allowedOrigins.length === 0) throw new Error('allowedOrigins must be a non-empty array');
   const normalized = allowedOrigins.map((value) => normalizeOrigin(value));
@@ -8,6 +9,7 @@ export function normalizeAllowedOrigins(allowedOrigins) {
   return Object.freeze(normalized);
 }
 
+/** Check a URL against the normalized origin allowlist and target-safety classifier. @param {{url:string,allowedOrigins:string[],classify?:Function,allowAboutBlank?:boolean}} options @returns {{ok:true,url:string,origin:string,classification:object}|{ok:false,reason:string,url:string,origin?:string,classification?:object}} Structured allow/deny result. @throws {Error} For invalid allowlist input or classifier errors. @sideeffects None. */
 export function guardAllowedOrigin({ url, allowedOrigins, classify = classifyTargetUrl, allowAboutBlank = false }) {
   if (allowAboutBlank && url === 'about:blank') return { ok: true, url, origin: 'about:blank', classification: classify(url, { allowAboutBlank: true }) };
   const origin = normalizeOrigin(url);

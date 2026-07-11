@@ -1,3 +1,8 @@
+/**
+ * Command-line orchestration for validation, smoke checks, MCP configuration,
+ * live browser verification, and owner-managed credential operations.
+ * Commands return structured results and fail closed during preflight failures.
+ */
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';

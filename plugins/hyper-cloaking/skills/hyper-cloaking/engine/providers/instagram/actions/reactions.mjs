@@ -1,9 +1,15 @@
-// Instagram post/reel reactions (writes): like, comment, save, share, repost.
-//
-// Every write: validates the target, passes the dryRun gate (default on),
-// checks the persisted rate limit, guards origin + challenge, performs the
-// action with humanized input, then VERIFIES an observable state change before
-// reporting performed:true (invariant: no false success on selector drift).
+/**
+ * Instagram post/reel reaction actions.
+ *
+ * Write APIs accept canonical HTTPS post or reel references and return
+ * structured action results rather than claiming success optimistically.
+ * Unless explicitly enabled by write options, the dry-run gate blocks mutation.
+ * Live actions navigate through guarded writes, reserve persisted rate-limit
+ * state immediately before dispatch, humanize input, and verify resulting DOM
+ * state; validation, gate, navigation, challenge, rate, and verification
+ * failures are represented as blocked/failed results. Repost is intentionally
+ * unsupported and never mutates state.
+ */
 
 import { instagramSelectors } from '../selectors.mjs';
 import { resolveWriteGate, checkAndRecordAction } from '../../../action-runtime/guardrails.mjs';

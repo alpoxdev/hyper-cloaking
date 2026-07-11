@@ -1,3 +1,9 @@
+/**
+ * Setup role: validate parent-authorized paths and client options, run the CLI
+ * validation/configuration commands, then return a schema-compatible envelope.
+ * It does not install software or broaden sandbox permissions; command stdout
+ * must be one JSON line and generated config is independently checked.
+ */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runCli as defaultRunCli } from '../cli.mjs';
@@ -5,6 +11,7 @@ import { readSingleJson, verifyAgentEnvelope } from './parent-verify.mjs';
 
 const CLIENTS = new Set(['direct', 'codex', 'json', 'claude-code', 'gajae-code', 'openclaw', 'hermes', 'hermes-agent']);
 
+/** Provide isolated in-memory stdout/stderr capture for injected CLI calls. */
 export function makeMemoryIo() {
   let stdout = '';
   let stderr = '';
@@ -15,6 +22,13 @@ export function makeMemoryIo() {
   };
 }
 
+/**
+ * Produce a setup envelope. Input, CLI, and generated-config failures remain
+ * structured and non-retryable at this role boundary.
+ * @param {object} input schemaVersion-1 setup request.
+ * @param {object} [dependencies] injectable CLI and IO factories.
+ * @returns {Promise<object>} setup agent envelope.
+ */
 export async function runSetup(input, { runCli = defaultRunCli, makeIo = makeMemoryIo } = {}) {
   const inputError = validateInput(input);
   if (inputError) return failedEnvelope('setup-input-invalid', 'setup-input', inputError, 'blocked');
@@ -55,6 +69,7 @@ export async function runSetup(input, { runCli = defaultRunCli, makeIo = makeMem
   });
 }
 
+/** Enforce the closed setup input contract before invoking the CLI. */
 function validateInput(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return 'input must be an object';
   const expected = ['client', 'headless', 'sandbox', 'schemaVersion', 'workspace'];
@@ -67,6 +82,7 @@ function validateInput(input) {
   return null;
 }
 
+/** Invoke a CLI and accept only a single JSON line on stdout. */
 async function invokeJson(runCli, argv, makeIo) {
   const io = makeIo();
   let exitCode;
@@ -79,6 +95,7 @@ async function invokeJson(runCli, argv, makeIo) {
   catch { return { ok: false, error: 'CLI returned malformed JSON' }; }
 }
 
+/** Confirm generated config preserves client, workspace, sandbox, and headless intent. */
 function verifyGeneratedConfig(value, input) {
   if (value.client !== input.client) return 'generated client does not match input';
   if (path.resolve(value.home || '') !== path.resolve(input.workspace)) return 'generated workspace does not match input';
@@ -131,6 +148,7 @@ function failure(code, phase, observedSignal) {
   return { code, phase, retryable: false, observedSignal: String(observedSignal) };
 }
 
+/** Construct the canonical setup result shape consumed by parent dispatch. */
 function setupEnvelope({ status, setupStatus, failure: failureValue, mcpConfig = null, executablePath = null, blockers = [] }) {
   return {
     schemaVersion: 1,

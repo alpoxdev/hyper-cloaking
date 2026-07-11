@@ -1,9 +1,22 @@
+/**
+ * Browser verification role. Navigation is delegated to the live verifier under
+ * parent-staged publication rules; this adapter normalizes safety, telemetry,
+ * cleanup, and evidence references into one immutable protocol envelope.
+ */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runLiveVerification as defaultRunLiveVerification } from '../cli.mjs';
 import { normalizeAllowedOrigins } from './lib/allowed-origin-guard.mjs';
 import { readSingleJson, verifyAgentEnvelope } from './parent-verify.mjs';
 
+/**
+ * Run a verification-only browser task.
+ * No evidence is publishable until cleanup is positively verified and every
+ * reference remains inside the parent-authorized staging root.
+ * @param {object} input schemaVersion-1 browser task request.
+ * @param {object} [dependencies] injectable live-verification runner.
+ * @returns {Promise<object>} succeeded or blocked browser-task envelope.
+ */
 export async function runBrowserTask(input, { runLiveVerification = defaultRunLiveVerification } = {}) {
   const error = validateInput(input);
   if (error) return blockedEnvelope(input, 'browser-input-invalid', 'browser-input', error, emptyCleanup());
@@ -63,6 +76,7 @@ export async function runBrowserTask(input, { runLiveVerification = defaultRunLi
   };
 }
 
+/** Reject unknown fields, unsafe URLs/paths, invalid origins, and redirect limits. */
 function validateInput(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return 'input must be an object';
   const allowed = new Set(['schemaVersion', 'taskMode', 'targetUrl', 'allowedOrigins', 'headless', 'workspace', 'provider', 'cookieSite', 'account', 'agentStagingRoot', 'maxRedirects']);
@@ -77,6 +91,7 @@ function validateInput(input) {
   return null;
 }
 
+/** Normalize lifecycle state; callers treat any missing positive flag as unsafe. */
 function normalizeCleanup(value) {
   return { ok: value?.ok === true, closed: value?.closed === true, timedOut: value?.timedOut === true, blocker: value?.blocker || null };
 }
@@ -91,6 +106,7 @@ function mapTargetSafety(value) {
   return 'refused';
 }
 function safeOrigin(value) { try { return value ? new URL(value).origin : null; } catch { return null; } }
+/** Convert verifier references to root-relative, typed evidence references. */
 function normalizeEvidenceRefs(refs, root) {
   if (!Array.isArray(refs)) return [];
   return refs.map((ref) => {
@@ -101,6 +117,7 @@ function normalizeEvidenceRefs(refs, root) {
     return { type: extension === '.png' || extension === '.jpg' || extension === '.jpeg' ? 'screenshot' : 'log', relPath, description: ref.kind || ref.description || 'live verification evidence' };
   });
 }
+/** Return a safe blocked result with no final URL or evidence references. */
 function blockedEnvelope(input, code, phase, observedSignal, cleanup) {
   return {
     schemaVersion: 1, agent: 'browser-task', status: 'blocked', executionMode: 'parent',

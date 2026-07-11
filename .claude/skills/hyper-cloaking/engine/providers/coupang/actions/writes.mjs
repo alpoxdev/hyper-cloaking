@@ -1,3 +1,7 @@
+/**
+ * Guarded Coupang cart/order mutations with explicit policy, idempotency, and
+ * postcondition verification.
+ */
 import { createHash } from 'node:crypto';
 import {
   finalizeGuardedAction,
@@ -177,6 +181,7 @@ async function cartLineState(session, productId) {
   return { cartLineId, quantity };
 }
 
+/** Add one product to the cart after write gates and state checks pass. */
 export async function addToCart(session, productRef, quantity = 1, opts = {}) {
   const action = 'coupang:addToCart';
   let product;
@@ -202,6 +207,7 @@ export async function addToCart(session, productRef, quantity = 1, opts = {}) {
   });
 }
 
+/** Move one owned cart line by a single quantity step. */
 export async function setCartQuantity(session, cartLineRef, quantity, opts = {}) {
   const action = 'coupang:setCartQuantity';
   let line;

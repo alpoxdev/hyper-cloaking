@@ -1,3 +1,8 @@
+/**
+ * Owner-controlled, filesystem-backed credential profile store.
+ * Profiles are schema-validated and mutated through revisioned operations with
+ * locking, secure permissions, and recovery markers.
+ */
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
@@ -227,10 +232,12 @@ class StrictJsonParser {
   }
 }
 
+/** Parses strict JSON credential descriptors and rejects trailing input. */
 export function parseCredentialJson(text) {
   return new StrictJsonParser(text).parse();
 }
 
+/** Returns secure filesystem paths for the credential store under `home`. */
 export function credentialPaths(home) {
   const root = path.join(resolveHome(home), 'secrets');
   return Object.freeze({
@@ -332,6 +339,7 @@ function validateProfile(profileId, input) {
   };
 }
 
+/** Validates the persisted store schema and returns the normalized value. */
 export function validateCredentialStore(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('credential store must be an object');
   if (input.version !== STORE_VERSION) throw new TypeError(`credential store version must be ${STORE_VERSION}`);
@@ -759,11 +767,13 @@ function redactedProfile(profileId, profile) {
   };
 }
 
+/** Initializes the owner-only store and returns its operation revision. */
 export async function initCredentialStore({ home, ...options } = {}) {
   const result = await mutateStore(home, async (store) => store, options);
   return { operationId: result.operationId, revision: result.afterRevision };
 }
 
+/** Lists redacted profile metadata, optionally filtered by provider. */
 export async function listCredentialProfiles({ home, provider, fsImpl } = {}) {
   const store = await readStore(credentialPaths(home), fsImpl || fs);
   return Object.entries(store.profiles)
@@ -771,6 +781,7 @@ export async function listCredentialProfiles({ home, provider, fsImpl } = {}) {
     .map(([id, profile]) => redactedProfile(id, profile));
 }
 
+/** Reads one profile's redacted metadata, or returns null when absent. */
 export async function inspectCredentialProfile({ home, profileId, fsImpl } = {}) {
   requireSafeKey(profileId, 'profile id');
   const store = await readStore(credentialPaths(home), fsImpl || fs);
@@ -778,6 +789,7 @@ export async function inspectCredentialProfile({ home, profileId, fsImpl } = {})
   return profile ? redactedProfile(profileId, profile) : null;
 }
 
+/** Imports a profile through the revisioned, locked mutation path. */
 export async function importCredentialProfile({ home, profileId, profile, ...options } = {}) {
   const imported = {
     ...profile,
@@ -795,6 +807,7 @@ export async function importCredentialProfile({ home, profileId, profile, ...opt
   });
 }
 
+/** Removes a profile and associated state markers. */
 export async function removeCredentialProfile({ home, profileId, ...options } = {}) {
   requireSafeKey(profileId, 'profile id');
   return withProfileLock(home, profileId, options, async () => {
@@ -808,6 +821,7 @@ export async function removeCredentialProfile({ home, profileId, ...options } = 
   });
 }
 
+/** Sets the provider's default profile. */
 export async function setDefaultCredentialProfile({ home, provider, profileId, ...options } = {}) {
   requireSafeKey(provider, 'provider');
   requireSafeKey(profileId, 'profile id');
@@ -893,6 +907,7 @@ export async function markCredentialProfileState({ home, profileId, state, evide
   ));
 }
 
+/** Resolves an eligible profile without exposing its credential values. */
 export async function resolveCredentialProfile({
   home,
   provider,
@@ -930,6 +945,7 @@ export async function resolveCredentialProfile({
   return { status: 'selected', profileId: selectedId, profile: structuredClone(profile) };
 }
 
+/** Builds a profile from prefixed environment variables. */
 export function profileFromEnvironment({ provider, kind, prefix, env = process.env } = {}) {
   requireSafeKey(provider, 'provider');
   requireSafeKey(kind, 'kind');

@@ -11,8 +11,18 @@
 // smoke path. The `SELECTORS_VERSION` bumps whenever a selector is changed so
 // drift is auditable.
 
+/**
+ * Version marker for the selector set, bumped when a selector changes.
+ *
+ * @type {string}
+ */
 export const SELECTORS_VERSION = '2026-07-10';
 
+/**
+ * Centralized DOM selectors for Instagram profile, post, and direct-message
+ * surfaces. Selectors prioritize accessible attributes and stable URL shapes,
+ * with structural fallbacks for less stable markup.
+ */
 export const instagramSelectors = {
   profile: {
     // Header region of a profile page.

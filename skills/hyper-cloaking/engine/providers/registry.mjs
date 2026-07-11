@@ -6,6 +6,7 @@ import { validateProviderSchema } from './schema.mjs';
 
 export const GENERIC_PROVIDER_ID = 'generic';
 
+/** Canonicalize a hostname for case-insensitive, dot-boundary matching. @param {*} host @returns {string} Lowercase host without one trailing dot. @sideeffects None. */
 export function normalizeHost(host) {
   return String(host || '').trim().toLowerCase().replace(/\.$/, '');
 }
@@ -14,6 +15,7 @@ export function normalizeHost(host) {
  * Exact-or-dot-boundary host match only. Rejects lookalike hosts such as
  * `evilreddit.com` for `reddit.com` or `notx.com` for `x.com`.
  */
+/** Match a host exactly or on a dot boundary; lookalike suffixes do not match. @param {*} host @param {*} domain @returns {boolean} Whether the host belongs to the domain. @sideeffects None. */
 export function hostMatchesDomain(host, domain) {
   const normalizedHost = normalizeHost(host);
   const normalizedDomain = normalizeHost(domain);
@@ -39,6 +41,7 @@ function providerDomainCandidates(provider) {
   return candidates;
 }
 
+/** Find every non-generic provider/domain candidate matching a host. @param {string} host @param {Array<object>} providers @returns {Array<{provider:object,domain:string,navigationOnly:boolean}>} Matching candidates. @sideeffects None. */
 export function findMatchingDomains(host, providers) {
   const matches = [];
   for (const provider of matchableProviders(providers)) {
@@ -57,6 +60,7 @@ function longestMatch(matches) {
   ), null);
 }
 
+/** Build the lookup registry used by explicit and URL provider resolution. @param {Array<object>} providers @returns {{providers:Array<object>,byId:Map<string,object>}} Registry preserving provider order and id lookup. @sideeffects None. */
 export function buildProviderRegistry(providers) {
   const byId = new Map(providers.map((provider) => [provider?.id, provider]));
   return { providers, byId };
@@ -66,6 +70,7 @@ export function buildProviderRegistry(providers) {
  * Explicit provider id lookup. Unknown ids fail closed with a structured
  * `unknown-provider` error; there is no generic fallback for explicit ids.
  */
+/** Resolve an explicit provider id without generic fallback. @param {{byId:Map<string,object>}} registry @param {*} id @returns {{ok:true,provider:object}|{ok:false,error:{code:'unknown-provider',message:string,id:string}}} Structured lookup result. @sideeffects None. */
 export function getProvider(registry, id) {
   const requestedId = typeof id === 'string' ? id : String(id ?? '');
   const normalizedId = requestedId.trim().toLowerCase();
@@ -88,6 +93,7 @@ export function getProvider(registry, id) {
  * Unknown valid URL -> generic fallback. Invalid URL -> invalid-provider-url.
  * Host matching different providers -> provider-ambiguous-host (fail-closed).
  */
+/** Resolve a provider from a URL, using longest same-provider domain matching and fail-closed ambiguity detection. @param {{providers:Array<object>,byId:Map<string,object>}} registry @param {*} url @returns {{ok:true,provider:object,source:'url',fallbackUsed:boolean,matchedDomain:string|null,matchedViaNavigationOnlyAlias:boolean,reason?:string}|{ok:false,error:object}} Structured resolution result. @sideeffects None. */
 export function resolveProviderForUrl(registry, url) {
   let parsed;
   try {
@@ -176,6 +182,7 @@ function detectCrossProviderAmbiguity(providers) {
  * Returns a deterministic { ok, providerCount, errors } shape for both
  * `engine validate` and root scripts/validate.mjs.
  */
+/** Validate provider schemas, ids, domains, origins, and cross-provider ambiguity. @param {Array<object>} providers @returns {{ok:boolean,providerCount:number,errors:Array<object>}} Deterministic validation report. @throws {Error} If downstream schema validation throws. @sideeffects None. */
 export function validateProviderRegistry(providers) {
   const errors = [];
   const idSeen = new Set();

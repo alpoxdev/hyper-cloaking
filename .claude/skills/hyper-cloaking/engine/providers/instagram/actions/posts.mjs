@@ -1,4 +1,12 @@
-// Instagram user posts / reels listing (read).
+/**
+ * Instagram profile-grid post and reel read actions.
+ *
+ * Reads accept a username plus bounded pagination options and perform guarded
+ * navigation/scrolling. Results are wrapped normalized post records with
+ * canonical owned-origin URLs; empty grids require explicit DOM evidence.
+ * Network/navigation failures and malformed or unbounded provider content throw;
+ * reads do not mutate account state.
+ */
 
 import { instagramSelectors } from '../selectors.mjs';
 import { wrapReadPayload } from '../../../action-runtime/action-result.mjs';

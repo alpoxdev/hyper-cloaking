@@ -1,3 +1,10 @@
+/**
+ * Public entry point for the YouTube provider.
+ *
+ * Metadata is exported separately from session, selector, network, and action
+ * implementations so provider discovery can load the safe registry surface
+ * without eagerly initializing live-session helpers.
+ */
 // YouTube provider public surface. The registry imports metadata directly so
 // actions and live-session helpers are never eagerly loaded during discovery.
 
@@ -26,6 +33,12 @@ import {
   saveToPlaylist
 } from './actions/reactions.mjs';
 
+/**
+ * Bound YouTube operations exposed to callers by action name.
+ *
+ * Read actions and state-changing actions retain the contracts of their
+ * underlying modules; this object is the convenient grouped API.
+ */
 export const youtubeActions = {
   searchVideos,
   getVideo,

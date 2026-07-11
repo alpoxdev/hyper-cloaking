@@ -1,3 +1,9 @@
+/**
+ * Parent orchestration boundary: validates a request, dispatches exactly one
+ * role, verifies its schema envelope, and optionally publishes parent-owned
+ * evidence. Role failures are returned as data; unexpected runner throws are
+ * converted to non-retryable contract failures.
+ */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runSetup } from './setup-agent.mjs';
@@ -6,6 +12,17 @@ import { runDiagnostics } from './diagnostics-agent.mjs';
 import { persistEvidence } from './evidence-writer.mjs';
 import { readSingleJson, verifyAgentEnvelope } from './parent-verify.mjs';
 
+/**
+ * Dispatch a parent request through the selected role or verified native adapter.
+ * The returned object is a CLI-safe response envelope with `exitCode`, while
+ * `envelope` is present only after schema and agent/trigger checks pass.
+ *
+ * @param {object} request schemaVersion-1 request; evidence publication is
+ *   enabled only when the parent supplies an absolute home and publication config.
+ * @param {object} [dependencies] injectable runners, verifier, publisher, or
+ *   subagent adapter; injections do not relax validation or cleanup checks.
+ * @returns {Promise<object>} response whose failure explains the rejected boundary.
+ */
 export async function dispatchParent(request, dependencies = {}) {
   const invalid = validateRequest(request);
   if (invalid) return failureResponse('contract_failure', 'contract-input-invalid', invalid);
@@ -67,6 +84,7 @@ export async function dispatchParent(request, dependencies = {}) {
   return response(route, envelope.status, envelope.status === 'succeeded' ? 0 : 1, envelope, evidenceReceipt, envelope.failure);
 }
 
+/** Validate the closed request shape before any runner or side effect executes. */
 function validateRequest(request) {
   if (!request || typeof request !== 'object' || Array.isArray(request)) return 'request must be an object';
   const allowed = new Set(['schemaVersion', 'trigger', 'executionMode', 'input', 'evidence']);
@@ -82,13 +100,16 @@ function validateRequest(request) {
   return null;
 }
 
+/** Browser cleanup must be positively closed, successful, and non-timeout before publication. */
 function cleanupVerified(value) { return value?.ok === true && value?.closed === true && value?.timedOut === false; }
 function isRoleInputFailure(failure) {
   return ['setup-input-invalid', 'browser-input-invalid', 'diagnostics-input-invalid'].includes(failure?.code);
 }
+/** Build the stable parent response; `failure` is null only for a clean result. */
 function response(route, status, exitCode, envelope, evidenceReceipt, failure = null) {
   return { schemaVersion: 1, route, status, exitCode, envelope, evidenceReceipt, failure };
 }
+/** Represent failures that occurred before a role envelope could be verified. */
 function failureResponse(route, code, observedSignal) {
   return response(route, 'failed', 1, null, null, { code, observedSignal: String(observedSignal) });
 }

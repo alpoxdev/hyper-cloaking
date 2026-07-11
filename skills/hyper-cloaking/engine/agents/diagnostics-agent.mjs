@@ -1,3 +1,9 @@
+/**
+ * Diagnostics role: inspect only parent-selected relative artifacts beneath a
+ * non-symlink state directory, redact log text, hash screenshots, and summarize
+ * the last verified role failure. It never follows escaped paths or publishes
+ * artifacts itself.
+ */
 import crypto from 'node:crypto';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -8,6 +14,13 @@ import { readSingleJson, verifyAgentEnvelope } from './parent-verify.mjs';
 
 const MAX_DIAGNOSTIC_FILE_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Build a diagnostics envelope from a verified setup/browser output and bounded
+ * artifact observations.
+ * @param {object} input schemaVersion-1 diagnostics request.
+ * @param {object} [dependencies] injectable file reader for tests/callers.
+ * @returns {Promise<object>} diagnostics envelope with JSON and markdown reports.
+ */
 export async function runDiagnostics(input, { readFile = fsp.readFile } = {}) {
   const invalid = validateInput(input);
   if (invalid) return diagnosticsEnvelope('failed', 'unknown', invalid, null, 'stop', { error: invalid });
@@ -74,6 +87,7 @@ export async function runDiagnostics(input, { readFile = fsp.readFile } = {}) {
   return diagnosticsEnvelope('succeeded', layer, observedSignal, reportJson.lastSafeAction, nextAuthorizedStep, reportJson, markdown);
 }
 
+/** Enforce verified prior output, relative artifact paths, and an absolute state root. */
 function validateInput(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return 'input must be an object';
   const allowed = new Set(['schemaVersion', 'lastAgentOutput', 'logPaths', 'screenshotPaths', 'stateDir']);
@@ -86,6 +100,7 @@ function validateInput(input) {
   return null;
 }
 
+/** Map failure signals to the diagnostic layer used for the next-step policy. */
 function classifyLayer(code = '', phase = '') {
   const value = `${code} ${phase}`.toLowerCase();
   if (/setup|binary|node|npm|config/.test(value)) return 'setup';
@@ -95,17 +110,20 @@ function classifyLayer(code = '', phase = '') {
   if (/outcome|humanization|cleanup|evidence/.test(value)) return 'outcome';
   return 'unknown';
 }
+/** Choose an authorized next action; unknown failures stop rather than retry. */
 function chooseNextStep(layer, retryable) {
   if (layer === 'setup' && retryable === true) return 'retry_setup';
   if (layer === 'target_safety') return 'clarify_scope';
   if (layer === 'network' || layer === 'waf_challenge' || layer === 'outcome') return 'manual_review';
   return 'stop';
 }
+/** Derive the last action known safe from the prior role's verified result. */
 function lastSafeAction(envelope) {
   if (envelope.agent === 'browser-task') return envelope.result?.finalUrl ? `Observed ${envelope.result.finalUrl}` : 'Stopped before verified navigation';
   if (envelope.agent === 'setup') return envelope.result?.setupStatus === 'ready' ? 'Validated setup configuration' : 'Stopped before setup became ready';
   return null;
 }
+/** Construct the report-bearing diagnostics result and structured failure, if any. */
 function diagnosticsEnvelope(status, layer, observedSignal, lastSafeActionValue, nextAuthorizedStep, reportJson, markdown = null) {
   const result = {
     agentType: 'diagnostics', layer, observedSignal: String(observedSignal), lastSafeAction: lastSafeActionValue,

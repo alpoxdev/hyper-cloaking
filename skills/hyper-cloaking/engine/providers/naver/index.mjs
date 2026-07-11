@@ -1,4 +1,7 @@
-// Naver provider public surface. Registry consumers import metadata only.
+/**
+ * Public Naver provider surface: metadata, guarded reads, selectors, sessions,
+ * and supported action handlers for registry and runtime consumers.
+ */
 
 export { naverProvider } from './metadata.mjs';
 export { buildNaverSession, ChallengeBlockedError, OffOriginError, TargetSafetyError } from './session.mjs';
@@ -44,6 +47,12 @@ import {
   setCafePostLiked
 } from './actions/writes.mjs';
 
+/**
+ * Action handlers exposed by the Naver provider.
+ *
+ * The map is intentionally limited to supported read, engagement, publishing,
+ * normalization, and explicitly blocked operations.
+ */
 export const naverActions = {
   searchWeb,
   searchBlog,

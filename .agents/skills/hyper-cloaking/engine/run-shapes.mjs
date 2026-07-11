@@ -1,3 +1,9 @@
+/**
+ * Sanitizes and optionally persists privacy-safe run-shape learning records.
+ * Learning is opt-in; persistence writes JSONL and strips secrets, PII, and raw content.
+ * @module engine/run-shapes
+ */
+
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';

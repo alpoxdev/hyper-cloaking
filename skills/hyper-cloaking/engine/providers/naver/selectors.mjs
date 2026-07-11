@@ -1,7 +1,19 @@
-// Centralized Naver DOM selectors. Drift must fail closed in action code.
+/**
+ * Centralized Naver DOM selectors; action code should fail closed when these
+ * selectors drift or no longer produce the expected page signals.
+ */
 
+/**
+ * Version identifier for the Naver selector contract.
+ */
 export const NAVER_SELECTORS_VERSION = '2026-07-11';
 
+/**
+ * Selector contract for Naver search, blog, and cafe surfaces.
+ *
+ * Consumers use these selectors to locate content, controls, and empty states;
+ * changes should be accompanied by a selector version update.
+ */
 export const naverSelectors = {
   search: {
     web: {

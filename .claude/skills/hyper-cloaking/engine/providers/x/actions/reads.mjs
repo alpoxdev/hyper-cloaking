@@ -1,3 +1,4 @@
+/** Read and normalize user, post, search, thread, and DM data from X. */
 import { wrapReadPayload } from '../../../action-runtime/action-result.mjs';
 import { executeXRead } from '../network.mjs';
 import { xSelectors } from '../selectors.mjs';
@@ -91,6 +92,7 @@ async function extractPostLinks(session, selector) {
   })));
 }
 
+/** Read a validated X user profile. */
 export async function getUser(session, userRef, opts = {}) {
   const user = assertUserRef(userRef);
   const dom = async () => {
@@ -119,6 +121,7 @@ export async function getUser(session, userRef, opts = {}) {
   return wrapReadPayload({ url: user.url, kind: 'x-user', content: value });
 }
 
+/** Read recent posts belonging to a validated X user. */
 export async function getUserPosts(session, userRef, opts = {}) {
   const user = assertUserRef(userRef);
   const limit = limitFor(opts.limit, 20);
@@ -134,6 +137,7 @@ export async function getUserPosts(session, userRef, opts = {}) {
   return wrapReadPayload({ url: user.url, kind: 'x-user-posts', content: value });
 }
 
+/** Read a validated X post and, optionally, its replies. */
 export async function getPost(session, postRef, opts = {}) {
   const post = assertPostRef(postRef);
   const limit = limitFor(opts.replyLimit, 50);
@@ -180,6 +184,7 @@ export async function getPost(session, postRef, opts = {}) {
   return wrapReadPayload({ url: post.url, kind: 'x-post', content: value });
 }
 
+/** Search X posts for a bounded query. */
 export async function searchPosts(session, query, opts = {}) {
   const searchQuery = String(query ?? '').trim();
   if (!searchQuery || searchQuery.length > 500) throw new TypeError('X search query must contain 1-500 characters');
@@ -197,6 +202,7 @@ export async function searchPosts(session, query, opts = {}) {
   return wrapReadPayload({ url, kind: 'x-search', content: value });
 }
 
+/** Read posts in the thread containing a validated X post. */
 export async function getThread(session, postRef, opts = {}) {
   const post = assertPostRef(postRef);
   const limit = limitFor(opts.limit, 50);
@@ -223,6 +229,7 @@ function accountFor(session, opts) {
   return accountId;
 }
 
+/** List DM threads for the current authenticated X account. */
 export async function listDMThreads(session, opts = {}) {
   const accountId = accountFor(session, opts);
   const limit = limitFor(opts.limit, 20);
@@ -257,6 +264,7 @@ export async function listDMThreads(session, opts = {}) {
   return wrapReadPayload({ url: xSelectors.dm.inboxUrl, kind: 'x-dm-threads', content: value });
 }
 
+/** Read bounded messages from a validated X DM thread. */
 export async function readDMThread(session, threadRef, opts = {}) {
   const accountId = accountFor(session, opts);
   const thread = assertThreadRef(threadRef, { accountId });

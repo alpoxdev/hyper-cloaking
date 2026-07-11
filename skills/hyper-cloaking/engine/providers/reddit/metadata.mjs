@@ -1,7 +1,11 @@
-// Reddit provider metadata only. The registry imports this module without loading actions.
-// `redd.it` is navigation-only and must never seed a cookie site key.
+/**
+ * Reddit provider metadata only. The registry imports this module without
+ * loading action implementations. `redd.it` is navigation-only and must never
+ * seed a cookie site key.
+ */
 
 export const redditProvider = {
+/** Canonical Reddit origins, cookie policy, and safe-flow guidance. */
   id: 'reddit',
   label: 'Reddit',
   metadata: {

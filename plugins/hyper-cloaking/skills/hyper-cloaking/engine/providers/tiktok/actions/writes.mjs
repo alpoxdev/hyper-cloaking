@@ -168,6 +168,7 @@ async function desiredToggle(session, {
   });
 }
 
+/** Set a video's liked state, with guarded dispatch and verified postcondition. */
 export async function setLiked(session, videoRef, liked, opts = {}) {
   const action = 'tiktok:setLiked';
   let video;
@@ -180,6 +181,7 @@ export async function setLiked(session, videoRef, liked, opts = {}) {
   });
 }
 
+/** Set a video's saved/bookmarked state, with guarded dispatch and verification. */
 export async function setSaved(session, videoRef, saved, opts = {}) {
   const action = 'tiktok:setSaved';
   let video;
@@ -192,6 +194,7 @@ export async function setSaved(session, videoRef, saved, opts = {}) {
   });
 }
 
+/** Set a user's following state, enforcing TikTok target safety and rate limits. */
 export async function setFollowing(session, userRef, following, opts = {}) {
   const action = 'tiktok:setFollowing';
   let user;
@@ -204,6 +207,7 @@ export async function setFollowing(session, userRef, following, opts = {}) {
   });
 }
 
+/** Set a video's repost state, with guarded dispatch and verified postcondition. */
 export async function setReposted(session, videoRef, reposted, opts = {}) {
   const action = 'tiktok:setReposted';
   let video;
@@ -258,6 +262,7 @@ async function createComment(session, { action, target, parentId, expected, opts
   });
 }
 
+/** Create a top-level comment on a TikTok video after validating text and controls. */
 export async function commentVideo(session, videoRef, text, opts = {}) {
   const action = 'tiktok:commentVideo';
   let video;
@@ -267,6 +272,7 @@ export async function commentVideo(session, videoRef, text, opts = {}) {
   return createComment(session, { action, target: video.url, parentId: null, expected, opts, enableKey: 'enableComment' });
 }
 
+/** Reply to an existing TikTok comment with verified text creation. */
 export async function replyToComment(session, commentRef, text, opts = {}) {
   const action = 'tiktok:replyToComment';
   let comment;
@@ -284,6 +290,7 @@ async function messageRows(page) {
   })).filter((message) => message.text));
 }
 
+/** Reply to a DM thread only when an inbound message proves the conversation is not cold outreach. */
 export async function replyToDM(session, threadRef, text, opts = {}) {
   const action = 'tiktok:replyToDM';
   const accountId = String(session.accountId ?? '');
@@ -369,6 +376,7 @@ async function validateUploadFile(file) {
   }
 }
 
+/** Upload a local media file as a guarded TikTok draft and verify its immutable draft ID. */
 export async function createUploadDraft(session, file, opts = {}) {
   const action = 'tiktok:createUploadDraft';
   const blocked = validateLive(session, action, opts, 'enableUploadDraft');
@@ -395,6 +403,7 @@ export async function createUploadDraft(session, file, opts = {}) {
   });
 }
 
+/** Publish an existing TikTok draft only after confirmation and immutable video-ID verification. */
 export async function publishDraft(session, draftRef, opts = {}) {
   const action = 'tiktok:publishDraft';
   let draft;
@@ -430,6 +439,7 @@ export async function publishDraft(session, draftRef, opts = {}) {
   });
 }
 
+/** Return a structured blocked result for a TikTok action that is prohibited by policy. */
 export function blockedTikTokAction(actionName) {
   const name = String(actionName ?? '');
   if (!FORBIDDEN_ACTIONS.has(name)) throw new TypeError(`unsupported TikTok structural blocker: ${name}`);

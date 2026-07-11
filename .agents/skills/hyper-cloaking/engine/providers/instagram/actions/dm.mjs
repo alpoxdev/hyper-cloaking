@@ -1,16 +1,15 @@
-// Instagram Direct Message actions.
-//
-// Enforced invariants (mechanical, not comments):
-//   1. `threadRef` MUST be an opaque existing-thread handle (/direct/t/<id>)
-//      produced by listDMThreads/readDMThread. Usernames and /direct/new/ refs
-//      are rejected — this is what makes "reply to existing conversations only,
-//      never cold outreach" real (P3).
-//   2. Before a real send, the thread must contain >=1 inbound message.
-//   3. After a send, the sent text is verified as the last outbound message
-//      before `performed:true` is reported.
-//   4. replyToMany is capped + human-confirmed + rate-limited + resumable
-//      (idempotent via a per-run ledger) so an interrupted bulk run never
-//      re-sends.
+/**
+ * Instagram Direct Message actions.
+ *
+ * Read APIs enumerate/read only existing threads and return bounded opaque
+ * handles/messages; malformed content or unproven empty states fail
+ * normalization. Write APIs accept only canonical existing-thread references
+ * and non-empty text. Dry-run, confirmation, inbound-message, rate-limit,
+ * durable-ledger, and verification checks can block sends. A live send mutates
+ * account state only after guarded checks, then verifies the exact new outbound
+ * tail; bulk sends persist uncertain/done progress for resumable, duplicate-safe
+ * dispatch.
+ */
 
 import { instagramSelectors } from '../selectors.mjs';
 import {

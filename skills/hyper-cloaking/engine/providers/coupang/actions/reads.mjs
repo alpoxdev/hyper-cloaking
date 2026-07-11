@@ -1,3 +1,6 @@
+/**
+ * Read-only Coupang product data with bounded normalization and evidence checks.
+ */
 import { wrapReadPayload } from '../../../action-runtime/action-result.mjs';
 import { executeCoupangRead } from '../network.mjs';
 import { coupangSelectors } from '../selectors.mjs';
@@ -97,6 +100,7 @@ function normalizeProductContent(value, { product, includeReviews, limit }) {
   };
 }
 
+/** Search Coupang products and return a normalized, bounded read payload. */
 export async function searchProducts(session, query, opts = {}) {
   const searchQuery = String(query ?? '').trim();
   if (!searchQuery || searchQuery.length > 500) throw new TypeError('Coupang search query must contain 1-500 characters');
@@ -133,6 +137,7 @@ export async function searchProducts(session, query, opts = {}) {
   return wrapReadPayload({ url, kind: 'coupang-product-search', content: value });
 }
 
+/** Read one owned Coupang product and optionally include bounded reviews. */
 export async function getProduct(session, productRef, opts = {}) {
   const product = assertProductRef(productRef);
   const includeReviews = opts.reviews !== false;

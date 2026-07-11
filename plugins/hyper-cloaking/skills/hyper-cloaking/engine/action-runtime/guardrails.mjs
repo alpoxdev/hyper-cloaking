@@ -1,3 +1,9 @@
+/**
+ * Deterministic write guardrails: dry-run defaults, interactive bulk
+ * confirmation, persistent rate limits, and idempotent resume state.
+ * This module performs filesystem state management only; it never dispatches
+ * browser or network actions.
+ */
 // Provider-agnostic write-action guardrails.
 //
 // This module is engine-level behavior, not provider metadata, so it lives

@@ -1,6 +1,14 @@
-// Naver provider metadata only. The registry imports this module without loading actions.
-// nid.naver.com is the auth-only login host; it is never an action navigation origin.
+/**
+ * Static Naver provider metadata used by the registry without loading actions.
+ *
+ * Auth-only `nid.naver.com` is retained as an alias but excluded from action
+ * navigation origins.
+ */
 
+/**
+ * Registry descriptor for Naver's guarded search, content, engagement, and
+ * publishing capabilities.
+ */
 export const naverProvider = {
   id: 'naver',
   label: 'Naver',

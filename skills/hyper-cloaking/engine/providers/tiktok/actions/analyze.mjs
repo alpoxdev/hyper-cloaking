@@ -7,6 +7,12 @@ function average(values) {
   return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
 }
 
+/**
+ * Summarizes up to 100 TikTok video records into engagement averages, cadence,
+ * the highest-viewed video, and normalized hashtag frequencies.
+ * @param {Array<object>} records Video records containing counts, timestamps, and hashtags.
+ * @returns {{count: number, averageViews: number|null, averageLikes: number|null, averageComments: number|null, topVideo: object|null, cadenceDays: number|null, hashtags: Array<{tag: string, count: number}>}}
+ */
 export function analyzeVideos(records) {
   const videos = Array.isArray(records) ? records.slice(0, 100) : [];
   const hashtags = new Map();

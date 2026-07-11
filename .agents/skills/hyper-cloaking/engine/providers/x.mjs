@@ -1,4 +1,7 @@
-// X provider metadata re-export shim. The provider directory at ./x/ carries
-// the full metadata + action stack; this flat module stays import-compatible
-// for callers that only need the metadata-only template (e.g. the registry).
+/**
+ * Compatibility entry point for the X provider metadata.
+ *
+ * The action stack lives under `./x/`; this module preserves the flat import
+ * path used by the provider registry.
+ */
 export { xProvider } from './x/metadata.mjs';

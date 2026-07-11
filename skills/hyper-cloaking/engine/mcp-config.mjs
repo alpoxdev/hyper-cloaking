@@ -1,3 +1,7 @@
+/**
+ * Build and validate Playwright MCP server launch/configuration payloads for
+ * supported clients without starting the server.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -8,6 +12,7 @@ import {
 
 const SUPPORTED_CLIENTS = new Set(['direct', 'codex', 'json', 'claude', 'claude-code', 'gajae-code', 'gjc', 'openclaw', 'hermes', 'hermes-agent']);
 
+/** Normalize client aliases and reject unsupported MCP client identifiers. */
 export function normalizeClient(client = 'direct') {
   const normalized = String(client || 'direct').toLowerCase();
   if (!SUPPORTED_CLIENTS.has(normalized)) {
@@ -18,6 +23,7 @@ export function normalizeClient(client = 'direct') {
   return normalized;
 }
 
+/** Validate that an executable path resolves to an accessible executable file. */
 export function validateExecutablePath(executablePath) {
   if (!executablePath || typeof executablePath !== 'string') {
     return { ok: false, reason: 'executable path is required' };
@@ -46,6 +52,7 @@ export function validateExecutablePath(executablePath) {
   }
 }
 
+/** Create the canonical `npx` command specification for the MCP server. */
 export function mcpCommand(executablePath, options = {}) {
   const { headless = true, sandbox = true } = options;
   const validation = validateExecutablePath(executablePath);
@@ -60,10 +67,12 @@ export function mcpCommand(executablePath, options = {}) {
   return { command: 'npx', args };
 }
 
+/** Quote command arguments for safe display as a shell command string. */
 export function shellJoin(parts) {
   return parts.map((part) => /^[A-Za-z0-9_@%+=:,./-]+$/.test(part) ? part : JSON.stringify(part)).join(' ');
 }
 
+/** Serialize a command specification as an MCP `mcpServers` JSON object. */
 export function jsonMcpConfig(commandSpec) {
   return {
     mcpServers: {
@@ -75,6 +84,7 @@ export function jsonMcpConfig(commandSpec) {
   };
 }
 
+/** Serialize a command specification in OpenClaw's managed-server shape. */
 export function openClawConfig(commandSpec) {
   return {
     mcp: {
@@ -89,6 +99,7 @@ export function openClawConfig(commandSpec) {
 }
 
 
+/** Serialize a command specification as Codex TOML. */
 export function codexTomlConfig(commandSpec) {
   return `[mcp_servers.${MCP_SERVER_ID}]\ncommand = ${JSON.stringify(commandSpec.command)}\nargs = ${JSON.stringify(commandSpec.args)}\n`;
 }
@@ -101,19 +112,23 @@ function yamlList(values, indent = '      ') {
   return values.map((value) => `${indent}- ${yamlScalar(value)}`).join('\n');
 }
 
+/** Serialize a command specification as Hermes YAML. */
 export function hermesYamlConfig(commandSpec) {
   return `mcp_servers:\n  ${MCP_SERVER_ID}:\n    command: ${yamlScalar(commandSpec.command)}\n    args:\n${yamlList(commandSpec.args)}\n    idle_timeout_seconds: 300\n`;
 }
 
 
+/** Build the Claude Code CLI arguments for registering the MCP server. */
 export function claudeCommand(commandSpec) {
   return ['claude', 'mcp', 'add', MCP_SERVER_ID, commandSpec.command, ...commandSpec.args];
 }
 
+/** Build a direct executable-and-arguments command array. */
 export function directCommand(commandSpec) {
   return [commandSpec.command, ...commandSpec.args];
 }
 
+/** Build Gajae-Code guidance containing paired-client configurations. */
 export function gajaeCodeConfig(commandSpec) {
   return {
     note: 'Gajae-Code runs beside MCP-capable clients; apply this server config to the paired client used for the GJC session.',
@@ -122,6 +137,7 @@ export function gajaeCodeConfig(commandSpec) {
   };
 }
 
+/** Generate one client-specific MCP configuration from executable options. */
 export function generateMcpConfig(options = {}) {
   const client = normalizeClient(options.client);
   const commandSpec = mcpCommand(options.executablePath, options);
@@ -187,6 +203,7 @@ export function generateMcpConfig(options = {}) {
   };
 }
 
+/** Generate the supported client configurations in one consolidated object. */
 export function generateAllMcpConfigs(options = {}) {
   return {
     direct: generateMcpConfig({ ...options, client: 'direct' }),

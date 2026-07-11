@@ -1,5 +1,12 @@
 // TikTok provider metadata only. Short-link hosts are navigation-only.
 
+/**
+ * Canonical TikTok identity and preflight contract.
+ *
+ * Domains distinguish navigation-only shorteners from allowed origins.
+ * Cookie and profile fields describe session requirements; outcome and safe
+ * flow hints document expected guarded results and structurally blocked errors.
+ */
 export const tiktokProvider = {
   id: 'tiktok',
   label: 'TikTok',

@@ -1,8 +1,13 @@
-// Pure post/reel analysis — no browser, no I/O, fully deterministic.
-//
-// Consumes the structured Post[] produced by getUserPosts and returns cadence,
-// media mix, engagement stats, and top hashtags. Because it is pure it is the
-// most thoroughly unit-tested action.
+/**
+ * Pure Instagram post/reel analysis.
+ *
+ * Performs no browser, network, filesystem, or account-state I/O. It accepts a
+ * possibly imperfect Post[] value, ignores non-object entries, treats missing
+ * numeric engagement as zero, and tolerates invalid timestamps. The
+ * deterministic result reports count, post/reel mix, cadence, engagement, and
+ * at most ten normalized hashtag counts; empty/invalid input returns the
+ * zero-valued result shape.
+ */
 
 const HOUR_MS = 60 * 60 * 1000;
 const WEEK_MS = 7 * 24 * HOUR_MS;

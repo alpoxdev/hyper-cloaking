@@ -1,3 +1,9 @@
+/**
+ * Diagnostic classifiers and failure reports for safe, non-bypass runs.
+ * Challenge labels are conservative blockers: any match stops automation.
+ * @module engine/diagnostics
+ */
+
 const CHALLENGE_LABELS = [
   ['site-disallowed', [/site\s+disallowed/i, /disallowed\s+target/i, /robots\s+disallow/i]],
   ['captcha-present', [/captcha/i, /hcaptcha/i, /recaptcha/i, /verify\s+you\s+are\s+human/i]],
@@ -27,6 +33,11 @@ function observationText(observation = {}) {
   ].filter(Boolean).join(' ');
 }
 
+/**
+ * @param {Record<string, unknown>} observation Browser/tool observation; text fields are inspected.
+ * @returns {{labels: string[], blocker: boolean, safeNext: string, bypassRecipe: null}}
+ * A non-empty `labels` list is a validation/blocker result; no side effects.
+ */
 export function classifyChallengeObservation(observation = {}) {
   const explicitLabels = asArray(observation.challengeLabels ?? observation.labels)
     .filter((label) => CHALLENGE_LABELS.some(([known]) => known === label));
@@ -46,6 +57,19 @@ export function classifyChallengeObservation(observation = {}) {
   };
 }
 
+/**
+ * Builds a terminal or resumable diagnostic without throwing on missing optional inputs.
+ * @param {object} [input] Diagnostic inputs.
+ * @param {unknown|unknown[]} [input.attempted] Checks already run.
+ * @param {unknown|unknown[]} [input.blockers] Blocker causes.
+ * @param {unknown|unknown[]} [input.remainingChecks] Safe checks not yet run.
+ * @param {unknown[]} [input.evidenceRefs] Supporting references.
+ * @param {boolean} [input.requiresUserDecision] Whether escalation is required.
+ * @returns {{stage: string, layer: string, attempted: unknown[], exhausted: boolean,
+ * notExhausted: boolean, blocker: unknown[]|unknown, safeNext: string,
+ * evidenceRefs: unknown[], requiresUserDecision: boolean}}
+ * Pure result construction; does not retry, bypass, or mutate evidence.
+ */
 export function makeFailureDiagnostic({
   stage,
   layer,

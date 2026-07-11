@@ -1,3 +1,9 @@
+/**
+ * Enforces same-origin and approved-origin evidence boundaries.
+ * Scope results never authorize fetch, crawl, or scan side effects.
+ * @module engine/recon-scope
+ */
+
 import { classifyTargetUrl, normalizeOrigin } from './target-safety.mjs';
 
 export { normalizeOrigin } from './target-safety.mjs';

@@ -23,6 +23,7 @@ export class InvalidTikTokRefError extends Error {
   }
 }
 
+/** Normalize a user handle or owned TikTok profile URL; returns null for invalid or external references. */
 export function normalizeUserRef(ref) {
   const raw = typeof ref === 'string'
     ? ref
@@ -39,12 +40,14 @@ export function normalizeUserRef(ref) {
   return match ? { handle: match[1], url: `https://www.tiktok.com/@${match[1]}` } : null;
 }
 
+/** Validate and normalize a user reference, throwing a typed error when invalid. */
 export function assertUserRef(ref) {
   const value = normalizeUserRef(ref);
   if (!value) throw new InvalidTikTokRefError('user', ref);
   return value;
 }
 
+/** Normalize a TikTok video ID/URL reference while enforcing the owned TikTok origin. */
 export function normalizeVideoRef(ref) {
   const suppliedId = ref && typeof ref === 'object' && ref.videoId != null ? String(ref.videoId) : null;
   const rawUrl = typeof ref === 'string' ? ref : ref && typeof ref === 'object' ? ref.url || ref.href : null;
@@ -58,12 +61,14 @@ export function normalizeVideoRef(ref) {
   return { handle, videoId, url: `https://www.tiktok.com/@${handle}/video/${videoId}` };
 }
 
+/** Validate and normalize a video reference, throwing a typed error when invalid. */
 export function assertVideoRef(ref) {
   const value = normalizeVideoRef(ref);
   if (!value) throw new InvalidTikTokRefError('video', ref);
   return value;
 }
 
+/** Normalize a comment reference and its parent video reference. */
 export function normalizeCommentRef(ref) {
   if (!ref || typeof ref !== 'object' || Array.isArray(ref)) return null;
   const commentId = String(ref.commentId ?? '');
@@ -71,12 +76,14 @@ export function normalizeCommentRef(ref) {
   return OPAQUE_ID_RE.test(commentId) && video ? { ...video, commentId } : null;
 }
 
+/** Validate and normalize a comment reference, throwing a typed error when invalid. */
 export function assertCommentRef(ref) {
   const value = normalizeCommentRef(ref);
   if (!value) throw new InvalidTikTokRefError('comment', ref);
   return value;
 }
 
+/** Normalize a current-account DM thread reference and verify its URL binding. */
 export function normalizeThreadRef(ref, { accountId } = {}) {
   if (!ref || typeof ref !== 'object' || Array.isArray(ref)) return null;
   const threadId = String(ref.threadId ?? '');
@@ -99,17 +106,20 @@ export function normalizeThreadRef(ref, { accountId } = {}) {
   };
 }
 
+/** Validate and normalize a DM thread reference, throwing a typed error when invalid. */
 export function assertThreadRef(ref, options) {
   const value = normalizeThreadRef(ref, options);
   if (!value) throw new InvalidTikTokRefError('thread', ref);
   return value;
 }
 
+/** Normalize an opaque TikTok draft identifier; returns null for malformed IDs. */
 export function normalizeDraftRef(ref) {
   const draftId = ref && typeof ref === 'object' ? String(ref.draftId ?? '') : String(ref ?? '');
   return OPAQUE_ID_RE.test(draftId) ? { draftId } : null;
 }
 
+/** Validate and normalize a draft reference, throwing a typed error when invalid. */
 export function assertDraftRef(ref) {
   const value = normalizeDraftRef(ref);
   if (!value) throw new InvalidTikTokRefError('draft', ref);

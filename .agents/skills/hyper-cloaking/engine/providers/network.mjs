@@ -1,3 +1,7 @@
+/**
+ * Bounded provider read strategies and normalized network envelopes.
+ * Responses remain untrusted; strategy selection never authorizes writes.
+ */
 import { TextDecoder } from 'node:util';
 
 import { isOriginApproved, normalizeOrigin } from '../recon-scope.mjs';

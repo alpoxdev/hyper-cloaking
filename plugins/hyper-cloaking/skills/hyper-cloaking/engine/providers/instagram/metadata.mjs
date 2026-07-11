@@ -1,6 +1,11 @@
 // Instagram provider template: metadata, domain/origin hints, and safe
 // defaults only. No proxy/fingerprint/bypass/evasion recipes.
 
+/**
+ * Schema-validated Instagram provider metadata used by the provider registry.
+ * Origins and flow notes describe safe defaults; no automation or evasion
+ * configuration is included.
+ */
 export const instagramProvider = {
   id: 'instagram',
   label: 'Instagram',

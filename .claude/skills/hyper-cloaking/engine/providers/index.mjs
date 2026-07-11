@@ -1,3 +1,7 @@
+/**
+ * Canonical provider registry facade. Metadata loads without provider action
+ * modules so resolution remains side-effect-light.
+ */
 // Assembles the provider registry from templates and re-exports the public
 // registry API (getProvider, resolveProviderForUrl, validateProviderRegistry).
 

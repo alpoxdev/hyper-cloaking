@@ -1,3 +1,4 @@
+/** Analyze up to 100 X posts and summarize engagement and posting cadence. */
 function finite(value) {
   return Number.isFinite(Number(value)) ? Number(value) : null;
 }
@@ -7,6 +8,10 @@ function average(values) {
   return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null;
 }
 
+/**
+ * @param {Array<object>} records Post-like records with numeric engagement fields.
+ * @returns {{count: number, averageReplies: number|null, averageReposts: number|null, averageLikes: number|null, averageBookmarks: number|null, topPost: object|null, cadenceDays: number|null}}
+ */
 export function analyzePosts(records) {
   const posts = Array.isArray(records) ? records.slice(0, 100) : [];
   const timestamps = [];

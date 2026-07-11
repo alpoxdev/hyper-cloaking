@@ -2,6 +2,10 @@
 // shortener, not a first-party cookie destination: it is a navigation-only
 // alias and must never seed cookie.siteKey.
 
+/**
+ * Canonical provider metadata for X, including origin and cookie safety policy.
+ * Redirect-only aliases are intentionally excluded from allowed origins.
+ */
 export const xProvider = {
   id: 'x',
   label: 'X',

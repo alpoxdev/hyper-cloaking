@@ -1,6 +1,7 @@
 // Generic fallback provider: used for URL auto-resolution of unknown hosts
 // only. Never authorizes broader origins or cookie loading.
 
+/** Fallback provider contract for unknown public HTTPS hosts; it never authorizes broader origins or cookie loading. @type {{id:string,label:string,metadata:object,domains:object,cookie:object,profile:object,preflight:object,outcomeHints:string[],safeFlowNotes:string[]}} */
 export const genericProvider = {
   id: 'generic',
   label: 'Generic',

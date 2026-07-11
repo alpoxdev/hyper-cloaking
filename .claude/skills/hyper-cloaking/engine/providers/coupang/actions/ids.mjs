@@ -1,3 +1,7 @@
+/**
+ * Normalize and validate Coupang-owned product, cart-line, and order-item
+ * references before they reach browser actions.
+ */
 const PRODUCT_ID_RE = /^\d{1,32}$/;
 const OPAQUE_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 const COUPANG_HOSTS = new Set(['coupang.com', 'www.coupang.com', 'm.coupang.com']);
@@ -19,6 +23,7 @@ function ownedUrl(value) {
   }
 }
 
+/** Error raised when a Coupang reference fails ownership or shape validation. */
 export class InvalidCoupangRefError extends Error {
   constructor(kind, ref) {
     super(`Invalid Coupang ${kind} reference: ${JSON.stringify(ref)}`);
@@ -28,6 +33,7 @@ export class InvalidCoupangRefError extends Error {
   }
 }
 
+/** Return a canonical product reference, or null when the input is invalid. */
 export function normalizeProductRef(ref) {
   const suppliedId = ref && typeof ref === 'object' && ref.productId != null
     ? String(ref.productId)
@@ -49,12 +55,14 @@ export function normalizeProductRef(ref) {
   };
 }
 
+/** Require and return a canonical product reference. */
 export function assertProductRef(ref) {
   const value = normalizeProductRef(ref);
   if (!value) throw new InvalidCoupangRefError('product', ref);
   return value;
 }
 
+/** Return a canonical cart-line reference, or null when the input is invalid. */
 export function normalizeCartLineRef(ref) {
   if (!ref || typeof ref !== 'object' || Array.isArray(ref)) return null;
   const cartLineId = String(ref.cartLineId ?? '');
@@ -71,12 +79,14 @@ export function normalizeCartLineRef(ref) {
   };
 }
 
+/** Require and return a canonical cart-line reference. */
 export function assertCartLineRef(ref) {
   const value = normalizeCartLineRef(ref);
   if (!value) throw new InvalidCoupangRefError('cart-line', ref);
   return value;
 }
 
+/** Return a canonical order-item reference, or null when the input is invalid. */
 export function normalizeOrderItemRef(ref) {
   if (!ref || typeof ref !== 'object' || Array.isArray(ref)) return null;
   const orderItemId = String(ref.orderItemId ?? '');
@@ -90,6 +100,7 @@ export function normalizeOrderItemRef(ref) {
   };
 }
 
+/** Require and return a canonical order-item reference. */
 export function assertOrderItemRef(ref) {
   const value = normalizeOrderItemRef(ref);
   if (!value) throw new InvalidCoupangRefError('order-item', ref);

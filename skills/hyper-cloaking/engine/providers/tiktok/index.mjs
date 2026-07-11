@@ -1,3 +1,12 @@
+/**
+ * Canonical TikTok provider surface: metadata, session construction, selectors,
+ * normalized reads, and the supported action implementations.
+ *
+ * Read actions return provider-normalized records; write actions enforce the
+ * provider's safety policy and may throw typed navigation, challenge, target,
+ * validation, or action errors. The public barrel intentionally exposes no
+ * mirror-tree implementation.
+ */
 export { tiktokProvider } from './metadata.mjs';
 export { buildTikTokSession } from './session.mjs';
 export { tiktokSelectors, TIKTOK_SELECTORS_VERSION } from './selectors.mjs';

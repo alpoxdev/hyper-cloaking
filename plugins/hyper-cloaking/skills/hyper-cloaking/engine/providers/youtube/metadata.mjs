@@ -4,6 +4,14 @@
 // `youtu.be` is a redirect shortener, not a first-party cookie destination:
 // it is a navigation-only alias and must never seed cookie.siteKey.
 
+/**
+ * Declarative YouTube provider metadata used for discovery and preflight.
+ *
+ * The domain and origin lists describe permitted first-party surfaces only.
+ * `youtu.be` remains navigation-only because it redirects and must not become
+ * the cookie site key; the safe-flow notes also require stopping on challenges
+ * rather than attempting to bypass them.
+ */
 export const youtubeProvider = {
   id: 'youtube',
   label: 'YouTube',

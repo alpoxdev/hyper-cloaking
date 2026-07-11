@@ -1,5 +1,9 @@
 // Centralized X (Twitter) DOM selectors. Drift must fail closed in action code.
 
+/**
+ * Versioned DOM selector contract for X provider actions.
+ * Selectors are centralized so UI drift can fail closed consistently.
+ */
 export const X_SELECTORS_VERSION = '2026-07-11';
 
 export const xSelectors = {

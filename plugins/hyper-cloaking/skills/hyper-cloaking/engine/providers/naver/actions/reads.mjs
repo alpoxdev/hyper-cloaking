@@ -1,3 +1,8 @@
+/**
+ * Naver read actions: guarded search and post/list extraction with bounded output.
+ * @module naver/actions/reads
+ */
+ 
 import { wrapReadPayload } from '../../../action-runtime/action-result.mjs';
 import { executeNaverRead } from '../network.mjs';
 import { naverSelectors } from '../selectors.mjs';
@@ -114,6 +119,8 @@ async function search(session, { kind, query, url, selectors, limit, refNormaliz
   return wrapReadPayload({ url, kind: `naver-${kind}-search`, content: value });
 }
 
+/** Search Naver's web index and return bounded, normalized results. */
+ 
 export async function searchWeb(session, query, opts = {}) {
   const searchQuery = String(query ?? '').trim();
   if (!searchQuery || searchQuery.length > 500) throw new TypeError('Naver search query must contain 1-500 characters');
@@ -123,6 +130,8 @@ export async function searchWeb(session, query, opts = {}) {
   }, opts);
 }
 
+/** Search Naver blog posts and return canonical owned references. */
+ 
 export async function searchBlog(session, query, opts = {}) {
   const searchQuery = String(query ?? '').trim();
   if (!searchQuery || searchQuery.length > 500) throw new TypeError('Naver search query must contain 1-500 characters');
@@ -133,6 +142,8 @@ export async function searchBlog(session, query, opts = {}) {
   }, opts);
 }
 
+/** Search Naver cafe articles and return canonical owned references. */
+ 
 export async function searchCafe(session, query, opts = {}) {
   const searchQuery = String(query ?? '').trim();
   if (!searchQuery || searchQuery.length > 500) throw new TypeError('Naver search query must contain 1-500 characters');
@@ -167,6 +178,8 @@ function normalizePostContent(value, { post, kind, includeComments, limit }) {
   };
 }
 
+/** Read one Naver blog post, optionally including comments. */
+ 
 export async function getBlogPost(session, blogPostRef, opts = {}) {
   const post = assertBlogPostRef(blogPostRef);
   const includeComments = opts.comments !== false;
@@ -193,6 +206,8 @@ export async function getBlogPost(session, blogPostRef, opts = {}) {
   return wrapReadPayload({ url: post.url, kind: 'naver-blog-post', content: value });
 }
 
+/** Read one Naver cafe post, optionally including comments. */
+ 
 export async function getCafePost(session, cafePostRef, opts = {}) {
   const post = assertCafePostRef(cafePostRef);
   const includeComments = opts.comments !== false;
@@ -251,6 +266,8 @@ async function extractListLinks(session, selector) {
   })));
 }
 
+/** Read a bounded list of posts belonging to a Naver blog. */
+ 
 export async function getBlogList(session, blogRef, opts = {}) {
   const blog = assertBlogRef(blogRef);
   const limit = limitFor(opts.limit);
@@ -266,6 +283,8 @@ export async function getBlogList(session, blogRef, opts = {}) {
   return wrapReadPayload({ url: blog.url, kind: 'naver-blog-list', content: value });
 }
 
+/** Read a bounded list of posts belonging to a Naver cafe. */
+ 
 export async function getCafeList(session, cafeRef, opts = {}) {
   const cafe = assertCafeRef(cafeRef);
   const limit = limitFor(opts.limit);

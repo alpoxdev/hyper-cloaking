@@ -1,4 +1,7 @@
-// Reddit provider public surface. Registry consumers import metadata only.
+/**
+ * Public Reddit provider API. Metadata remains separately importable so registry
+ * discovery does not load action implementations or browser dependencies.
+ */
 
 export { redditProvider } from './metadata.mjs';
 export { buildRedditSession, OffOriginError, ChallengeBlockedError, TargetSafetyError } from './session.mjs';
@@ -24,6 +27,7 @@ import {
 } from './actions/ids.mjs';
 
 export const redditActions = {
+/** Named Reddit read and guarded-write actions exposed to workflow consumers. */
   getSubreddit,
   getPost,
   getUserProfile,
@@ -35,6 +39,10 @@ export const redditActions = {
 };
 
 export {
+/**
+ * Public Reddit action functions and reference helpers.
+ * @see {@link redditActions}
+ */
   getSubreddit,
   getPost,
   getUserProfile,

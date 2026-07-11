@@ -1,3 +1,8 @@
+/**
+ * Verification primitives for the versioned agent-envelope protocol.
+ * This module is the trust boundary: callers must verify role output before
+ * consuming result data or publishing evidence.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -5,10 +10,12 @@ import Ajv2020 from 'ajv/dist/2020.js';
 
 const SCHEMA_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), 'schemas', 'hyper-cloaking-agent-output.schema.json');
 
+/** Load the canonical JSON Schema from this plugin tree. */
 export function loadAgentEnvelopeSchema(schemaPath = SCHEMA_PATH) {
   return JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
 }
 
+/** Compile strict schema validation; the returned Ajv function exposes `.errors`. */
 export function compileAgentEnvelopeValidator(schema = loadAgentEnvelopeSchema()) {
   const ajv = new Ajv2020({ strict: true, allErrors: true, allowUnionTypes: true });
   return ajv.compile(schema);
@@ -21,6 +28,10 @@ function validator() {
   return defaultValidator;
 }
 
+/**
+ * Verify one complete agent envelope without mutating it.
+ * @returns {{ok: true, value: object}|{ok: false, route: string, verifierCode: string, errors: object[], failure: object}}
+ */
 export function verifyAgentEnvelope(envelope, { validate = validator() } = {}) {
   if (validate(envelope)) return { ok: true, value: envelope };
   const errors = (validate.errors || []).map(normalizeError);
@@ -55,6 +66,7 @@ function classifyErrors(errors) {
   return 'schema-invalid';
 }
 
+/** Read exactly one object-shaped JSON document; empty, malformed, or non-object input throws. */
 export async function readSingleJson(stream) {
   let text = '';
   for await (const chunk of stream) text += chunk;

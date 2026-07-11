@@ -1,4 +1,13 @@
-// Instagram profile lookup (read).
+/**
+ * Instagram profile read actions.
+ *
+ * Inputs are normalized usernames (optional leading `@`); reads navigate to the
+ * canonical profile URL and return a wrapped, bounded profile snapshot. Invalid
+ * usernames throw/return validation errors before network access. The read lane
+ * may perform browser navigation and state observation, but does not mutate the
+ * account; navigation, selector drift, and unproven profile state surface as
+ * errors.
+ */
 
 import { instagramSelectors } from '../selectors.mjs';
 import { wrapReadPayload } from '../../../action-runtime/action-result.mjs';

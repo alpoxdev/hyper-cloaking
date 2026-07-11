@@ -1,5 +1,12 @@
+/**
+ * Canonical Coupang DOM selector contract. Action modules must fail closed
+ * when required page structure or state drifts.
+ */
 // Centralized Coupang DOM selectors. Drift must fail closed in action code.
 
+/**
+ * Selector contract version; update when selectors change.
+ */
 export const COUPANG_SELECTORS_VERSION = '2026-07-11';
 
 export const coupangSelectors = {

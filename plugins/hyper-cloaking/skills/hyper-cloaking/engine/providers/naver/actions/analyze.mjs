@@ -1,3 +1,8 @@
+/**
+ * Derives bounded engagement and posting-cadence metrics from Naver posts.
+ * @module naver/actions/analyze
+ */
+ 
 function finite(value) {
   return Number.isFinite(Number(value)) ? Number(value) : null;
 }
@@ -13,6 +18,12 @@ function parseTimestamp(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * Summarize up to 100 posts with count, average comments, top post, and cadence.
+ * @param {Array} records
+ * @returns {{count: number, averageCommentCount: number|null, topPost: object|null, cadenceDays: number|null}}
+ */
+ 
 export function analyzePosts(records) {
   const posts = Array.isArray(records) ? records.slice(0, 100) : [];
   const timestamps = [];

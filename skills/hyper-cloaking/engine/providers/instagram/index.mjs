@@ -1,3 +1,7 @@
+/**
+ * Public exports for the Instagram provider, including metadata, selectors,
+ * session construction, read execution, and guarded action helpers.
+ */
 // Instagram provider public surface.
 //
 // Exports the schema-validated metadata object (unchanged shape, consumed by the

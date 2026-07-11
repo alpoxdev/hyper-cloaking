@@ -93,6 +93,7 @@ async function extractVideoLinks(session, selector) {
   })));
 }
 
+/** Read a TikTok user profile with presence evidence and normalized engagement counts. */
 export async function getUser(session, userRef, opts = {}) {
   const user = assertUserRef(userRef);
   const dom = async () => {
@@ -123,6 +124,7 @@ export async function getUser(session, userRef, opts = {}) {
   return wrapReadPayload({ url: user.url, kind: 'tiktok-user', content: value });
 }
 
+/** Read up to the requested number of videos owned by a TikTok user. */
 export async function getUserVideos(session, userRef, opts = {}) {
   const user = assertUserRef(userRef);
   const limit = limitFor(opts.limit);
@@ -138,6 +140,7 @@ export async function getUserVideos(session, userRef, opts = {}) {
   return wrapReadPayload({ url: user.url, kind: 'tiktok-user-videos', content: value });
 }
 
+/** Read a TikTok video and, by default, its bounded, verifiable comments. */
 export async function getVideo(session, videoRef, opts = {}) {
   const video = assertVideoRef(videoRef);
   const limit = limitFor(opts.commentLimit);
@@ -183,6 +186,7 @@ export async function getVideo(session, videoRef, opts = {}) {
   return wrapReadPayload({ url: video.url, kind: 'tiktok-video', content: value });
 }
 
+/** Search TikTok videos by query and return normalized owned-video references. */
 export async function searchVideos(session, query, opts = {}) {
   const searchQuery = String(query ?? '').trim();
   if (!searchQuery || searchQuery.length > 500) throw new TypeError('TikTok search query must contain 1-500 characters');
@@ -211,6 +215,7 @@ function accountFor(session, opts) {
   return accountId;
 }
 
+/** List direct-message threads bound to the current session account. */
 export async function listDMThreads(session, opts = {}) {
   const accountId = accountFor(session, opts);
   const limit = limitFor(opts.limit);
@@ -245,6 +250,7 @@ export async function listDMThreads(session, opts = {}) {
   return wrapReadPayload({ url: tiktokSelectors.dm.inboxUrl, kind: 'tiktok-dm-threads', content: value });
 }
 
+/** Read a bounded, verifiable message history for a current-account DM thread. */
 export async function readDMThread(session, threadRef, opts = {}) {
   const accountId = accountFor(session, opts);
   const thread = assertThreadRef(threadRef, { accountId });

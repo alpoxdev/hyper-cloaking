@@ -1,3 +1,7 @@
+/**
+ * Public X provider surface: metadata, session, selectors, reads, and actions.
+ * Action functions retain their provider-specific safety and normalization rules.
+ */
 export { xProvider } from './metadata.mjs';
 export { buildXSession } from './session.mjs';
 export { xSelectors, X_SELECTORS_VERSION } from './selectors.mjs';
@@ -33,6 +37,10 @@ import {
   setReposted
 } from './actions/writes.mjs';
 
+/**
+ * Action registry for supported X reads, writes, analysis, and reference helpers.
+ * The object is suitable for dispatch by action name.
+ */
 export const xActions = {
   getUser,
   getUserPosts,

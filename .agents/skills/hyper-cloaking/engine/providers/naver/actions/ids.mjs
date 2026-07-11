@@ -1,3 +1,8 @@
+/**
+ * Validates and normalizes canonical Naver blog, cafe, post, comment, and draft references.
+ * @module naver/actions/ids
+ */
+ 
 const BLOG_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const CAFE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const LOG_NO_RE = /^\d{1,32}$/;
@@ -24,6 +29,11 @@ function parseOwnedUrl(value, allowedHosts) {
   }
 }
 
+/**
+ * Error raised when a Naver reference fails validation.
+ * @extends Error
+ */
+ 
 export class InvalidNaverRefError extends Error {
   constructor(kind, ref) {
     super(`Invalid Naver ${kind} reference: ${JSON.stringify(ref)}`);

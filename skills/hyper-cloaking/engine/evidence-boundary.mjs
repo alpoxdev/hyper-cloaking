@@ -1,3 +1,9 @@
+/**
+ * Sanitizes external evidence and emits trust-boundary metadata.
+ * Redaction is deterministic; external content never receives instruction authority.
+ * @module engine/evidence-boundary
+ */
+
 function isoTime(value) {
   if (!value) return new Date(0).toISOString();
   const date = value instanceof Date ? value : new Date(value);
@@ -16,6 +22,11 @@ function replaceAndCount(text, pattern, replacement, counts, key) {
   });
 }
 
+/**
+ * @param {unknown} text Evidence text coerced to a string.
+ * @param {{mask?: string}} [options] Replacement mask.
+ * @returns {{text: string, redactions: Record<string, number>}} Redacted text and counts.
+ */
 export function redactEvidenceText(text, options = {}) {
   const counts = {};
   let redacted = String(text ?? '');

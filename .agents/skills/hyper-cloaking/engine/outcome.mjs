@@ -1,3 +1,9 @@
+/**
+ * Evaluates declarative success criteria and assembles reliability reports.
+ * Unknown criterion types fail closed; page-load-only success requires explicit justification.
+ * @module engine/outcome
+ */
+
 const CRITERION_TYPES = new Set([
   'urlLoaded',
   'urlIncludes',

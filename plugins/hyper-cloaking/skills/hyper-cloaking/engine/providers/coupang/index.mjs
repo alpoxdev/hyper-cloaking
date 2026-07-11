@@ -1,3 +1,7 @@
+/**
+ * Public Coupang provider surface: metadata, guarded sessions, selectors,
+ * read execution, and action handlers.
+ */
 export { coupangProvider } from './metadata.mjs';
 export { buildCoupangSession } from './session.mjs';
 export { coupangSelectors, COUPANG_SELECTORS_VERSION } from './selectors.mjs';
@@ -22,6 +26,10 @@ import {
   submitOwnOrderReview
 } from './actions/writes.mjs';
 
+/**
+ * Canonical action registry. Handlers return action results or throw
+ * provider safety and validation errors when rejected.
+ */
 export const coupangActions = {
   searchProducts,
   getProduct,

@@ -1,3 +1,8 @@
+/**
+ * Canonical runtime configuration and path helpers for hyper-cloaking.
+ * Home resolution rejects invalid overrides; path helpers derive storage
+ * locations beneath that resolved home.
+ */
 import os from 'node:os';
 import path from 'node:path';
 

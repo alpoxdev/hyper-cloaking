@@ -1,6 +1,15 @@
 // Centralized TikTok DOM selectors. Drift must fail closed in action code.
 
+/**
+ * Versioned, fail-closed TikTok DOM contract consumed by action modules.
+ * Selectors cover read states, mutation controls, messaging, and upload
+ * results; a selector version change signals drift requiring review.
+ */
 export const TIKTOK_SELECTORS_VERSION = '2026-07-11';
+/**
+ * Stable selector groups for profiles, videos, search, DMs, and uploads.
+ * Empty-state selectors are part of the result contract, not incidental UI.
+ */
 
 export const tiktokSelectors = {
   user: {
