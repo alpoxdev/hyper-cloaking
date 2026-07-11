@@ -1,26 +1,40 @@
 {
-  "name": "hyper-cloaking-mcp",
+  "name": "@alpoxdev/hyper-cloaking",
   "version": "0.0.1",
-  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alpoxdev/hyper-cloaking.git",
+    "directory": "mcp"
+  },
   "description": "Stateful stdio MCP server exposing the hyper-cloaking CloakBrowser engine as typed tools.",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "bin": {
-    "hyper-cloaking-mcp": "./dist/server.mjs"
+    "hyper-cloaking-mcp": "dist/server.mjs"
   },
-  "main": "./src/server.mjs",
+  "main": "./dist/server.mjs",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "esbuild src/server.mjs --bundle --platform=node --format=esm --target=node20 --outfile=dist/server.mjs --external:cloakbrowser --external:playwright-core --banner:js=\"#!/usr/bin/env node\"",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "prepack": "npm run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0",
-    "ajv": "^8.20.0",
-    "hyper-cloaking-engine": "*"
+    "cloakbrowser": "^0.4.10",
+    "playwright-core": "^1.61.1"
   },
   "devDependencies": {
-    "esbuild": "^0.28.1"
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "ajv": "^8.20.0",
+    "esbuild": "^0.28.1",
+    "hyper-cloaking-engine": "*"
   }
 }
