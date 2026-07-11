@@ -173,7 +173,7 @@ test('bulk ledger fails closed on corruption and preserves concurrent progress',
   const keys = Array.from({ length: 12 }, (_, index) => `recipient-${index}`);
   await Promise.all(keys.map((key) => recordBulkProgress(concurrentDir, 'run', key)));
   const ledger = await loadBulkLedger(concurrentDir, 'run');
-  assert.deepEqual([...ledger.done].sort(), [...keys].sort());
+  assert.deepEqual([...ledger.done].toSorted(), [...keys].toSorted());
 });
 
 const hash = (character) => character.repeat(64);
@@ -282,12 +282,12 @@ test('atomic guarded reservations enforce both rate and idempotency under concur
   );
   assert.equal(rateStore.rates['fixture-write'].length, 3);
   assert.deepEqual(
-    Object.keys(rateStore.claims).sort(),
+    Object.keys(rateStore.claims).toSorted(),
     rateResults
       .filter((result) => result.status === 'reserved')
       .map((result) => result.claim.createdAt - 1_000_000_000_000)
       .map((index) => hash((index % 10).toString(16)))
-      .sort()
+      .toSorted()
   );
 
   const mixedDir = await tmpStateDir();
@@ -306,7 +306,7 @@ test('atomic guarded reservations enforce both rate and idempotency under concur
   );
   assert.equal(mixedStore.rates.like.length, 1);
   assert.equal(mixedStore.rates.comment.length, 1);
-  assert.deepEqual(Object.keys(mixedStore.claims).sort(), [hash('1'), hash('2')]);
+  assert.deepEqual(Object.keys(mixedStore.claims).toSorted(), [hash('1'), hash('2')]);
 });
 
 test('guarded claims finalize, block replay, and require interactive reconciliation', async () => {

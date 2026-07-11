@@ -7,6 +7,10 @@
  * never launches the server.
  */
 
+import { fileURLToPath } from 'node:url';
+
+const LOCAL_SERVER_PATH = fileURLToPath(new URL('../dist/server.mjs', import.meta.url));
+
 export const SERVER_ID = 'hyper-cloaking-mcp';
 
 const CLIENT_ALIASES = { claude: 'claude-code', gjc: 'gajae-code' };
@@ -35,20 +39,27 @@ export function normalizeClient(client = 'direct') {
 }
 
 /**
- * Default launch command for the server (npx over the published bin).
+ * Default launch command for the built local server bundle.
  *
  * @param {{ command?: string, args?: string[] }} [options] Command override.
  * @returns {{ command: string, args: string[] }} Command spec.
  */
 export function serverCommand(options = {}) {
   return {
-    command: options.command ?? 'npx',
-    args: options.args ?? [SERVER_ID]
+    command: options.command ?? process.execPath,
+    args: options.args ?? [LOCAL_SERVER_PATH]
   };
 }
 
 function shellJoin(parts) {
-  return parts.map((p) => (/^[A-Za-z0-9_@%+=:,./-]+$/.test(p) ? p : JSON.stringify(p))).join(' ');
+  return parts
+    .map((part) => {
+      const value = String(part);
+      return /^[A-Za-z0-9_@%+=:,./-]+$/.test(value)
+        ? value
+        : `'${value.replaceAll("'", "'\"'\"'")}'`;
+    })
+    .join(' ');
 }
 
 function jsonMcpServers(spec) {
@@ -81,7 +92,12 @@ export function generateServerRegistration(client, options = {}) {
   switch (normalized) {
     case 'direct': {
       const command = [spec.command, ...spec.args];
-      return { serverId: SERVER_ID, type: 'direct-command', command, shellCommand: shellJoin(command) };
+      return {
+        serverId: SERVER_ID,
+        type: 'direct-command',
+        command,
+        shellCommand: shellJoin(command)
+      };
     }
     case 'codex':
       return { serverId: SERVER_ID, type: 'codex-toml', config: codexTomlConfig(spec) };
@@ -89,10 +105,19 @@ export function generateServerRegistration(client, options = {}) {
       return { serverId: SERVER_ID, type: 'json-mcpServers', config: jsonMcpServers(spec) };
     case 'claude-code': {
       const command = ['claude', 'mcp', 'add', SERVER_ID, spec.command, ...spec.args];
-      return { serverId: SERVER_ID, type: 'claude-code-cli', command, shellCommand: shellJoin(command) };
+      return {
+        serverId: SERVER_ID,
+        type: 'claude-code-cli',
+        command,
+        shellCommand: shellJoin(command)
+      };
     }
     case 'openclaw':
-      return { serverId: SERVER_ID, type: 'openclaw-managed-outbound', config: openClawConfig(spec) };
+      return {
+        serverId: SERVER_ID,
+        type: 'openclaw-managed-outbound',
+        config: openClawConfig(spec)
+      };
     case 'hermes':
     case 'hermes-agent':
       return {

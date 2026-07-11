@@ -4,6 +4,8 @@ Last verified: 2026-07-08.
 
 current package syntax, setup command, executable path behavior, source-sensitive caveat가 필요할 때 이 reference를 사용합니다. CloakBrowser, `@playwright/mcp`, Node requirement가 바뀌면 refresh합니다.
 
+> 범위: 이 문서는 upstream package와 legacy external Playwright MCP fact를 보존합니다. Operational skill run은 local `hyper-cloaking-mcp` 서버, `mcp/src/register.mjs`, typed `cloak_*` tool을 사용합니다. 아래 command는 recommended live surface가 아닙니다.
+
 ## Sources
 
 | Source | What it supports |

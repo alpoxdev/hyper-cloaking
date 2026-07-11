@@ -40,9 +40,6 @@ export const PROFILE_KINDS = Object.freeze({
     'api-key': ['apiKey'],
     oauth2: ['accessToken']
   }),
-  reddit: Object.freeze({
-    oauth2: ['accessToken', 'clientId']
-  }),
   coupang: Object.freeze({
     hmac: ['accessKey', 'secretKey']
   }),
@@ -61,7 +58,6 @@ export const PROFILE_KINDS = Object.freeze({
 const OFFICIAL_ORIGINS = Object.freeze({
   instagram: Object.freeze(['https://graph.instagram.com', 'https://graph.facebook.com']),
   youtube: Object.freeze(['https://www.googleapis.com', 'https://youtube.googleapis.com']),
-  reddit: Object.freeze(['https://oauth.reddit.com']),
   coupang: Object.freeze(['https://api-gateway.coupang.com']),
   tiktok: Object.freeze(['https://open.tiktokapis.com']),
   naver: Object.freeze(['https://openapi.naver.com']),

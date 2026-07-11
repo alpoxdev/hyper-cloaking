@@ -12,7 +12,6 @@ import { genericProvider } from './generic.mjs';
 import { coupangProvider } from './coupang/metadata.mjs';
 import { instagramProvider } from './instagram/metadata.mjs';
 import { naverProvider } from './naver.mjs';
-import { redditProvider } from './reddit/metadata.mjs';
 import {
   GENERIC_PROVIDER_ID,
   buildProviderRegistry,
@@ -28,7 +27,6 @@ import { youtubeProvider } from './youtube/metadata.mjs';
 export const providers = [
   genericProvider,
   naverProvider,
-  redditProvider,
   instagramProvider,
   youtubeProvider,
   coupangProvider,

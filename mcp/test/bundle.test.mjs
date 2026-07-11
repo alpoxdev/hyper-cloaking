@@ -2,10 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 
-// P0-c: the distribution bundle must externalize cloakbrowser + playwright-core
-// (never inline them) AND preserve browser-utils.mjs's runtime dynamic import so
-// `npx hyper-cloaking-mcp` can resolve a workspace-installed cloakbrowser at run
-// time. This bundles the engine entry the server will import in Phase 2 and
+// The distribution bundle must externalize cloakbrowser + playwright-core
+// (never inline them) and preserve browser-utils.mjs's runtime dynamic import so
+// the registered local dist server can resolve a workspace-installed
+// cloakbrowser at runtime. This bundles the engine entry the server imports and
 // asserts on the emitted code without shipping it.
 test('engine bundles with cloakbrowser/playwright-core external and dynamic import preserved', async () => {
   const result = await build({

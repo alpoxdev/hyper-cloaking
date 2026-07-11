@@ -13,7 +13,7 @@ export function normalizeHost(host) {
 
 /**
  * Exact-or-dot-boundary host match only. Rejects lookalike hosts such as
- * `evilreddit.com` for `reddit.com` or `notx.com` for `x.com`.
+ * `evilcoupang.com` for `coupang.com` or `notx.com` for `x.com`.
  */
 /** Match a host exactly or on a dot boundary; lookalike suffixes do not match. @param {*} host @param {*} domain @returns {boolean} Whether the host belongs to the domain. @sideeffects None. */
 export function hostMatchesDomain(host, domain) {

@@ -4,6 +4,8 @@ Last verified: 2026-07-08.
 
 Use this reference for current package syntax, setup commands, executable path behavior, helper contract names, and source-sensitive caveats. Refresh it when CloakBrowser, `@playwright/mcp`, or Node requirements change.
 
+> Scope: this file preserves upstream package and legacy external Playwright MCP facts only. Operational skill runs use the local `hyper-cloaking-mcp` server, `mcp/src/register.mjs`, and typed `cloak_*` tools. Commands below are not the recommended live surface.
+
 ## Sources
 
 | Source | What it supports |

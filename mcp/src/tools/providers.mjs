@@ -10,12 +10,23 @@
  */
 import { markUntrustedBrowserContent, workspacePaths } from 'hyper-cloaking-engine';
 import { resolveProviderForUrl, getProvider } from 'hyper-cloaking-engine/providers/index.mjs';
-import { instagramActions, buildInstagramSession } from 'hyper-cloaking-engine/providers/instagram/index.mjs';
+import {
+  instagramActions,
+  buildInstagramSession
+} from 'hyper-cloaking-engine/providers/instagram/index.mjs';
 import { naverActions, buildNaverSession } from 'hyper-cloaking-engine/providers/naver/index.mjs';
-import { redditActions, buildRedditSession } from 'hyper-cloaking-engine/providers/reddit/index.mjs';
-import { youtubeActions, buildYouTubeSession } from 'hyper-cloaking-engine/providers/youtube/index.mjs';
-import { coupangActions, buildCoupangSession } from 'hyper-cloaking-engine/providers/coupang/index.mjs';
-import { tiktokActions, buildTikTokSession } from 'hyper-cloaking-engine/providers/tiktok/index.mjs';
+import {
+  youtubeActions,
+  buildYouTubeSession
+} from 'hyper-cloaking-engine/providers/youtube/index.mjs';
+import {
+  coupangActions,
+  buildCoupangSession
+} from 'hyper-cloaking-engine/providers/coupang/index.mjs';
+import {
+  tiktokActions,
+  buildTikTokSession
+} from 'hyper-cloaking-engine/providers/tiktok/index.mjs';
 import { xActions, buildXSession } from 'hyper-cloaking-engine/providers/x/index.mjs';
 import { defineTool } from '../error-signal.mjs';
 import { buildWriteOpts, classifyWriteResult } from '../guardrail-bridge.mjs';
@@ -28,45 +39,148 @@ const PROVIDERS = {
     actions: instagramActions,
     buildSession: buildInstagramSession,
     reads: new Set(['getUser', 'getUserPosts', 'analyzePosts', 'listDMThreads', 'readDMThread']),
-    writes: new Set(['likePost', 'commentPost', 'savePost', 'sharePost', 'repost', 'replyToDM', 'replyToMany'])
+    writes: new Set([
+      'likePost',
+      'commentPost',
+      'savePost',
+      'sharePost',
+      'repost',
+      'replyToDM',
+      'replyToMany'
+    ])
   },
   naver: {
     actions: naverActions,
     buildSession: buildNaverSession,
-    reads: new Set(['searchWeb', 'searchBlog', 'searchCafe', 'getBlogPost', 'getBlogList', 'getCafePost', 'getCafeList', 'analyzePosts']),
-    writes: new Set(['setBlogPostLiked', 'setCafePostLiked', 'commentBlogPost', 'replyToBlogComment', 'commentCafePost', 'replyToCafeComment', 'createBlogDraft', 'publishBlogDraft', 'createCafePost'])
-  },
-  reddit: {
-    actions: redditActions,
-    buildSession: buildRedditSession,
-    reads: new Set(['getSubreddit', 'getPost', 'getUserProfile', 'analyzeActivity']),
-    writes: new Set(['upvotePost', 'commentPost', 'replyToComment', 'savePost'])
+    reads: new Set([
+      'searchWeb',
+      'searchBlog',
+      'searchCafe',
+      'getBlogPost',
+      'getBlogList',
+      'getCafePost',
+      'getCafeList',
+      'analyzePosts'
+    ]),
+    writes: new Set([
+      'setBlogPostLiked',
+      'setCafePostLiked',
+      'commentBlogPost',
+      'replyToBlogComment',
+      'commentCafePost',
+      'replyToCafeComment',
+      'createBlogDraft',
+      'publishBlogDraft',
+      'createCafePost'
+    ])
   },
   youtube: {
     actions: youtubeActions,
     buildSession: buildYouTubeSession,
     reads: new Set(['searchVideos', 'getVideo', 'getChannel', 'analyzeChannel']),
-    writes: new Set(['likeVideo', 'commentVideo', 'subscribeChannel', 'shareVideo', 'saveToPlaylist'])
+    writes: new Set([
+      'likeVideo',
+      'commentVideo',
+      'subscribeChannel',
+      'shareVideo',
+      'saveToPlaylist'
+    ])
   },
   coupang: {
     actions: coupangActions,
     buildSession: buildCoupangSession,
     reads: new Set(['searchProducts', 'getProduct', 'analyzeProducts']),
-    writes: new Set(['addToCart', 'setCartQuantity', 'removeCartItem', 'setSavedState', 'submitOwnOrderReview'])
+    writes: new Set([
+      'addToCart',
+      'setCartQuantity',
+      'removeCartItem',
+      'setSavedState',
+      'submitOwnOrderReview'
+    ])
   },
   tiktok: {
     actions: tiktokActions,
     buildSession: buildTikTokSession,
-    reads: new Set(['getUser', 'getUserVideos', 'getVideo', 'searchVideos', 'listDMThreads', 'readDMThread', 'analyzeVideos']),
-    writes: new Set(['setLiked', 'setSaved', 'setFollowing', 'setReposted', 'commentVideo', 'replyToComment', 'replyToDM', 'createUploadDraft', 'publishDraft'])
+    reads: new Set([
+      'getUser',
+      'getUserVideos',
+      'getVideo',
+      'searchVideos',
+      'listDMThreads',
+      'readDMThread',
+      'analyzeVideos'
+    ]),
+    writes: new Set([
+      'setLiked',
+      'setSaved',
+      'setFollowing',
+      'setReposted',
+      'commentVideo',
+      'replyToComment',
+      'replyToDM',
+      'createUploadDraft',
+      'publishDraft'
+    ])
   },
   x: {
     actions: xActions,
     buildSession: buildXSession,
-    reads: new Set(['getUser', 'getUserPosts', 'getPost', 'searchPosts', 'getThread', 'listDMThreads', 'readDMThread', 'analyzePosts']),
-    writes: new Set(['setLiked', 'setBookmarked', 'setFollowing', 'setReposted', 'createPost', 'replyToPost', 'quotePost', 'replyToDM'])
+    reads: new Set([
+      'getUser',
+      'getUserPosts',
+      'getPost',
+      'searchPosts',
+      'getThread',
+      'listDMThreads',
+      'readDMThread',
+      'analyzePosts'
+    ]),
+    writes: new Set([
+      'setLiked',
+      'setBookmarked',
+      'setFollowing',
+      'setReposted',
+      'createPost',
+      'replyToPost',
+      'quotePost',
+      'replyToDM'
+    ])
   }
 };
+/**
+ * Builds a fresh provider capability catalog from the provider dispatch
+ * allowlists. Helpers and blocked actions are intentionally not included.
+ *
+ * @returns {{ status: 'ok', providers: Array<{ id: string, reads: string[], writes: string[] }> }} Capability catalog.
+ */
+export function buildProviderCapabilities() {
+  return {
+    status: 'ok',
+    providers: Object.entries(PROVIDERS).map(([id, entry]) => ({
+      id,
+      reads: [...entry.reads],
+      writes: [...entry.writes]
+    }))
+  };
+}
+
+/**
+ * Session-less MCP tool exposing the provider capability catalog.
+ *
+ * @returns {object} Provider capability catalog tool descriptor.
+ */
+export const providerCapabilitiesTool = defineTool({
+  name: 'cloak_provider_capabilities',
+  description: 'List supported providers and their allowed read and write action names.',
+  inputSchema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {}
+  },
+  handler() {
+    return buildProviderCapabilities();
+  }
+});
 
 /**
  * Resolves a provider id fail-closed from an explicit id or a URL.
@@ -77,12 +191,15 @@ const PROVIDERS = {
 function resolveProviderId(input) {
   if (input.provider) {
     const resolved = getProvider(input.provider);
-    if (!resolved.ok) return { ok: false, code: resolved.error.code, message: resolved.error.message };
+    if (!resolved.ok)
+      return { ok: false, code: resolved.error.code, message: resolved.error.message };
     return { ok: true, id: resolved.provider.id };
   }
-  if (!input.url) return { ok: false, code: 'missing-target', message: 'Provide a provider id or a url.' };
+  if (!input.url)
+    return { ok: false, code: 'missing-target', message: 'Provide a provider id or a url.' };
   const resolved = resolveProviderForUrl(input.url);
-  if (!resolved.ok) return { ok: false, code: resolved.error.code, message: resolved.error.message };
+  if (!resolved.ok)
+    return { ok: false, code: resolved.error.code, message: resolved.error.message };
   return { ok: true, id: resolved.provider.id };
 }
 
@@ -104,7 +221,10 @@ export function makeProviderReadTool(manager) {
       properties: {
         provider: { type: 'string', description: 'Explicit provider id (else resolved from url).' },
         url: { type: 'string', description: 'Target URL used to resolve the provider.' },
-        action: { type: 'string', description: 'Read action name (must be on the provider read allowlist).' },
+        action: {
+          type: 'string',
+          description: 'Read action name (must be on the provider read allowlist).'
+        },
         args: { type: 'array', description: 'Positional args passed after the session.' }
       }
     },
@@ -116,7 +236,12 @@ export function makeProviderReadTool(manager) {
       }
       const entry = PROVIDERS[resolved.id];
       if (!entry) {
-        return { status: 'refused', code: 'no-read-actions', provider: resolved.id, message: `Provider "${resolved.id}" exposes no read actions.` };
+        return {
+          status: 'refused',
+          code: 'no-read-actions',
+          provider: resolved.id,
+          message: `Provider "${resolved.id}" exposes no read actions.`
+        };
       }
       if (!entry.reads.has(input.action)) {
         return {
@@ -159,14 +284,23 @@ export function makeProviderWriteTool(manager) {
       properties: {
         provider: { type: 'string' },
         url: { type: 'string' },
-        action: { type: 'string', description: 'Write action name (must be on the provider write allowlist).' },
-        args: { type: 'array', description: 'Positional args passed after the session, before opts.' },
+        action: {
+          type: 'string',
+          description: 'Write action name (must be on the provider write allowlist).'
+        },
+        args: {
+          type: 'array',
+          description: 'Positional args passed after the session, before opts.'
+        },
         dryRun: { type: 'boolean', description: 'Defaults true; pass false to actually write.' },
         runId: { type: 'string' },
-        idempotencyKey: { type: 'string' },
         confirmed: { type: 'boolean' },
         cap: { type: 'integer', minimum: 1 },
-        opts: { type: 'object', additionalProperties: true, description: 'Extra action opts (e.g. per-action enable flag).' }
+        opts: {
+          type: 'object',
+          additionalProperties: true,
+          description: 'Extra action opts (e.g. per-action enable flag).'
+        }
       }
     },
     handler(input) {
@@ -176,7 +310,12 @@ export function makeProviderWriteTool(manager) {
       }
       const entry = PROVIDERS[resolved.id];
       if (!entry) {
-        return { status: 'refused', code: 'no-write-actions', provider: resolved.id, message: `Provider "${resolved.id}" exposes no write actions.` };
+        return {
+          status: 'refused',
+          code: 'no-write-actions',
+          provider: resolved.id,
+          message: `Provider "${resolved.id}" exposes no write actions.`
+        };
       }
       if (!entry.writes.has(input.action)) {
         return {
@@ -192,7 +331,11 @@ export function makeProviderWriteTool(manager) {
         // MCP context is non-interactive: bulk confirmation cannot be auto-satisfied.
         const providerSession = entry.buildSession(session.page, { stateDir, interactive: false });
         const opts = buildWriteOpts(input);
-        const result = await entry.actions[input.action](providerSession, ...(input.args ?? []), opts);
+        const result = await entry.actions[input.action](
+          providerSession,
+          ...(input.args ?? []),
+          opts
+        );
         const classification = classifyWriteResult(result);
         const marked = markUntrustedBrowserContent({
           url: session.page.url(),

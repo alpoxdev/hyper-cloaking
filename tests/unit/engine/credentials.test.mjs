@@ -63,6 +63,43 @@ async function setupProfile(home, overrides) {
 function mode(stat) {
   return stat.mode & 0o777;
 }
+async function createLock(home, host) {
+  await setupProfile(home);
+  const paths = credentialPaths(home);
+  const hash = crypto.createHash('sha256').update('yt-main').digest('hex');
+  const lock = path.join(paths.refreshLocks, `${hash}.lock`);
+  await fs.mkdir(lock, { mode: 0o700 });
+  await fs.writeFile(
+    path.join(lock, 'owner.json'),
+    JSON.stringify({
+      version: 1,
+      pid: 999999,
+      host,
+      nonce: 'owner-nonce',
+      phase: 'reserved',
+      createdAt: 1,
+      updatedAt: 1
+    }),
+    { mode: 0o600 }
+  );
+  return lock;
+}
+
+function failStoreRelease(paths) {
+  return new Proxy(fs, {
+    get(target, property) {
+      if (property !== 'rename') return target[property];
+      return async (from, to) => {
+        if (String(from) === paths.lock && String(to).includes('.release-')) {
+          const error = new Error('store lock release failed');
+          error.code = 'EIO';
+          throw error;
+        }
+        return fs.rename(from, to);
+      };
+    }
+  });
+}
 
 test('strict credential JSON rejects duplicate, dangerous, oversized and deeply nested input', () => {
   assert.throws(() => parseCredentialJson('{"a":1,"a":2}'), /duplicate key/);
@@ -309,7 +346,7 @@ test('concurrent imports serialize without losing profiles', async () => {
   const profiles = await listCredentialProfiles({ home });
   assert.equal(profiles.length, 8);
   assert.deepEqual(
-    profiles.map((profile) => profile.id).sort(),
+    profiles.map((profile) => profile.id).toSorted(),
     Array.from({ length: 8 }, (_, index) => `yt-${index}`)
   );
 });
@@ -420,20 +457,6 @@ test('rename acknowledgement plus root fsync failure remains ambiguous and never
 test('lock release failures preserve successful results and primary mutation errors', async () => {
   const successHome = await tempHome();
   const successPaths = credentialPaths(successHome);
-  const failStoreRelease = (paths) =>
-    new Proxy(fs, {
-      get(target, property) {
-        if (property !== 'rename') return target[property];
-        return async (from, to) => {
-          if (String(from) === paths.lock && String(to).includes('.release-')) {
-            const error = new Error('store lock release failed');
-            error.code = 'EIO';
-            throw error;
-          }
-          return fs.rename(from, to);
-        };
-      }
-    });
   await assert.rejects(
     initCredentialStore({ home: successHome, fsImpl: failStoreRelease(successPaths) }),
     (error) =>
@@ -698,28 +721,6 @@ test('post-refresh uncertainty marks profile while generic policy errors remain 
 });
 
 test('same-host dead locks recover while foreign-host and EPERM locks fail closed', async () => {
-  async function createLock(home, host) {
-    await setupProfile(home);
-    const paths = credentialPaths(home);
-    const hash = crypto.createHash('sha256').update('yt-main').digest('hex');
-    const lock = path.join(paths.refreshLocks, `${hash}.lock`);
-    await fs.mkdir(lock, { mode: 0o700 });
-    await fs.writeFile(
-      path.join(lock, 'owner.json'),
-      JSON.stringify({
-        version: 1,
-        pid: 999999,
-        host,
-        nonce: 'owner-nonce',
-        phase: 'reserved',
-        createdAt: 1,
-        updatedAt: 1
-      }),
-      { mode: 0o600 }
-    );
-    return lock;
-  }
-
   const deadHome = await tempHome();
   await createLock(deadHome, 'test-host');
   const value = await withCredentialProfileOperation(
@@ -829,7 +830,6 @@ test('official adapters reject every cross-origin credential dispatch and userin
   const profiles = [
     ['instagram', 'graph-oauth', { accessToken: 'token' }],
     ['youtube', 'oauth2', { accessToken: 'token' }],
-    ['reddit', 'oauth2', { accessToken: 'token', clientId: 'client' }],
     ['coupang', 'hmac', { accessKey: 'access', secretKey: 'secret' }],
     ['tiktok', 'oauth2', { accessToken: 'token' }],
     ['naver', 'client-credentials', { clientId: 'client', clientSecret: 'secret' }],

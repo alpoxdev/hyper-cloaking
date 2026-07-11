@@ -22,10 +22,6 @@ import {
   instagramReadPromotions
 } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/network.mjs';
 import {
-  executeRedditRead,
-  redditReadPromotions
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/reddit/network.mjs';
-import {
   executeYouTubeRead,
   youtubeReadPromotions
 } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/network.mjs';
@@ -219,11 +215,6 @@ test('provider dispatchers freeze false defaults, forward observers, and reject 
       execute: executeYouTubeRead,
       promotions: youtubeReadPromotions,
       actions: ['searchVideos', 'getChannel', 'getVideo']
-    },
-    {
-      execute: executeRedditRead,
-      promotions: redditReadPromotions,
-      actions: ['getSubreddit', 'getUserProfile', 'getPost']
     }
   ];
 
@@ -445,7 +436,7 @@ test('isolated GET rejects origins, redirects, status, size, UTF-8, JSON and str
     [{ body: Buffer.from([0xff]) }, 'response-utf8-invalid'],
     [{ body: Buffer.from('{bad') }, 'response-json-invalid'],
     [
-      { payload: { rows: Array.from({ length: 10 }).fill({ id: 1 }) } },
+      { payload: { rows: Array.from({ length: 10 }, () => ({ id: 1 })) } },
       'response-record-cap',
       { maxRecords: 5 }
     ]

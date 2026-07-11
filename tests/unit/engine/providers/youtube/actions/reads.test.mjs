@@ -28,6 +28,17 @@ function sessionFor(page) {
   };
   return session;
 }
+function countsFor(counts) {
+  return {
+    locator(selector) {
+      return {
+        async count() {
+          return counts[selector] ?? 0;
+        }
+      };
+    }
+  };
+}
 
 function channelLinkNode({ href, title, publishedAt, viewCount, likeCount, tags }) {
   const metadataText = `${viewCount} ${publishedAt}`;
@@ -184,15 +195,6 @@ test('searchVideos preserves visible channels while deduplicating results', asyn
   ]);
 });
 test('resolveYouTubeSelector distinguishes primary, fallback, and exhaustion', async () => {
-  const countsFor = (counts) => ({
-    locator(selector) {
-      return {
-        async count() {
-          return counts[selector] ?? 0;
-        }
-      };
-    }
-  });
   const entry = { primary: '[data-primary]', fallback: '[data-fallback]' };
 
   assert.equal(
@@ -337,15 +339,6 @@ test('getChannel freezes its fallback tier instead of aggregating nested wrapper
 });
 
 test('resolveYouTubeExtractionTier prefers primary and rejects exhaustion', async () => {
-  const countsFor = (counts) => ({
-    locator(selector) {
-      return {
-        async count() {
-          return counts[selector] ?? 0;
-        }
-      };
-    }
-  });
   const entry = {
     primary: { resultCard: '[data-primary]' },
     fallback: { resultCard: '[data-fallback]' }

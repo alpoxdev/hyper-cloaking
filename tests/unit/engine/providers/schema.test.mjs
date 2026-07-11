@@ -3,7 +3,6 @@ import test from 'node:test';
 
 import { genericProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/generic.mjs';
 import { coupangProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/metadata.mjs';
-import { redditProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/reddit/metadata.mjs';
 import { naverProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/metadata.mjs';
 import {
   FORBIDDEN_PROVIDER_FIELDS,
@@ -22,7 +21,6 @@ test('valid built-in providers pass schema validation', () => {
     genericProvider,
     coupangProvider,
     naverProvider,
-    redditProvider,
     tiktokProvider,
     xProvider
   ]) {

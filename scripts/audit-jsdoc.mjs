@@ -106,7 +106,7 @@ export function exportSignatures(ast) {
         signatureSha256: sha256(JSON.stringify(stable(node.source)))
       });
   }
-  return out.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  return out.toSorted((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
 export function nonCommentTokenBasis(source, tokens, comments) {

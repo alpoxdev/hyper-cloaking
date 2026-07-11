@@ -6,7 +6,7 @@
 
 **Sea cual sea la tarea de navegador, tu agente la termina. Si tienes autorización para probarlo, Hyper Cloaking lo consigue.**
 
-Un navegador sigiloso al ritmo humano para agentes de IA, que ejecuta [CloakBrowser](https://github.com/CloakHQ/CloakBrowser) detrás de [Playwright MCP](https://github.com/microsoft/playwright-mcp). Sin configuración manual, sin resultados a medias del tipo "la página cargó": termina con evidencia.
+Un navegador sigiloso al ritmo humano para agentes de IA, impulsado por el servidor local gestionado `hyper-cloaking-mcp`. Sin configuración manual, sin resultados a medias del tipo "la página cargó": termina con evidencia.
 
 <p>
   <img src="https://img.shields.io/badge/Claude_Code-D97757?logo=claude&logoColor=white" alt="Claude Code">
@@ -55,15 +55,15 @@ No hay comandos que aprender. Pídele a tu agente con normalidad —— la skill
 
 ## 🌐 Compatible con
 
-**Claude Code · Codex · Cursor · OpenClaw · Hermes Agent · Gajae-Code** —— cualquier agente compatible con MCP que cargue `SKILL.md`. Pistas de metadatos integradas para **Naver · Reddit · Instagram · YouTube · X**, más un modo `generic` para cualquier sitio que estés autorizado a probar.
+**Claude Code · Codex · Cursor · OpenClaw · Hermes Agent · Gajae-Code** —— cualquier agente compatible con MCP que cargue `SKILL.md`. Pistas de metadatos integradas para **Naver · Instagram · YouTube · X · Coupang · TikTok**, más un modo `generic` para cualquier sitio que estés autorizado a probar.
 
 ## ⚙️ Por qué funciona
 
-- **Un navegador sigiloso real, no un User-Agent parcheado** —— ejecuta el Chromium de CloakBrowser detrás de Playwright MCP, con huellas de navegador genuinas en lugar de una simple cabecera cambiada.
+- **Un navegador sigiloso real, no un User-Agent parcheado** —— el servidor local gestionado `hyper-cloaking-mcp` ejecuta CloakBrowser con huellas de navegador genuinas en lugar de limitarse a cambiar una cabecera.
 - **Al ritmo humano por defecto** —— cada ejecución operativa fuerza `humanize: true`: movimiento de ratón, escritura y desplazamiento a cadencia humana, para que los flujos automatizados largos no se atasquen ni se rompan a mitad de tarea.
 - **Pasa por controles antes de lanzarse** —— la clasificación de seguridad del objetivo, la base de autorización, los orígenes permitidos y una ronda de preguntas previas ocurren *antes* de que se abra ningún navegador.
 - **Sin evidencia no está hecho** —— que una página cargue nunca es "completado". La tarea solo termina cuando el resultado está probado, y devuelve un resultado estructurado.
-- **Configuración sin complicaciones** —— verifica Node.js, `cloakbrowser`, `playwright-core` y Playwright MCP, y luego instala o repara lo que falte.
+- **Configuración sin complicaciones** —— construye el bundle MCP local, genera el registro del cliente desde `mcp/src/register.mjs` con el ejecutable Node actual y la ruta absoluta al bundle, y usa herramientas tipadas.
 
 ## 🆚 Navegador MCP normal vs `+ Hyper Cloaking`
 
@@ -87,12 +87,12 @@ Una petición como *"usa CloakBrowser para este sitio"* se convierte en un flujo
 
 1. **Control de seguridad del objetivo** —— clasifica el objetivo como permitido / rechazado / requiere aclaración, y registra la base de autorización y los orígenes permitidos.
 2. **Control de preguntas previas** —— recopila la URL del objetivo, los orígenes permitidos, el modo headless, el modo/cuenta de cookies y la preferencia de mantener abierto, mediante la interfaz nativa de preguntas estructuradas del host.
-3. **Control de configuración** —— verifica Node.js, `cloakbrowser`, `playwright-core` y Playwright MCP; instala o repara lo que falte.
+3. **Control de configuración** —— verifica Node.js y el bundle MCP local gestionado; instala o repara lo que falte.
 4. **Espacio de trabajo en tiempo de ejecución** —— inicializa `~/.hyper-cloaking/` para `cookie.yml`, perfiles, descargas, evidencia, logs y estado.
 5. **Manejo de cookies** —— normaliza y carga cookies que coincidan con el sitio (JSON exportado de Chrome, arrays de Playwright, entradas multicuenta) mediante un helper dedicado, sin almacenar nunca valores en bruto en el repositorio.
 6. **Resolución del ejecutable** —— localiza el binario de Chromium de CloakBrowser en caché bajo `~/.hyper-cloaking/cache/cloakbrowser/`.
 7. **Lanzamiento al ritmo humano** —— se ejecuta con `humanize: true` obligatorio en cada ejecución operativa (ratón, escritura y desplazamiento a ritmo humano).
-8. **Configuración de MCP** —— emite la configuración para Codex TOML, JSON `mcpServers` (Claude Code / Cursor), OpenClaw `mcp.servers`, Hermes `mcp_servers` o un comando CLI directo, apuntando `@playwright/mcp` al ejecutable de CloakBrowser.
+8. **Configuración de MCP** —— construye `mcp/dist/server.mjs` y usa los registros generados por `mcp/src/register.mjs`, con el ejecutable Node actual y la ruta absoluta al bundle.
 9. **Ejecución de la tarea + validación del resultado** —— realiza la tarea solicitada y la completa solo cuando la evidencia prueba el resultado (la carga de página por sí sola nunca es completar).
 10. **Informe estructurado** —— devuelve `targetSafety`, `outcome`, `failure`, `contentBoundary` y `learning`; guarda informes y capturas bajo `~/.hyper-cloaking/evidence/`.
 
@@ -110,47 +110,33 @@ Hyper Cloaking es una herramienta para **navegación autorizada**, no una forma 
 
 ---
 
-## Fragmentos de configuración MCP
+## Configuración del MCP local gestionado
 
-Una vez resuelto el binario de Chromium de CloakBrowser, apunta Playwright MCP hacia él. Los lanzamientos por defecto son **headless** y **sandboxed**; quita `--headless` para navegación visible.
-
-**Comando directo**
+La superficie operativa recomendada es el servidor gestionado `hyper-cloaking-mcp`. Desde la raíz del repositorio, construye su bundle:
 
 ```bash
-npx @playwright/mcp@latest --headless --sandbox \
-  --executable-path ~/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome
+npm --workspace mcp run build
 ```
 
-**Codex (`~/.codex/config.toml`)** —— usa una ruta completamente expandida:
-
-```toml
-[mcp_servers.hyper-cloaking]
-command = "npx"
-args = ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/Users/you/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome"]
-```
-
-**Claude Code / Cursor (`mcpServers` JSON)**
-
-```json
-{
-  "mcpServers": {
-    "hyper-cloaking": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest", "--headless", "--sandbox", "--executable-path", "/Users/you/.hyper-cloaking/cache/cloakbrowser/chromium-146.0.7680.177.3/chrome"]
-    }
-  }
-}
-```
-
-**OpenClaw (`mcp.servers.<name>`)** y **Hermes (`mcp_servers.<name>` en `~/.hermes/config.yaml`)** siguen la misma forma command/args bajo sus respectivas claves de configuración.
-
-Genera cualquiera de estas de forma determinista:
+Genera un registro para el cliente que uses. El renderizador resuelve el ejecutable Node actual y la ruta absoluta a `mcp/dist/server.mjs`:
 
 ```bash
-node skills/hyper-cloaking/engine/cli.mjs mcp-config --json
-node skills/hyper-cloaking/engine/cli.mjs mcp-config --client codex --json
-node skills/hyper-cloaking/engine/cli.mjs mcp-config --headed
+node --input-type=module -e "import { generateServerRegistration } from './mcp/src/register.mjs'; console.log(JSON.stringify(generateServerRegistration('direct'), null, 2))"
+node --input-type=module -e "import { generateServerRegistration } from './mcp/src/register.mjs'; console.log(JSON.stringify(generateServerRegistration('codex'), null, 2))"
+node --input-type=module -e "import { generateServerRegistration } from './mcp/src/register.mjs'; console.log(JSON.stringify(generateServerRegistration('json'), null, 2))"
 ```
+
+Aplica el registro generado a Codex, Claude Code/Cursor JSON, OpenClaw, Hermes o al cliente MCP emparejado con la sesión de Gajae-Code. Comprobación de lanzamiento directo:
+
+```bash
+node "$(pwd)/mcp/dist/server.mjs"
+```
+
+Usa las herramientas tipadas en este orden: `cloak_setup` → `cloak_status` → `cloak_launch` → `cloak_navigate` → `cloak_snapshot` → `cloak_click`/`cloak_type`/`cloak_scroll` → `cloak_screenshot` → consulta `cloak_provider_capabilities` → `cloak_provider_read` o `cloak_provider_write` → `cloak_teardown`. Usa las herramientas de cookies y credenciales (`cloak_cookies_list`, `cloak_cookies_status`, `cloak_credentials`) cuando sea necesario. Los proveedores compatibles son **Naver, Instagram, YouTube, X, Coupang, TikTok**; los proveedores desconocidos fallan de forma segura.
+
+El paquete upstream Playwright MCP queda solo como contexto histórico/de comparación y no es la ruta operativa recomendada.
+
+La verificación sin credenciales construye el bundle de distribución, completa el handshake stdio, inicia una sesión CloakBrowser humanizada real, comprueba el estado y la cierra. Las lecturas/escrituras reales por provider siguen siendo pruebas live condicionadas a credenciales y autorización; CI no simula que hayan pasado.
 
 ## Helpers del motor
 
@@ -158,20 +144,20 @@ Los helpers de tiempo de ejecución viven bajo `skills/hyper-cloaking/engine/` y
 
 | Helper | Propósito |
 |---|---|
-| `engine/cli.mjs` | Comandos `validate` / `smoke` / `mcp-config` / `live`; renderiza la config MCP y ejecuta verificación en vivo contenida. |
+| `engine/cli.mjs` | Comandos `validate` / `smoke` / `live`; ejecuta verificación en vivo contenida. |
 | `engine/cookie.mjs` | Importa, normaliza, inspecciona, enmascara e inyecta cookies (JSON exportado de Chrome, arrays de Playwright, entradas sitio/cuenta de `cookie.yml`). |
 | `engine/browser-utils.mjs` | Inicializa `~/.hyper-cloaking/`, lanza CloakBrowser con `humanize: true` y provee helpers `humanMove` / `humanClick` / `humanType` / `humanScroll` / XPath. |
 
 ```bash
 node skills/hyper-cloaking/engine/browser-utils.mjs init
 node skills/hyper-cloaking/engine/cookie.mjs inspect --url https://www.instagram.com/example/ --site instagram --json
-node skills/hyper-cloaking/engine/cli.mjs mcp-config --help
+node --input-type=module -e "import { generateServerRegistration } from './mcp/src/register.mjs'; console.log(JSON.stringify(generateServerRegistration('claude-code'), null, 2))"
 ```
 
 <details>
 <summary><strong>Providers y módulos de acción de Instagram —— detalles</strong></summary>
 
-**Providers (solo metadatos).** `engine/cli.mjs live --provider <id>` selecciona **solo metadatos** —— pistas de dominio/origen y cookie/perfil para `naver`, `reddit`, `instagram`, `youtube`, `x` o `generic`. Los providers nunca autorizan orígenes más amplios ni eluden los controles de seguridad, reconocimiento o preguntas previas; un provider desconocido falla de forma segura (fail closed).
+**Providers (solo metadatos).** `engine/cli.mjs live --provider <id>` selecciona **solo metadatos** —— pistas de dominio/origen y cookie/perfil para `naver`, `instagram`, `youtube`, `x`, `coupang`, `tiktok` o `generic`. Los providers nunca autorizan orígenes más amplios ni eluden los controles de seguridad, reconocimiento o preguntas previas; un provider desconocido falla de forma segura (fail closed).
 
 **Módulos de acción de Instagram.** Flujos reutilizables basados en un driver JS para automatizar **tu propia** cuenta de Instagram autenticada, ubicados bajo `engine/providers/instagram/`. Requieren un `page` real de Playwright (no el modo Playwright-MCP) e incluyen barreras de seguridad: las escrituras son dry-run por defecto, las respuestas de DM solo apuntan a conversaciones existentes (sin contacto en frío), y las respuestas masivas tienen tope, límite de tasa, confirmación humana y son reanudables.
 

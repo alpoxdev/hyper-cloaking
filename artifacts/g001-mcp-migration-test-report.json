@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "api-package-test-report",
+  "goalId": "G001",
+  "surface": "api/package",
+  "status": "passed",
+  "commands": [
+    {
+      "command": "node --test action-runtime/guardrails.test.mjs providers/network.test.mjs agents/setup-agent.test.mjs credentials.test.mjs providers/youtube/actions/reads.test.mjs",
+      "cwd": "tests/unit/engine",
+      "result": "passed",
+      "tests": 88
+    },
+    {
+      "command": "npm run mcp:test",
+      "cwd": ".",
+      "result": "passed",
+      "tests": 50
+    },
+    {
+      "command": "npm run ci",
+      "cwd": ".",
+      "result": "passed",
+      "engineTests": 326,
+      "e2eTests": 5,
+      "mcpTests": 51,
+      "lintWarnings": 0
+    }
+  ],
+  "surfaceEvidence": [
+    {
+      "id": "dist-lifecycle",
+      "invocation": "esbuild actual mcp/src/server.mjs, spawn bundled server with StdioClientTransport, list tools, cloak_launch, cloak_status, cloak_teardown",
+      "verdict": "passed",
+      "evidence": "mcp/test/dist-live-smoke.test.mjs"
+    },
+    {
+      "id": "provider-catalog",
+      "invocation": "cloak_provider_capabilities direct handler and stdio tools/list",
+      "verdict": "passed",
+      "evidence": "mcp/test/providers.contract.test.mjs and mcp/test/server.stdio.test.mjs"
+    },
+    {
+      "id": "registration",
+      "invocation": "generateServerRegistration for eight clients plus adversarial POSIX shell quoting",
+      "verdict": "passed",
+      "evidence": "mcp/test/register.contract.test.mjs"
+    }
+  ],
+  "adversarialCases": [
+    "returned provider catalog mutation does not persist",
+    "Reddit explicit id fails unknown-provider",
+    "Reddit URL falls back to generic and provider action is refused",
+    "read/write/helper boundary confusion is refused",
+    "write defaults to dry-run and performs no navigation",
+    "credential reveal is host-only",
+    "shell expansion characters and apostrophes remain literal",
+    "bundled server performs a real credential-free browser lifecycle"
+  ],
+  "limitations": [
+    "Credentialed real-site provider reads and writes require user authorization and credentials and are deliberately not represented as passing CI evidence."
+  ]
+}

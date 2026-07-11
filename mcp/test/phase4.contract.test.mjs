@@ -44,6 +44,12 @@ test('unknown provider is refused at the write boundary', async () => {
   assert.equal(r.status, 'refused');
 });
 
+test('removed provider is refused at the write boundary', async () => {
+  const r = payload(await writeTool.handler({ provider: 'reddit', action: 'upvotePost' }));
+  assert.equal(r.status, 'refused');
+  assert.equal(r.code, 'unknown-provider');
+});
+
 test('a READ action is refused via the write tool', async () => {
   const r = payload(await writeTool.handler({ provider: 'instagram', action: 'getUser' }));
   assert.equal(r.status, 'refused');

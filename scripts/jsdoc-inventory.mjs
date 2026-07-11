@@ -36,7 +36,7 @@ export function normalizeRelativePath(value) {
 export function enumerateMjsFiles(root) {
   const output = [];
   function walk(dir, relative = '') {
-    for (const name of fs.readdirSync(dir).sort()) {
+    for (const name of fs.readdirSync(dir).toSorted()) {
       const rel = relative ? `${relative}/${name}` : name;
       const full = path.join(dir, name);
       if (fs.statSync(full).isDirectory()) walk(full, rel);
@@ -44,7 +44,7 @@ export function enumerateMjsFiles(root) {
     }
   }
   walk(root);
-  return output.sort();
+  return output.toSorted();
 }
 export function buildInventory(root) {
   const paths = enumerateMjsFiles(root);

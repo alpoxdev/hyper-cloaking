@@ -30,6 +30,15 @@ function fakeRunCli({ validate = { ok: true }, config } = {}) {
   };
   return { runCli, calls };
 }
+async function malformedRunCli(_argv, io) {
+  io.stdout.write('{bad');
+  return 0;
+}
+
+async function extraRunCli(_argv, io) {
+  io.stdout.write('{}\n{}\n');
+  return 0;
+}
 
 const input = {
   schemaVersion: 1,
@@ -120,14 +129,6 @@ test('rejects missing sandbox, no-sandbox and headless contradictions', async ()
 });
 
 test('rejects malformed and extra stdout', async () => {
-  const malformed = async (_argv, io) => {
-    io.stdout.write('{bad');
-    return 0;
-  };
-  assert.equal((await runSetup(input, { runCli: malformed })).status, 'blocked');
-  const extra = async (_argv, io) => {
-    io.stdout.write('{}\n{}\n');
-    return 0;
-  };
-  assert.equal((await runSetup(input, { runCli: extra })).status, 'blocked');
+  assert.equal((await runSetup(input, { runCli: malformedRunCli })).status, 'blocked');
+  assert.equal((await runSetup(input, { runCli: extraRunCli })).status, 'blocked');
 });

@@ -9,7 +9,6 @@ import {
   validateProviderRegistry
 } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/index.mjs';
 import { coupangProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/metadata.mjs';
-import { redditProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/reddit/metadata.mjs';
 import {
   buildProviderRegistry,
   hostMatchesDomain,
@@ -30,8 +29,6 @@ test('known aliases resolve to the correct provider', () => {
   const cases = [
     ['https://www.naver.com', 'naver'],
     ['https://blog.naver.com', 'naver'],
-    ['https://old.reddit.com', 'reddit'],
-    ['https://oauth.reddit.com', 'reddit'],
     ['https://m.instagram.com', 'instagram'],
     ['https://music.youtube.com', 'youtube'],
     ['https://www.coupang.com', 'coupang'],
@@ -73,22 +70,21 @@ test('unknown explicit provider id returns unknown-provider with no generic fall
   assert.equal(resolution.error.id, 'bogus');
 });
 
-test('known explicit provider id resolves', () => {
+test('removed explicit provider id fails closed', () => {
   const resolution = getProvider('reddit');
-  assert.equal(resolution.ok, true);
-  assert.equal(resolution.provider.id, 'reddit');
+  assert.equal(resolution.ok, false);
+  assert.equal(resolution.error.code, 'unknown-provider');
 });
 
 test('lookalike hosts do not match unrelated providers', () => {
-  assert.equal(hostMatchesDomain('evilreddit.com', 'reddit.com'), false);
-  assert.equal(hostMatchesDomain('notx.com', 'x.com'), false);
   assert.equal(hostMatchesDomain('evilcoupang.com', 'coupang.com'), false);
+  assert.equal(hostMatchesDomain('notx.com', 'x.com'), false);
   assert.equal(hostMatchesDomain('nottiktok.com', 'tiktok.com'), false);
 
-  const evilReddit = resolveProviderForUrl('https://evilreddit.com');
-  assert.equal(evilReddit.ok, true);
-  assert.equal(evilReddit.provider.id, 'generic');
-  assert.equal(evilReddit.fallbackUsed, true);
+  const removedReddit = resolveProviderForUrl('https://www.reddit.com');
+  assert.equal(removedReddit.ok, true);
+  assert.equal(removedReddit.provider.id, 'generic');
+  assert.equal(removedReddit.fallbackUsed, true);
 
   const notX = resolveProviderForUrl('https://notx.com');
   assert.equal(notX.ok, true);
@@ -97,11 +93,6 @@ test('lookalike hosts do not match unrelated providers', () => {
 });
 
 test('same-provider parent/subdomain overlap collapses to the longest match', () => {
-  const reddit = resolveProviderForUrl('https://www.reddit.com');
-  assert.equal(reddit.ok, true);
-  assert.equal(reddit.provider.id, 'reddit');
-  assert.equal(reddit.matchedDomain, 'www.reddit.com');
-
   const twitter = resolveProviderForUrl('https://mobile.twitter.com');
   assert.equal(twitter.ok, true);
   assert.equal(twitter.provider.id, 'x');
@@ -109,12 +100,6 @@ test('same-provider parent/subdomain overlap collapses to the longest match', ()
 });
 
 test('navigation-only alias hosts resolve but are flagged so cookie hints are never seeded from them', () => {
-  const reddit = resolveProviderForUrl('https://redd.it/abc123');
-  assert.equal(reddit.ok, true);
-  assert.equal(reddit.provider.id, 'reddit');
-  assert.equal(reddit.matchedDomain, 'redd.it');
-  assert.equal(reddit.matchedViaNavigationOnlyAlias, true);
-
   const youtube = resolveProviderForUrl('https://youtu.be/xyz');
   assert.equal(youtube.ok, true);
   assert.equal(youtube.provider.id, 'youtube');
@@ -140,7 +125,7 @@ test('navigation-only alias hosts resolve but are flagged so cookie hints are ne
   const naver = resolveProviderForUrl('https://www.naver.com');
   assert.equal(naver.matchedViaNavigationOnlyAlias, false);
 
-  for (const provider of [redditProvider, coupangProvider, tiktokProvider, xProvider]) {
+  for (const provider of [coupangProvider, tiktokProvider, xProvider]) {
     for (const navigationOnly of provider.domains.navigationOnlyAliases || []) {
       assert.ok(!provider.domains.aliases.includes(navigationOnly));
     }

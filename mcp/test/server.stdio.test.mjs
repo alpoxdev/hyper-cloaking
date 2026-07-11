@@ -31,6 +31,7 @@ test('server completes the MCP handshake and lists the implemented tool catalog'
         'cloak_credentials',
         'cloak_launch',
         'cloak_navigate',
+        'cloak_provider_capabilities',
         'cloak_provider_read',
         'cloak_provider_write',
         'cloak_screenshot',

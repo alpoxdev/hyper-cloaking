@@ -265,10 +265,6 @@ function validateEngineOnlyMigration() {
       `${base}/engine/providers/youtube.mjs`,
       'flat YouTube provider module was replaced by the directory module'
     );
-    rejectPathExists(
-      `${base}/engine/providers/reddit.mjs`,
-      'flat Reddit provider module was replaced by the directory module'
-    );
   }
 
   // Old skill-local helper commands/imports are only allowed inside a bounded migration block in docs,
@@ -310,7 +306,7 @@ function validateEngineOnlyMigration() {
 // Deliberate-bump tripwire: the number of *.test.mjs files expected under
 // tests/unit/engine/. Bump this constant only when engine unit tests are
 // intentionally added or removed, so an accidental drop is caught here.
-const TESTS_BASELINE = 32;
+const TESTS_BASELINE = 29;
 
 function countTestFiles(start) {
   if (!existsSync(fullPath(start))) return 0;
@@ -524,16 +520,6 @@ for (const helper of [
   'engine/providers/generic.mjs',
   'engine/providers/naver.mjs',
   'engine/providers/session.mjs',
-  'engine/providers/reddit/index.mjs',
-  'engine/providers/reddit/metadata.mjs',
-  'engine/providers/reddit/selectors.mjs',
-  'engine/providers/reddit/session.mjs',
-  'engine/providers/reddit/actions/ids.mjs',
-  'engine/providers/reddit/actions/listing.mjs',
-  'engine/providers/reddit/actions/post.mjs',
-  'engine/providers/reddit/actions/user.mjs',
-  'engine/providers/reddit/actions/analyze.mjs',
-  'engine/providers/reddit/actions/reactions.mjs',
   'engine/providers/instagram/index.mjs',
   'engine/providers/instagram/metadata.mjs',
   'engine/providers/instagram/selectors.mjs',

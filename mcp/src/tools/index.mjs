@@ -8,14 +8,24 @@ import { cookiesListTool, cookiesStatusTool } from './cookies.mjs';
 import { makeLifecycleTools } from './lifecycle.mjs';
 import { makeNavigateTool } from './navigate.mjs';
 import { makeInteractTools } from './interact.mjs';
-import { makeProviderReadTool, makeProviderWriteTool } from './providers.mjs';
+import {
+  makeProviderReadTool,
+  makeProviderWriteTool,
+  providerCapabilitiesTool
+} from './providers.mjs';
 import { credentialsTool } from './credentials.mjs';
 
 // One process-wide session shared across callers, serialized by its FIFO queue.
 export const sessionManager = createSessionManager();
 
 // Phase 1: read-only, session-less tools (cloak_status is bound to the manager).
-const phase1 = [setupTool, makeStatusTool(sessionManager), cookiesListTool, cookiesStatusTool];
+const phase1 = [
+  setupTool,
+  makeStatusTool(sessionManager),
+  cookiesListTool,
+  cookiesStatusTool,
+  providerCapabilitiesTool
+];
 
 // Phase 2: lifecycle + generic browser tools (session-bound).
 const phase2 = [
@@ -26,7 +36,6 @@ const phase2 = [
 
 // Phase 3: provider read tools (session-bound, fail-closed).
 const phase3 = [makeProviderReadTool(sessionManager)];
-
 
 // Phase 4: provider write tools + guardrail bridge + credentials.
 const phase4 = [makeProviderWriteTool(sessionManager), credentialsTool];

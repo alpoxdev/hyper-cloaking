@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-07-11T16:33:38.832Z",
+  "generatedAt": "2026-07-11T18:21:25.872Z",
   "decision": "Option A (engine-routed input)",
   "matrix": [
     {
       "method": "engine.humanClick",
       "path": "default",
-      "moves": 111,
+      "moves": 107,
       "movesTrusted": true,
       "keys": 0,
       "keysTrusted": false,
@@ -15,15 +15,17 @@
     {
       "method": "engine.humanType",
       "path": "default",
-      "moves": 54,
+      "moves": 52,
       "movesTrusted": true,
-      "keys": 5,
+      "keys": 7,
       "keysTrusted": true,
       "keyDeltas": [
-        256,
-        261,
-        262,
-        266
+        264,
+        267,
+        211,
+        122,
+        250,
+        252
       ],
       "scroll": 0
     },
@@ -40,7 +42,7 @@
     {
       "method": "locator.click",
       "path": "option-c",
-      "moves": 72,
+      "moves": 66,
       "movesTrusted": true,
       "keys": 0,
       "keysTrusted": false,
@@ -67,11 +69,11 @@
       "keys": 6,
       "keysTrusted": true,
       "keyDeltas": [
-        0,
-        48,
-        99,
-        121,
-        681
+        1,
+        78,
+        115,
+        64,
+        116
       ],
       "scroll": 0,
       "pointerHumanized": true
@@ -79,7 +81,7 @@
     {
       "method": "locator.press",
       "path": "option-c",
-      "moves": 81,
+      "moves": 64,
       "movesTrusted": true,
       "keys": 1,
       "keysTrusted": true,
