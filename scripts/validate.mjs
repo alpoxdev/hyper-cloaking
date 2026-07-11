@@ -4,6 +4,8 @@ import {
   MANAGED_EXCLUDED_SEGMENTS,
   OWNED_CANONICAL_MANIFEST
 } from '../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/lib/sync-mirror.mjs';
+import { enumerateMjsFiles } from './jsdoc-inventory.mjs';
+import { analyzeFile } from './audit-jsdoc.mjs';
 
 const root = process.cwd();
 const pluginRoot = 'plugins/hyper-cloaking';
@@ -308,7 +310,7 @@ function validateEngineOnlyMigration() {
 // Deliberate-bump tripwire: the number of *.test.mjs files expected under
 // tests/unit/engine/. Bump this constant only when engine unit tests are
 // intentionally added or removed, so an accidental drop is caught here.
-const TESTS_BASELINE = 30;
+const TESTS_BASELINE = 32;
 
 function countTestFiles(start) {
   if (!existsSync(fullPath(start))) return 0;
@@ -611,6 +613,15 @@ const hyperCanonicalDir = `${pluginRoot}/skills/hyper-cloaking`;
 assertDirectorySame(hyperCanonicalDir, '.agents/skills/hyper-cloaking');
 assertDirectorySame(hyperCanonicalDir, '.claude/skills/hyper-cloaking');
 assertDirectorySame(hyperCanonicalDir, 'skills/hyper-cloaking');
+
+const hyperModules = enumerateMjsFiles(hyperCanonicalDir);
+for (const relativePath of hyperModules) {
+  const modulePath = `${hyperCanonicalDir}/${relativePath}`;
+  const source = readFileSync(fullPath(modulePath), 'utf8');
+  if (!source.includes('/**')) fail(`${modulePath} must contain high-signal JSDoc`);
+  const analysis = analyzeFile(fullPath(modulePath));
+  if (analysis.error) fail(`${modulePath} JSDoc audit parse failure: ${analysis.error.message}`);
+}
 
 const expectedSkillDirs = [...skillNames].toSorted();
 for (const dir of [`${pluginRoot}/skills`, '.agents/skills', '.claude/skills', 'skills']) {
