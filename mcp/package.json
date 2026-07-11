@@ -1,0 +1,26 @@
+{
+  "name": "hyper-cloaking-mcp",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Stateful stdio MCP server exposing the hyper-cloaking CloakBrowser engine as typed tools.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "hyper-cloaking-mcp": "./dist/server.mjs"
+  },
+  "main": "./src/server.mjs",
+  "scripts": {
+    "build": "esbuild src/server.mjs --bundle --platform=node --format=esm --target=node20 --outfile=dist/server.mjs --external:cloakbrowser --external:playwright-core --banner:js=\"#!/usr/bin/env node\"",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "ajv": "^8.20.0",
+    "hyper-cloaking-engine": "*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
+}
