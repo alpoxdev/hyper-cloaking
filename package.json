@@ -16,7 +16,7 @@
     "lint:fix": "oxlint --fix plugins scripts tests",
     "test": "node --test tests/e2e/*.test.mjs && cd tests/unit/engine && node --test",
     "engine:validate": "node skills/hyper-cloaking/engine/cli.mjs validate --json",
-    "mcp:test": "node --test --test-timeout=120000 mcp/test/*.test.mjs",
+    "mcp:test": "node --test --test-concurrency=1 --test-timeout=120000 mcp/test/*.test.mjs",
     "build": "npm --workspace mcp run build",
     "ci": "npm run validate && npm run lint && npm run format:check && npm test && npm run engine:validate && npm run mcp:test",
     "ci:compat": "npm test && npm run engine:validate && npm run mcp:test",
