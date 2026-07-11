@@ -34,6 +34,11 @@ jobs:
         run: npm ci --ignore-scripts --no-audit
       - name: Build managed MCP server
         run: npm run build
+      - name: Enable Chromium sandbox support
+        run: |
+          if sysctl kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
       - name: Run quality gates
         run: npm run ci
 
@@ -56,5 +61,10 @@ jobs:
         run: npm ci --ignore-scripts --no-audit
       - name: Build managed MCP server
         run: npm run build
+      - name: Enable Chromium sandbox support
+        run: |
+          if sysctl kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
       - name: Run compatibility gates
         run: npm run ci:compat
