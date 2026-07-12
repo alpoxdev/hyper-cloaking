@@ -11,6 +11,7 @@
   "scripts": {
     "validate": "node scripts/validate.mjs",
     "jsdoc:check": "node scripts/audit-jsdoc.mjs check",
+    "mcp:jsdoc:check": "node scripts/audit-jsdoc.mjs check mcp",
     "skills:list": "npx skills add . --list",
     "lint": "oxlint plugins scripts tests",
     "lint:fix": "oxlint --fix plugins scripts tests",

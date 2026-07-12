@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "kind": "api-package-test-report",
+  "status": "passed",
+  "approvedPlan": ".gjc/_session-019f53ec-d5ca-7000-9645-641aa8c491c0/plans/ralplan/019f53ec-d5ca-7000-9645-641aa8c491c0/pending-approval.md",
+  "commands": [
+    "npm run build",
+    "npm run ci",
+    "npm run mcp:jsdoc:check",
+    "npm run jsdoc:check",
+    "git diff --check"
+  ],
+  "results": {
+    "build": "passed",
+    "validate": "passed",
+    "lint": "passed",
+    "formatCheck": "passed",
+    "rootE2eTests": 5,
+    "engineTests": 332,
+    "engineValidate": "passed",
+    "mcpTests": 55,
+    "mcpStrictJsdocFiles": 14,
+    "allTargetJsdocFiles": 105,
+    "diffCheck": "passed",
+    "commentOnlyMcpSourceProof": "14 of 14 modules passed"
+  },
+  "cleanupReport": {
+    "title": "AI SLOP CLEANUP REPORT",
+    "scope": "All changed MCP source, audit/inventory tooling, contract tests, benchmark harness, package scripts, and generated evidence artifacts",
+    "mode": "read-only detector/report; no edits performed during final pass",
+    "blockingFindings": [],
+    "advisoryFindings": [],
+    "fallbackFindings": [
+      "Optional bundle and lock-file absence are grounded compatibility fallbacks limited to ENOENT; other errors propagate."
+    ],
+    "uiDesignFindings": "N/A",
+    "missingTestFindings": [],
+    "recursionGuard": "confirmed no nested workflows spawned by cleaner",
+    "gateResult": "PASS",
+    "remainingRisks": [
+      "Machine-local timing remains non-CI evidence; no runtime optimization candidate was retained."
+    ]
+  },
+  "architectReview": {
+    "architectureStatus": "CLEAR",
+    "productStatus": "CLEAR",
+    "codeStatus": "CLEAR",
+    "recommendation": "APPROVE",
+    "blockers": []
+  },
+  "executorQa": {
+    "status": "passed",
+    "e2eStatus": "passed",
+    "redTeamStatus": "passed",
+    "covered": [
+      "strict audit target/default export/exemption failures",
+      "tool order/schema/singleton/FIFO contracts",
+      "benchmark no-overlap/revision identity/resource failures",
+      "typed fail-closed errors",
+      "public mutation approval gate",
+      "rejected performance candidate rollback"
+    ],
+    "blockers": []
+  },
+  "artifactRefs": [
+    "artifacts/mcp-benchmark-baseline.json",
+    "artifacts/mcp-benchmark-candidate-c001.json",
+    "artifacts/mcp-registration-c001-comparison.json",
+    "artifacts/mcp-registration-c002-comparison.json",
+    "artifacts/mcp-public-api-migration-analysis.json"
+  ]
+}

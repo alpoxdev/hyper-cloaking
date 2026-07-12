@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "status": "analysis-only",
+  "breakingMutationApproved": false,
+  "packageSurface": {
+    "name": "@alpoxdev/hyper-cloaking",
+    "version": "0.0.1",
+    "bin": { "hyper-cloaking-mcp": "dist/server.mjs" },
+    "main": "./dist/server.mjs",
+    "files": ["dist"],
+    "node": ">=20",
+    "packageSha256": "68f1abc3e11fccab8270210ad1a90ab9624c6b2afeea36908734761f90d6e2e3"
+  },
+  "moduleExports": {
+    "error-signal.mjs": ["defineTool", "jsonResult", "mapErrorToSignal", "redactMessage"],
+    "guardrail-bridge.mjs": ["buildWriteOpts", "classifyWriteResult", "hashHex"],
+    "register.mjs": ["generateAllServerRegistrations", "generateServerRegistration", "normalizeClient", "SERVER_ID", "serverCommand"],
+    "server.mjs": ["createServer", "main", "SERVER_INFO"],
+    "session-manager.mjs": ["createSessionManager"],
+    "snapshot-resolver.mjs": ["resolveTarget", "takeAriaSnapshot"],
+    "tools/cookies.mjs": ["cookiesListTool", "cookiesStatusTool"],
+    "tools/credentials.mjs": ["credentialsTool"],
+    "tools/index.mjs": ["allTools", "sessionManager"],
+    "tools/interact.mjs": ["makeInteractTools"],
+    "tools/lifecycle.mjs": ["makeLifecycleTools"],
+    "tools/navigate.mjs": ["makeNavigateTool"],
+    "tools/providers.mjs": ["buildProviderCapabilities", "makeProviderReadTool", "makeProviderWriteTool", "providerCapabilitiesTool"],
+    "tools/setup.mjs": ["makeStatusTool", "setupTool"]
+  },
+  "toolContract": {
+    "orderedNames": ["cloak_setup", "cloak_status", "cloak_cookies_list", "cloak_cookies_status", "cloak_provider_capabilities", "cloak_launch", "cloak_teardown", "cloak_navigate", "cloak_snapshot", "cloak_click", "cloak_type", "cloak_scroll", "cloak_screenshot", "cloak_provider_read", "cloak_provider_write", "cloak_credentials"],
+    "descriptorSha256": "4265672e9795db9cf14f83709d1ec798402bfc773df26694f9d740a39f3df105"
+  },
+  "registrationContract": {
+    "targets": ["direct", "codex", "json", "claudeCode", "gajaeCode", "openclaw", "hermes", "hermesAgent"],
+    "registrationSha256": "0c8dd98ec4c6c6f92faf7340b7ca6d6028ca0ae54a877cf25f2eef507c51362c"
+  },
+  "candidates": [
+    {
+      "surface": "source-level helper exports",
+      "examples": ["jsonResult", "serverCommand", "SERVER_INFO", "sessionManager", "buildProviderCapabilities"],
+      "classification": "potential breaking change",
+      "evidence": "Several are consumed by repository tests or runtime modules; absence of additional local consumers does not prove external non-use.",
+      "migrationOptions": ["retain", "deprecate then remove in a major release", "retain compatibility alias"],
+      "recommendation": "retain until a separately approved migration plan defines export maps, deprecation period, semver, consumer tests, and rollback"
+    },
+    {
+      "surface": "tool catalog and schemas",
+      "classification": "protocol-breaking",
+      "evidence": "Sixteen ordered tools are registration and client contracts.",
+      "migrationOptions": ["additive versioned tool", "dual-schema compatibility window", "major removal"],
+      "recommendation": "no mutation in this execution"
+    },
+    {
+      "surface": "package bin/main/files and eight registration formats",
+      "classification": "distribution-breaking",
+      "evidence": "Published consumers and client configuration resolve these exact surfaces.",
+      "migrationOptions": ["versioned parallel entry", "documented config migration", "major replacement"],
+      "recommendation": "no mutation in this execution"
+    }
+  ],
+  "requiredFutureGate": {
+    "plan": "separate migration/versioning/compatibility plan",
+    "reviews": ["Architect CLEAR/APPROVE", "Critic OKAY"],
+    "approval": "explicit user approval",
+    "verification": ["consumer/package tests", "eight-target registration tests", "deprecation/rollback tests"]
+  }
+}

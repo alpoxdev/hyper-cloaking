@@ -1,4 +1,6 @@
 /**
+ * @module server
+ *
  * hyper-cloaking-mcp — stateful stdio MCP server exposing the CloakBrowser
  * engine as typed tools.
  *
@@ -9,13 +11,15 @@
  */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema
-} from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { allTools } from './tools/index.mjs';
+/**
+ * MCP implementation identity advertised during initialization.
+ *
+ * @type {{ name: string, version: string }}
+ */
 
 export const SERVER_INFO = { name: 'hyper-cloaking-mcp', version: '0.0.1' };
 
@@ -63,8 +67,7 @@ export async function main() {
   await server.connect(transport);
 }
 
-const isMain =
-  process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isMain) {
   main().catch((error) => {
     process.stderr.write(`hyper-cloaking-mcp failed to start: ${error?.stack || error}\n`);

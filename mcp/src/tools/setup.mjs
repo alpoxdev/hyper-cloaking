@@ -1,4 +1,6 @@
 /**
+ * @module setup
+ *
  * Read-only, session-less setup + status tools (Phase 1).
  */
 import fs from 'node:fs/promises';
@@ -51,6 +53,11 @@ async function guardStorePresent(stateDir) {
   }
 }
 
+/**
+ * Creates the setup tool descriptor.
+ *
+ * @type {object}
+ */
 export const setupTool = defineTool({
   name: 'cloak_setup',
   description:
@@ -101,7 +108,12 @@ export function makeStatusTool(manager) {
         status: 'ok',
         workspace: paths.root,
         session: snap.active
-          ? { account: snap.account, createdAt: snap.createdAt, lastUsedAt: snap.lastUsedAt, pendingClaims: snap.pendingClaims }
+          ? {
+              account: snap.account,
+              createdAt: snap.createdAt,
+              lastUsedAt: snap.lastUsedAt,
+              pendingClaims: snap.pendingClaims
+            }
           : null,
         queue: { active: snap.active, depth: snap.queueDepth },
         guardrailStore: { present: await guardStorePresent(paths.stateDir) }

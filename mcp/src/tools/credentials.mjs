@@ -1,4 +1,6 @@
 /**
+ * @module credentials
+ *
  * Owner-managed credential tools (Phase 4): cloak_credentials.
  *
  * Reads delegate to credentials.mjs, which returns ONLY redacted profile
@@ -6,9 +8,18 @@
  * A reveal request is refused with needs-confirmation (host-only, never served
  * by the MCP server).
  */
-import { listCredentialProfiles, inspectCredentialProfile } from 'hyper-cloaking-engine/credentials.mjs';
+import {
+  listCredentialProfiles,
+  inspectCredentialProfile
+} from 'hyper-cloaking-engine/credentials.mjs';
 import { defineTool } from '../error-signal.mjs';
 
+/**
+ * Exposes owner-managed credential metadata operations; cleartext reveal is
+ * fail-closed as a host-only confirmation result.
+ *
+ * @type {object}
+ */
 export const credentialsTool = defineTool({
   name: 'cloak_credentials',
   description:
@@ -21,7 +32,10 @@ export const credentialsTool = defineTool({
       op: { type: 'string', enum: ['list', 'inspect', 'reveal'] },
       provider: { type: 'string' },
       profileId: { type: 'string' },
-      workspace: { type: 'string', description: 'Credential home (defaults to the runtime workspace).' }
+      workspace: {
+        type: 'string',
+        description: 'Credential home (defaults to the runtime workspace).'
+      }
     }
   },
   async handler(input) {
@@ -31,7 +45,8 @@ export const credentialsTool = defineTool({
       return { status: 'ok', op: 'list', profiles };
     }
     if (input.op === 'inspect') {
-      if (!input.profileId) return { status: 'invalid-args', message: 'inspect requires profileId.' };
+      if (!input.profileId)
+        return { status: 'invalid-args', message: 'inspect requires profileId.' };
       const profile = await inspectCredentialProfile({ home, profileId: input.profileId });
       return profile
         ? { status: 'ok', op: 'inspect', profile }

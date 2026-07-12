@@ -1,4 +1,6 @@
 /**
+ * @module navigate
+ *
  * Navigation tool (Phase 2): cloak_navigate.
  *
  * target-safety is a precondition enforced with the NON-throwing classifyTargetUrl

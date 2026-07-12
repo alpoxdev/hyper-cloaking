@@ -1,4 +1,6 @@
 /**
+ * @module interact
+ *
  * Generic browser interaction tools (Phase 2):
  * cloak_snapshot / cloak_click / cloak_type / cloak_scroll / cloak_screenshot.
  *
@@ -18,6 +20,12 @@ import {
 import { defineTool } from '../error-signal.mjs';
 import { takeAriaSnapshot, resolveTarget } from '../snapshot-resolver.mjs';
 
+/**
+ * Shared ref/selector target schema for interaction tools.
+ *
+ * @type {object}
+ * @private
+ */
 const TARGET_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -32,7 +40,8 @@ const TARGET_SCHEMA = {
  * Builds the interaction tool descriptors bound to a session manager.
  *
  * @param {ReturnType<import('../session-manager.mjs').createSessionManager>} manager Session manager.
- * @returns {Array<object>} Interaction tool descriptors.
+ * @returns {Array<object>} Interaction tool descriptors, in stable snapshot/click/type/scroll/screenshot order.
+ * @sideeffects Registers no global state; each descriptor uses the supplied manager's serialized session.
  */
 export function makeInteractTools(manager) {
   const snapshotTool = defineTool({
@@ -73,7 +82,8 @@ export function makeInteractTools(manager) {
 
   const typeTool = defineTool({
     name: 'cloak_type',
-    description: 'Type text into a ref/selector target through the engine humanized keystroke path.',
+    description:
+      'Type text into a ref/selector target through the engine humanized keystroke path.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
@@ -119,7 +129,8 @@ export function makeInteractTools(manager) {
 
   const screenshotTool = defineTool({
     name: 'cloak_screenshot',
-    description: 'Capture a screenshot into the workspace evidence dir. Returns a redacted evidence ref (path only).',
+    description:
+      'Capture a screenshot into the workspace evidence dir. Returns a redacted evidence ref (path only).',
     inputSchema: {
       type: 'object',
       additionalProperties: false,

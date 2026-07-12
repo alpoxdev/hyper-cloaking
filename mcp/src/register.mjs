@@ -1,4 +1,6 @@
 /**
+ * @module register
+ *
  * Client registration renderer for the hyper-cloaking-mcp server.
  *
  * Mirrors the shapes in engine/mcp-config.mjs (which configure the EXTERNAL
@@ -11,9 +13,21 @@ import { fileURLToPath } from 'node:url';
 
 const LOCAL_SERVER_PATH = fileURLToPath(new URL('../dist/server.mjs', import.meta.url));
 
+/**
+ * Public server identifier used in every client registration.
+ *
+ * @type {string}
+ */
 export const SERVER_ID = 'hyper-cloaking-mcp';
-
+/**
+ * Supported client aliases resolved by {@link normalizeClient}.
+ *
+ * @type {Record<string, string>}
+ * @private
+ */
 const CLIENT_ALIASES = { claude: 'claude-code', gjc: 'gajae-code' };
+// Canonical client identifiers accepted by the renderer.
+
 const SUPPORTED = new Set([
   'direct',
   'codex',
@@ -51,6 +65,13 @@ export function serverCommand(options = {}) {
   };
 }
 
+/**
+ * Quotes command parts for safe shell display without executing them.
+ *
+ * @param {Array<unknown>} parts Command and argument values.
+ * @returns {string} Shell-escaped display command.
+ */
+
 function shellJoin(parts) {
   return parts
     .map((part) => {
@@ -62,18 +83,45 @@ function shellJoin(parts) {
     .join(' ');
 }
 
+/**
+ * Builds the JSON MCP server configuration shape.
+ *
+ * @param {{ command: string, args: string[] }} spec Launch command specification.
+ * @returns {{ mcpServers: Record<string, { command: string, args: string[] }> }} JSON configuration.
+ */
+
 function jsonMcpServers(spec) {
   return { mcpServers: { [SERVER_ID]: { command: spec.command, args: spec.args } } };
 }
+
+/**
+ * Builds the OpenClaw-managed MCP configuration shape.
+ *
+ * @param {{ command: string, args: string[] }} spec Launch command specification.
+ * @returns {{ mcp: { servers: Record<string, { command: string, args: string[] }> }} OpenClaw configuration.
+ */
 
 function openClawConfig(spec) {
   return { mcp: { servers: { [SERVER_ID]: { command: spec.command, args: spec.args } } } };
 }
 
+/**
+ * Builds the Codex TOML MCP configuration text.
+ *
+ * @param {{ command: string, args: string[] }} spec Launch command specification.
+ * @returns {string} TOML configuration.
+ */
+
 function codexTomlConfig(spec) {
   return `[mcp_servers.${SERVER_ID}]\ncommand = ${JSON.stringify(spec.command)}\nargs = ${JSON.stringify(spec.args)}\n`;
 }
 
+/**
+ * Builds the Hermes YAML MCP configuration text.
+ *
+ * @param {{ command: string, args: string[] }} spec Launch command specification.
+ * @returns {string} YAML configuration.
+ */
 function hermesYamlConfig(spec) {
   const args = spec.args.map((a) => `      - ${JSON.stringify(a)}`).join('\n');
   return `mcp_servers:\n  ${SERVER_ID}:\n    command: ${JSON.stringify(spec.command)}\n    args:\n${args}\n    idle_timeout_seconds: 300\n`;

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "candidate": "C002",
+  "scenario": "generateAllServerRegistrations with shell-escaping inputs",
+  "workloadIterations": 5000,
+  "samples": 30,
+  "baseline": {
+    "medianMs": 12.924333999999988,
+    "p95Ms": 13.977333000000002
+  },
+  "candidateResult": {
+    "medianMs": 11.931708999999955,
+    "p95Ms": 12.77350000000007
+  },
+  "improvement": {
+    "medianPercent": 7.680279695650338,
+    "p95Percent": 8.612751803222631
+  },
+  "threshold": {
+    "medianPercent": 10,
+    "p95Percent": 15,
+    "rule": "median OR p95"
+  },
+  "accepted": false,
+  "action": "revert candidate",
+  "reason": "Neither predeclared performance threshold was met."
+}

@@ -1,4 +1,6 @@
 /**
+ * @module guardrail-bridge
+ *
  * Guardrail bridge for provider writes.
  *
  * The ENGINE write actions already own the atomic guardrail sequence

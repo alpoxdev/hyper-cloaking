@@ -25,6 +25,7 @@
   "scripts": {
     "build": "esbuild src/server.mjs --bundle --platform=node --format=esm --target=node20 --outfile=dist/server.mjs --external:cloakbrowser --external:playwright-core --banner:js=\"#!/usr/bin/env node\"",
     "test": "node --test test/*.test.mjs",
+    "bench": "node bench.mjs",
     "prepack": "npm run build"
   },
   "dependencies": {

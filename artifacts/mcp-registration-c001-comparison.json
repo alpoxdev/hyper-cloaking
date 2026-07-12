@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "candidate": "C001",
+  "scenario": "generateAllServerRegistrations repeated workload",
+  "workloadIterations": 5000,
+  "samples": 30,
+  "baseline": {
+    "medianMs": 7.434249999999992,
+    "p95Ms": 8.711833000000013
+  },
+  "candidateResult": {
+    "medianMs": 6.389959000000033,
+    "p95Ms": 7.417708000000005
+  },
+  "improvement": {
+    "medianPercent": 14.04702559101402,
+    "p95Percent": 14.85479577030467
+  },
+  "timingThresholdMet": true,
+  "accepted": false,
+  "action": "rolled-back",
+  "reason": "The implementation changed exported function source signatures and failed the stronger immutable public-surface manifest gate.",
+  "behavioralEvidence": [
+    "mcp/test/register.contract.test.mjs",
+    "mcp/test/tools.contract.test.mjs"
+  ]
+}

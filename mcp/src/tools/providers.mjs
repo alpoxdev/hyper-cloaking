@@ -1,4 +1,6 @@
 /**
+ * @module providers
+ *
  * Provider read tool (Phase 3): cloak_provider_read.
  *
  * Provider resolution goes through the fail-closed facade (resolveProviderForUrl
@@ -34,6 +36,16 @@ import { buildWriteOpts, classifyWriteResult } from '../guardrail-bridge.mjs';
 // Per-provider READ allowlist + action namespace + session builder. Only these
 // names are dispatchable through cloak_provider_read; every write/helper name is
 // refused at the boundary.
+/**
+ * Provider dispatch catalog.
+ *
+ * @type {Record<string, {
+ *   actions: Record<string, Function>,
+ *   buildSession: Function,
+ *   reads: Set<string>,
+ *   writes: Set<string>
+ * }>}
+ */
 const PROVIDERS = {
   instagram: {
     actions: instagramActions,

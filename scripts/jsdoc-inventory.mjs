@@ -3,6 +3,43 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 export const CANONICAL_ROOT = 'plugins/hyper-cloaking/skills/hyper-cloaking';
+export const CANONICAL_TARGETS = [
+  { key: 'skills', root: CANONICAL_ROOT },
+  { key: 'mcp', root: 'mcp/src' }
+];
+export function canonicalTarget(key) {
+  return CANONICAL_TARGETS.find((target) => target.key === key);
+}
+export function selectCanonicalTargets(selection = 'all') {
+  const keys =
+    selection === 'all' || selection == null
+      ? ['skills', 'mcp']
+      : Array.isArray(selection)
+        ? selection
+        : [selection];
+  if (keys.some((key) => !canonicalTarget(key))) throw new Error('unknown-audit-target');
+  return keys.map((key) => canonicalTarget(key));
+}
+export function buildTargetManifest(target) {
+  if (!target || !target.root || !target.key || !canonicalTarget(target.key))
+    throw new Error('unknown-audit-target');
+  if (!fs.existsSync(target.root) || !fs.statSync(target.root).isDirectory())
+    throw new Error('target-root-missing');
+  const paths = enumerateMjsFiles(target.root);
+  if (!paths.length) throw new Error('target-empty');
+  return {
+    key: target.key,
+    canonicalRoot: target.root,
+    paths,
+    discoveredCount: paths.length,
+    pathTextSha256: sha256(`${paths.join('\n')}\n`)
+  };
+}
+export function generateTargetManifests(selection = 'all') {
+  return selectCanonicalTargets(selection).map(buildTargetManifest);
+}
+export const selectAuditTargets = selectCanonicalTargets;
+export const resolveCanonicalTargets = selectCanonicalTargets;
 export const MIRROR_ROOTS = [
   '.agents/skills/hyper-cloaking',
   '.claude/skills/hyper-cloaking',

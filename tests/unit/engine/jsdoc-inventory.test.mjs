@@ -9,7 +9,9 @@ import {
   validateInventoryArtifact,
   validateSliceArtifact,
   serializeCanonicalJson,
-  validateRelativeModulePath
+  validateRelativeModulePath,
+  selectCanonicalTargets,
+  buildTargetManifest
 } from '../../../scripts/jsdoc-inventory.mjs';
 
 async function fixture() {
@@ -68,4 +70,28 @@ test('slices form a sorted, non-overlapping complete partition', async (t) => {
       inventory
     )
   );
+});
+test('canonical target selection is shared and rejects unknown, missing, and empty targets', async (t) => {
+  assert.deepEqual(
+    selectCanonicalTargets('mcp').map((target) => target.key),
+    ['mcp']
+  );
+  assert.deepEqual(
+    selectCanonicalTargets('all').map((target) => target.key),
+    ['skills', 'mcp']
+  );
+  assert.throws(() => selectCanonicalTargets('unknown'), /unknown-audit-target/);
+
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'jsdoc-target-'));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  assert.throws(
+    () => buildTargetManifest({ key: 'mcp', root: path.join(root, 'missing') }),
+    /target-root-missing/
+  );
+  await fs.mkdir(path.join(root, 'empty'), { recursive: true });
+  assert.throws(
+    () => buildTargetManifest({ key: 'mcp', root: path.join(root, 'empty') }),
+    /target-empty/
+  );
+  assert.throws(() => buildTargetManifest({ key: 'other', root }), /unknown-audit-target/);
 });

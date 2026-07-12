@@ -168,33 +168,152 @@ export function analyzeFile(file) {
   }
 }
 
+function isJsdoc(comment) {
+  return comment.type === 'Block' && comment.value.startsWith('*');
+}
+function commentText(comment) {
+  return comment.value
+    .replace(/^\*/, '')
+    .split('\n')
+    .map((line) => line.replace(/^\s*\*\s?/, ''))
+    .join('\n')
+    .trim();
+}
+function directJsdoc(result, node) {
+  return result.comments.find(
+    (comment) =>
+      isJsdoc(comment) &&
+      !/^@module(?:\s|$)/.test(commentText(comment)) &&
+      comment.end <= node.start &&
+      /^\s*(?:export(?:\s+default)?\s*)?$/.test(result.source.slice(comment.end, node.start))
+  );
+}
+function precedingPhaseComment(result, node) {
+  return result.comments.some(
+    (comment) =>
+      comment.type === 'Line' &&
+      comment.end <= node.start &&
+      /^\s*(?:\/\*\*[\s\S]*?\*\/\s*)*$/.test(result.source.slice(comment.end, node.start)) &&
+      /phase[1-4]\b/i.test(comment.value)
+  );
+}
+function topLevelTargets(ast) {
+  const targets = [];
+  for (const node of ast.body || []) {
+    if (node.type === 'ExportAllDeclaration') targets.push({ node, kind: 'reexport' });
+    if (node.type === 'ExportNamedDeclaration' && node.specifiers?.length)
+      targets.push({ node, kind: 'reexport' });
+    if (node.type === 'ExportDefaultDeclaration') {
+      targets.push({ node, declaration: node.declaration, kind: 'export' });
+      continue;
+    }
+    const declaration = node.type === 'ExportNamedDeclaration' ? node.declaration : node;
+    if (!declaration) continue;
+    const exported = node.type === 'ExportNamedDeclaration';
+    if (declaration.type === 'FunctionDeclaration' || declaration.type === 'ClassDeclaration')
+      targets.push({ node, declaration, kind: exported ? 'export' : 'internal' });
+    else if (declaration.type === 'VariableDeclaration') {
+      for (const item of declaration.declarations || []) {
+        const init = item.init;
+        const major =
+          init &&
+          [
+            'FunctionExpression',
+            'ArrowFunctionExpression',
+            'ClassExpression',
+            'ObjectExpression'
+          ].includes(init.type);
+        if (major || exported)
+          targets.push({ node, declaration: item, kind: exported ? 'export' : 'internal' });
+      }
+    }
+  }
+  return targets;
+}
+function descriptorClassification(target) {
+  const init = target.declaration?.init;
+  if (init?.type !== 'ObjectExpression') return null;
+  const properties = new Map(
+    init.properties
+      .filter((item) => item.type === 'Property' && !item.computed)
+      .map((item) => [item.key.type === 'Identifier' ? item.key.name : item.key.value, item.value])
+  );
+  const name = properties.get('name');
+  return name?.type === 'Literal' && typeof name.value === 'string' && properties.has('inputSchema')
+    ? 'descriptor'
+    : null;
+}
+function strictErrors(result) {
+  const errors = [];
+  const body = result.ast.body || [];
+  const headers = result.comments.filter(
+    (comment) => isJsdoc(comment) && /^@module(?:\s|$)/.test(commentText(comment))
+  );
+  const header = headers[0];
+  if (!header) errors.push({ code: 'missing-module-header', path: result.path });
+  else {
+    if (headers.length > 1) errors.push({ code: 'duplicate-module-header', path: result.path });
+    const before = result.source.slice(0, header.start);
+    const firstCode = body.find((node) => node.type !== 'EmptyStatement' && !node.directive);
+    if (
+      (firstCode && header.start > firstCode.start) ||
+      !/^(?:#![^\n]*(?:\n|$)|\s*(?:['"][^'"]*['"];\s*)*)*$/.test(before)
+    )
+      errors.push({ code: 'misplaced-module-header', path: result.path });
+  }
+  const targets = topLevelTargets(result.ast);
+  for (const target of targets) {
+    const jsdoc = directJsdoc(result, target.node);
+    const text = jsdoc && commentText(jsdoc);
+    const exempt = text && /^@jsdoc-exempt internal-top-level [a-z0-9]+(?:-[a-z0-9]+)*$/.test(text);
+    if (target.kind === 'reexport' && !jsdoc)
+      errors.push({ code: 'missing-reexport-jsdoc', path: result.path });
+    else if (target.kind === 'export' && !jsdoc)
+      errors.push({ code: 'missing-export-jsdoc', path: result.path });
+    else if (target.kind === 'internal' && !jsdoc && !exempt)
+      errors.push({ code: 'missing-internal-jsdoc', path: result.path });
+    if (text?.startsWith('@jsdoc-exempt') && !exempt)
+      errors.push({ code: 'invalid-exemption', path: result.path });
+    if (exempt && target.kind !== 'internal')
+      errors.push({ code: 'export-exemption-forbidden', path: result.path });
+    if (
+      target.declaration?.id?.name &&
+      /^phase[1-4]$/i.test(target.declaration.id.name) &&
+      !precedingPhaseComment(result, target.node)
+    )
+      errors.push({ code: 'missing-phase-comment', path: result.path });
+  }
+  for (const comment of result.comments) {
+    if (!isJsdoc(comment) || /^@module(?:\s|$)/.test(commentText(comment))) continue;
+    const next = targets.find((target) => target.node.start >= comment.end)?.node;
+    const gap = next ? result.source.slice(comment.end, next.start) : '';
+    comment.attached = !!(next && /^\s*$/.test(gap));
+    if (!comment.attached && !commentText(comment).startsWith('@jsdoc-exempt'))
+      errors.push({ code: 'comment-attachment-gap', path: result.path });
+    if (commentText(comment).startsWith('@jsdoc-exempt') && !comment.attached)
+      errors.push({ code: 'unattached-exemption', path: result.path });
+  }
+  return errors;
+}
 export async function auditJsdoc({ files = [] } = {}) {
   const results = files.map((file) => {
     const result = analyzeFile(file);
     if (result.error) return { ...result, exports: [], errors: [result.error] };
+    const errors = strictErrors(result);
     const nodes = walk(result.ast);
-    const errors = [];
-    for (const comment of result.comments) {
-      const jsdoc = comment.type === 'Block' && comment.value.startsWith('*');
-      const next = nodes.find((node) => node.start >= comment.end);
-      const gap = next ? result.source.slice(comment.end, next.start) : '';
-      comment.attached = !!(jsdoc && next && /^(?:\s*export(?:\s+default)?\s*)?$/.test(gap));
-      if (jsdoc && !comment.attached && !/^\s*module\b/i.test(comment.value)) {
-        comment.attachmentError = 'comment-attachment-gap';
-        errors.push({ code: comment.attachmentError, path: file });
-      }
-    }
-    if (
-      nodes.length &&
-      !result.comments.some(
-        (comment) =>
-          comment.type === 'Block' &&
-          comment.value.startsWith('*') &&
-          /^\s*module\b/i.test(comment.value)
-      )
-    )
-      errors.push({ code: 'missing-module-header', path: file });
-    return { ...result, documentableCount: nodes.length, exports: result.exportSignatures, errors };
+    return {
+      ...result,
+      documentableCount: nodes.length,
+      exports: result.exportSignatures,
+      descriptors: topLevelTargets(result.ast)
+        .filter((target) => descriptorClassification(target))
+        .map((target) => ({
+          path: file,
+          classification: descriptorClassification(target),
+          kind: target.kind
+        })),
+      errors
+    };
   });
   return { files: results, errors: results.flatMap((result) => result.errors || []) };
 }
@@ -291,22 +410,33 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       process.exitCode = 1;
     }
   } else if (command === 'check') {
-    const { CANONICAL_ROOT, enumerateMjsFiles } = await import('./jsdoc-inventory.mjs');
-    const moduleFiles = enumerateMjsFiles(CANONICAL_ROOT).map(
-      (relative) => `${CANONICAL_ROOT}/${relative}`
-    );
-    const failures = [];
-    for (const file of moduleFiles) {
-      const source = fs.readFileSync(file, 'utf8');
-      if (!source.includes('/**')) failures.push({ code: 'missing-jsdoc', path: file });
-      const result = analyzeFile(file);
-      if (result.error) failures.push(result.error);
-    }
-    if (failures.length) {
-      console.error(JSON.stringify({ valid: false, failures }, null, 2));
+    const { generateTargetManifests } = await import('./jsdoc-inventory.mjs');
+    try {
+      const selection = process.argv[3] || 'all';
+      const manifests = generateTargetManifests(selection);
+      const failures = [];
+      let count = 0;
+      for (const manifest of manifests) {
+        for (const relative of manifest.paths) {
+          const file = `${manifest.canonicalRoot}/${relative}`;
+          count += 1;
+          const result = analyzeFile(file);
+          if (result.error) failures.push(result.error);
+          else if (manifest.key === 'mcp') failures.push(...strictErrors(result));
+          else if (!result.source.includes('/**'))
+            failures.push({ code: 'missing-jsdoc', path: file });
+        }
+      }
+      if (failures.length) {
+        console.error(JSON.stringify({ valid: false, failures }, null, 2));
+        process.exitCode = 1;
+      } else
+        console.log(
+          JSON.stringify({ valid: true, files: count, targets: manifests.map((item) => item.key) })
+        );
+    } catch (error) {
+      console.error(JSON.stringify({ valid: false, failures: [{ code: error.message }] }, null, 2));
       process.exitCode = 1;
-    } else {
-      console.log(JSON.stringify({ valid: true, files: moduleFiles.length }));
     }
   } else {
     console.error('usage: audit <files...> | verify <baseline> <files...> | check');

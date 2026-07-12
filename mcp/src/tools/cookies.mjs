@@ -1,4 +1,6 @@
 /**
+ * @module cookies
+ *
  * Read-only, session-less cookie inspection tools (Phase 1).
  *
  * Cookie VALUES are never returned: every record is passed through the engine's
@@ -13,6 +15,12 @@ import {
 } from 'hyper-cloaking-engine';
 import { defineTool } from '../error-signal.mjs';
 
+/**
+ * Shared input schema for URL-based cookie selection and status tools.
+ *
+ * @type {object}
+ * @private
+ */
 const SELECTION_SCHEMA = {
   type: 'object',
   additionalProperties: false,
@@ -29,7 +37,8 @@ const SELECTION_SCHEMA = {
  * Loads the workspace cookie config and selects records for a URL.
  *
  * @param {{ url: string, site?: string, account?: string, workspace?: string }} input Selection input.
- * @returns {Promise<ReturnType<typeof selectCookieRecords>>} Selection result.
+ * @returns {Promise<ReturnType<typeof selectCookieRecords>>} Selection result, including a fail-closed account ambiguity signal.
+ * @private
  */
 async function selectFor(input) {
   const paths = workspacePaths(input.workspace);
@@ -37,6 +46,11 @@ async function selectFor(input) {
   return selectCookieRecords(config, input.url, { site: input.site, account: input.account });
 }
 
+/**
+ * Lists selected cookie records with values redacted before returning them.
+ *
+ * @type {object}
+ */
 export const cookiesListTool = defineTool({
   name: 'cloak_cookies_list',
   description:
@@ -60,6 +74,11 @@ export const cookiesListTool = defineTool({
   }
 });
 
+/**
+ * Summarizes selected cookie coverage without returning individual records.
+ *
+ * @type {object}
+ */
 export const cookiesStatusTool = defineTool({
   name: 'cloak_cookies_status',
   description:

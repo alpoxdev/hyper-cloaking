@@ -1,4 +1,6 @@
 /**
+ * @module session-manager
+ *
  * Single-session lifecycle + a per-session FIFO queue over EVERY session-touching
  * call. The guardrail lock protects write dispatch but not page-state coherence,
  * so navigate/snapshot/click/type/scroll/screenshot/provider/teardown all run
@@ -25,13 +27,7 @@ export function createSessionManager(options = {}) {
   let pending = 0;
   let idleTimer = null;
 
-  /**
-   * Runs a function exclusively behind the FIFO queue.
-   *
-   * @param {() => Promise<any>} fn Work to serialize.
-   * @param {{ bypassBusyBound?: boolean }} [opts] Options.
-   * @returns {Promise<any>} Work result, or a busy signal.
-   */
+  // Runs a function exclusively behind the FIFO queue.
   function runExclusive(fn, opts = {}) {
     if (!opts.bypassBusyBound && pending >= maxQueueDepth) {
       return Promise.resolve({ status: 'busy', queueDepth: pending });
@@ -47,7 +43,7 @@ export function createSessionManager(options = {}) {
     });
   }
 
-  /** Clears any pending idle timer. */
+  // Clears the pending idle timer without changing session state.
   function clearIdle() {
     if (idleTimer) {
       clearTimeout(idleTimer);
@@ -55,7 +51,7 @@ export function createSessionManager(options = {}) {
     }
   }
 
-  /** (Re)arms the idle timer; on expiry, tears down through the queue with claim-gating. */
+  // (Re)arms idle expiry; expiration queues a non-forced, claim-gated teardown.
   function armIdle() {
     clearIdle();
     if (!session || idleTimeoutMs <= 0) return;
@@ -67,18 +63,13 @@ export function createSessionManager(options = {}) {
     if (typeof idleTimer.unref === 'function') idleTimer.unref();
   }
 
-  /** Marks the session as recently used and re-arms idle expiry. */
+  // Marks the session as recently used and re-arms idle expiry.
   function touch() {
     if (session) session.lastUsedAt = Date.now();
     armIdle();
   }
 
-  /**
-   * Launches the single session via a caller-provided factory.
-   *
-   * @param {() => Promise<{ browser?: any, context?: any, page: any, account?: string }>} factory Launch factory.
-   * @returns {Promise<object>} Structured result.
-   */
+  // Launches the single session via a caller-provided factory.
   function launch(factory) {
     return runExclusive(async () => {
       if (session) {
@@ -100,48 +91,49 @@ export function createSessionManager(options = {}) {
     });
   }
 
-  /**
-   * Tears the session down, refusing while pending claims exist unless forced.
-   *
-   * @param {{ force?: boolean, reason?: string }} [opts] Teardown options.
-   * @returns {Promise<object>} Structured result.
-   */
+  // Tears the session down, refusing while pending claims exist unless forced.
   function teardown(opts = {}) {
-    return runExclusive(async () => {
-      if (!session) return { status: 'no-session' };
-      if (session.pendingClaims.size > 0 && !opts.force) {
-        return {
-          status: 'needs-confirmation',
-          code: 'pending-claims',
-          pendingClaims: [...session.pendingClaims],
-          message: 'Session has pending guarded claims; pass force:true to tear down anyway.'
-        };
-      }
-      // Prefer closing the browser (which closes its contexts+pages); fall back
-      // to the context for a persistent-context launch that has no browser handle.
-      const closable = session.browser || session.context;
-      clearIdle();
-      const closed = session;
-      session = null;
-      try {
-        if (closable && typeof closable.close === 'function') await closable.close();
-      } catch (error) {
-        return { status: 'error', code: 'teardown-close-failed', message: String(error?.message || error) };
-      }
-      return { status: 'torn-down', account: closed.account, reason: opts.reason ?? 'requested' };
-    }, { bypassBusyBound: true });
+    return runExclusive(
+      async () => {
+        if (!session) return { status: 'no-session' };
+        if (session.pendingClaims.size > 0 && !opts.force) {
+          return {
+            status: 'needs-confirmation',
+            code: 'pending-claims',
+            pendingClaims: [...session.pendingClaims],
+            message: 'Session has pending guarded claims; pass force:true to tear down anyway.'
+          };
+        }
+        // Prefer closing the browser (which closes its contexts+pages); fall back
+        // to the context for a persistent-context launch that has no browser handle.
+        const closable = session.browser || session.context;
+        clearIdle();
+        const closed = session;
+        session = null;
+        try {
+          if (closable && typeof closable.close === 'function') await closable.close();
+        } catch (error) {
+          return {
+            status: 'error',
+            code: 'teardown-close-failed',
+            message: String(error?.message || error)
+          };
+        }
+        return { status: 'torn-down', account: closed.account, reason: opts.reason ?? 'requested' };
+      },
+      { bypassBusyBound: true }
+    );
   }
 
-  /**
-   * Runs work against the live session page, serialized behind the queue.
-   *
-   * @param {(session: object) => Promise<object>} fn Work needing the live page.
-   * @returns {Promise<object>} Work result, or a needs-preflight/busy signal.
-   */
+  // Runs work against the live session page, serialized behind the queue.
   function withSession(fn) {
     return runExclusive(async () => {
       if (!session) {
-        return { status: 'needs-preflight', code: 'no-session', message: 'No active session; call cloak_launch first.' };
+        return {
+          status: 'needs-preflight',
+          code: 'no-session',
+          message: 'No active session; call cloak_launch first.'
+        };
       }
       const result = await fn(session);
       touch();

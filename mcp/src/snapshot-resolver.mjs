@@ -1,4 +1,6 @@
 /**
+ * @module snapshot-resolver
+ *
  * Generic-read + target-resolution seam (Option A).
  *
  * Reads use native playwright-core `ariaSnapshot({ mode: 'ai' })`, which emits
@@ -23,7 +25,9 @@ export async function takeAriaSnapshot(page, options = {}) {
   const totalChars = full.length;
   const truncated = totalChars > maxChars;
   return {
-    snapshot: truncated ? `${full.slice(0, maxChars)}\n… [truncated ${totalChars - maxChars} chars]` : full,
+    snapshot: truncated
+      ? `${full.slice(0, maxChars)}\n… [truncated ${totalChars - maxChars} chars]`
+      : full,
     truncated,
     totalChars
   };

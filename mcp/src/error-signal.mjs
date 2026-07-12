@@ -1,4 +1,6 @@
 /**
+ * @module error-signal
+ *
  * Tool result + error->signal plumbing shared by every hyper-cloaking-mcp tool.
  *
  * Principle 7: no engine throw crosses the MCP boundary as a raw exception.
@@ -27,13 +29,27 @@ export function jsonResult(payload) {
 // target-safety, guardrails, and provider resolution. The default rule below
 // guarantees an unexpected throw still becomes a redacted structured error.
 const ERROR_RULES = [
-  { match: /Ambiguous cookie site selection/i, signal: (m) => ({ status: 'needs-account', code: 'ambiguous-site', message: m }) },
-  { match: /Unknown cookie site/i, signal: (m) => ({ status: 'refused', code: 'unknown-site', message: m }) },
-  { match: /Multiple cookie accounts are available/i, signal: (m) => ({ status: 'needs-account', code: 'needs-account', message: m }) },
-  { match: /Navigation blocked by target safety/i, signal: (m) => ({ status: 'needs-preflight', code: 'navigation-blocked', message: m }) },
-  { match: /has no bounding box/i, signal: (m) => ({ status: 'refused', code: 'target-not-actionable', message: m }) }
+  {
+    match: /Ambiguous cookie site selection/i,
+    signal: (m) => ({ status: 'needs-account', code: 'ambiguous-site', message: m })
+  },
+  {
+    match: /Unknown cookie site/i,
+    signal: (m) => ({ status: 'refused', code: 'unknown-site', message: m })
+  },
+  {
+    match: /Multiple cookie accounts are available/i,
+    signal: (m) => ({ status: 'needs-account', code: 'needs-account', message: m })
+  },
+  {
+    match: /Navigation blocked by target safety/i,
+    signal: (m) => ({ status: 'needs-preflight', code: 'navigation-blocked', message: m })
+  },
+  {
+    match: /has no bounding box/i,
+    signal: (m) => ({ status: 'refused', code: 'target-not-actionable', message: m })
+  }
 ];
-
 const SECRET_PATTERN = /(authorization|cookie|token|secret|password|api[-_ ]?key)\s*[:=]\s*\S+/gi;
 
 /**

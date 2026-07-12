@@ -64,3 +64,121 @@ test('export and comment-only evidence expose code tampering', async (t) => {
   assert.equal(exports.unchanged, true);
   assert.equal(comments.allCommentOnly, true);
 });
+test('whitespace-only separation attaches JSDoc to its shared target', async (t) => {
+  const f = await sourceFixture(
+    '#!/usr/bin/env node\n/** @module fixture */\n"use strict";\n\n/** documented export */\n\nexport const value = 1;\n'
+  );
+  t.after(() => fs.rm(f.root, { recursive: true, force: true }));
+  const result = await auditJsdoc({ files: [f.file] });
+  assert.equal(
+    result.files[0].comments.find((comment) => comment.value.includes('documented')).attached,
+    true
+  );
+  assert.equal(
+    result.files[0].errors.some((error) => error.code === 'comment-attachment-gap'),
+    false
+  );
+  assert.equal(
+    result.files[0].errors.some((error) => error.code === 'misplaced-module-header'),
+    false
+  );
+});
+
+test('exports, re-exports, qualifying internals, descriptors, and phase comments are audited', async (t) => {
+  const f = await sourceFixture(
+    '/** @module fixture */\n' +
+      '/** exported */\nexport function exported() {}\n' +
+      '/** alias */\nexport { exported as alias };\n' +
+      '/** stars */\nexport * from "./other.mjs";\n' +
+      '/** internal */\nconst helper = () => 1;\n' +
+      '/** descriptor */\nexport const tool = { name: "tool", inputSchema: {} };\n' +
+      '// phase1 setup\n' +
+      '/** phase */\nconst phase1 = () => {};\n'
+  );
+  t.after(() => fs.rm(f.root, { recursive: true, force: true }));
+  const result = await auditJsdoc({ files: [f.file] });
+  assert.deepEqual(
+    result.files[0].descriptors.map((item) => item.classification),
+    ['descriptor']
+  );
+  assert.equal(
+    result.files[0].errors.some((error) => error.code === 'missing-export-jsdoc'),
+    false
+  );
+  assert.equal(
+    result.files[0].errors.some((error) => error.code === 'missing-reexport-jsdoc'),
+    false
+  );
+  assert.equal(
+    result.files[0].errors.some((error) => error.code === 'missing-phase-comment'),
+    false
+  );
+});
+
+test('exemptions require an exact internal form and are forbidden on exports', async (t) => {
+  const f = await sourceFixture(
+    '/** @module fixture */\n' +
+      '/** @jsdoc-exempt internal-top-level helper */\nconst helper = () => 1;\n' +
+      '/** @jsdoc-exempt internal-top-level */\nconst invalid = () => 1;\n' +
+      '/** @jsdoc-exempt internal-top-level exported */\nexport const exported = 1;\n'
+  );
+  t.after(() => fs.rm(f.root, { recursive: true, force: true }));
+  const result = await auditJsdoc({ files: [f.file] });
+  const codes = result.files[0].errors.map((error) => error.code);
+  assert.ok(codes.includes('invalid-exemption'));
+  assert.ok(codes.includes('export-exemption-forbidden'));
+});
+test('default exports are strict export targets, including anonymous declarations', async (t) => {
+  const documented = await sourceFixture(
+    '/** @module fixture */\n/** named default */\nexport default function named() {}\n'
+  );
+  const missing = await sourceFixture(
+    '/** @module fixture */\nexport default class Anonymous {}\n'
+  );
+  t.after(() =>
+    Promise.all([
+      fs.rm(documented.root, { recursive: true, force: true }),
+      fs.rm(missing.root, { recursive: true, force: true })
+    ])
+  );
+  const documentedResult = await auditJsdoc({ files: [documented.file] });
+  const missingResult = await auditJsdoc({ files: [missing.file] });
+  assert.equal(
+    documentedResult.errors.some((error) => error.code === 'missing-export-jsdoc'),
+    false
+  );
+  assert.equal(
+    missingResult.errors.filter((error) => error.code === 'missing-export-jsdoc').length,
+    1
+  );
+  assert.equal(
+    missingResult.errors.some((error) => error.code === 'missing-reexport-jsdoc'),
+    false
+  );
+});
+
+test('default expression attachment and misplaced documentation are deterministic', async (t) => {
+  const attached = await sourceFixture(
+    '/** @module fixture */\n/** attached expression */\nexport default { value: 1 };\n'
+  );
+  const misplaced = await sourceFixture(
+    '/** @module fixture */\n/** misplaced expression */\nconst helper = 1;\nexport default helper;\n'
+  );
+  t.after(() =>
+    Promise.all([
+      fs.rm(attached.root, { recursive: true, force: true }),
+      fs.rm(misplaced.root, { recursive: true, force: true })
+    ])
+  );
+  const attachedResult = await auditJsdoc({ files: [attached.file] });
+  const misplacedResult = await auditJsdoc({ files: [misplaced.file] });
+  assert.equal(
+    attachedResult.errors.some((error) => error.code === 'missing-export-jsdoc'),
+    false
+  );
+  assert.equal(
+    misplacedResult.errors.filter((error) => error.code === 'missing-export-jsdoc').length,
+    1
+  );
+  assert.ok(misplacedResult.errors.some((error) => error.code === 'comment-attachment-gap'));
+});
