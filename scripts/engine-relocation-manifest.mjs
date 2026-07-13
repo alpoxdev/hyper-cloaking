@@ -5,14 +5,17 @@ import { fileURLToPath } from 'node:url';
 
 export const SCHEMA_VERSION = 1;
 export const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const CANONICAL_ENGINE_ROOT = 'plugins/hyper-cloaking/skills/hyper-cloaking/engine';
+export const HISTORICAL_V1_CANONICAL_ENGINE_ROOT =
+  'plugins/hyper-cloaking/skills/hyper-cloaking/engine';
+export const CANONICAL_ENGINE_ROOT = HISTORICAL_V1_CANONICAL_ENGINE_ROOT;
 export const LEGACY_ENGINE_ROOTS = Object.freeze([
   CANONICAL_ENGINE_ROOT,
   '.agents/skills/hyper-cloaking/engine',
   '.claude/skills/hyper-cloaking/engine',
   'skills/hyper-cloaking/engine'
 ]);
-export const FIXTURE_ROOT = 'mcp/test/fixtures';
+export const HISTORICAL_V1_FIXTURE_ROOT = 'mcp/test/fixtures';
+export const FIXTURE_ROOT = HISTORICAL_V1_FIXTURE_ROOT;
 export const MANIFEST_FILENAME = 'engine-relocation-manifest.v1.json';
 export const PREIMAGES_FILENAME = 'engine-relocation-preimages.v1.json';
 export const ADMISSION_DIRECTORY = 'engine-relocation-preimage-admission';
@@ -51,7 +54,7 @@ const OWNED_CANONICAL_MANIFEST = Object.freeze([
 
 const HASHBANG_PATHS = new Set(['agents/parent-dispatcher.mjs', 'cli.mjs']);
 const RETIRED_ENGINE_PACKAGE = 'hyper-cloaking-engine';
-const OUTPUT_ENGINE_ROOT = 'mcp/engine';
+const HISTORICAL_V1_DESTINATION_ROOT = 'mcp/engine';
 
 export const OUTER_PACKAGE_POLICY = Object.freeze({
   main: './dist/server.mjs',
@@ -134,10 +137,6 @@ function sha256(bytes) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
 
-function modeString(mode) {
-  return `0${(mode & 0o777).toString(8).padStart(3, '0')}`;
-}
-
 function normalizedRelative(value, label) {
   if (typeof value !== 'string' || value.length === 0 || value.includes('\\'))
     throw new Error(`${label} must be a non-empty POSIX relative path`);
@@ -177,9 +176,6 @@ function stableJson(value) {
 function sameValue(left, right) {
   return stableJson(left) === stableJson(right);
 }
-function compareLexical(left, right) {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function assertSortedUnique(records, field, label) {
   let previous = null;
@@ -214,24 +210,8 @@ function decodeBase64(value, label) {
   return bytes;
 }
 
-function fixturePath(repoRoot, filename) {
-  return path.join(repoRoot, FIXTURE_ROOT, filename);
-}
-
-function admissionPath(repoRoot, filename) {
-  return path.join(repoRoot, FIXTURE_ROOT, ADMISSION_DIRECTORY, filename);
-}
-
 function exceptionFor(relativePath) {
   return EXCEPTION_DETAILS[relativePath] || null;
-}
-
-function sourceFor(relativePath) {
-  return `${CANONICAL_ENGINE_ROOT}/${relativePath}`;
-}
-
-function destinationFor(relativePath) {
-  return relativePath === 'package.json' ? null : `${OUTPUT_ENGINE_ROOT}/${relativePath}`;
 }
 
 function ownedManifestSource() {
@@ -374,7 +354,7 @@ function relativeFromSource(source) {
 
 function relativeFromDestination(destination) {
   const normalized = normalizedRelative(destination, 'entry destination');
-  const prefix = `${OUTPUT_ENGINE_ROOT}/`;
+  const prefix = `${HISTORICAL_V1_DESTINATION_ROOT}/`;
   if (!normalized.startsWith(prefix))
     throw new Error(`entry destination is outside relocated engine: ${destination}`);
   return normalized.slice(prefix.length);
@@ -579,231 +559,31 @@ export function validatePositiveAdmission(positive, preimages, manifest) {
   return validatePreimageBundle(preimages, manifest);
 }
 
-function syntheticRecord(relativePath, text) {
-  const bytes = Buffer.from(text, 'utf8');
-  return {
-    path: relativePath,
-    type: 'file',
-    mode: '0644',
-    sha256: sha256(bytes),
-    bytesBase64: bytes.toString('base64')
-  };
-}
-
-function negativeAdmissionFixtures(preimages) {
-  const byPath = new Map(preimages.records.map((record) => [record.path, record]));
-  const altered = (relativePath, suffix) => {
-    const baseline = byPath.get(relativePath);
-    const bytes = Buffer.concat([
-      decodeBase64(baseline.bytesBase64, `preimage ${relativePath} bytesBase64`),
-      Buffer.from(suffix, 'utf8')
-    ]);
-    return {
-      path: relativePath,
-      type: 'file',
-      mode: baseline.mode,
-      sha256: sha256(bytes),
-      bytesBase64: bytes.toString('base64')
-    };
-  };
-  return {
-    'reject-cookie-runtime-payload.v1.json': {
-      version: SCHEMA_VERSION,
-      records: [syntheticRecord('cookie.yml', 'sites:\n  synthetic:\n    cookies: []\n')]
-    },
-    'reject-credential-profile-payload.v1.json': {
-      version: SCHEMA_VERSION,
-      records: [
-        syntheticRecord(
-          'profiles/synthetic-profile.json',
-          '{"profile":"synthetic-sentinel","authorized":false}\n'
-        )
-      ]
-    },
-    'reject-undeclared-secret-source.v1.json': {
-      version: SCHEMA_VERSION,
-      records: [
-        syntheticRecord(
-          'agents/undeclared-secret-source.mjs',
-          'export const syntheticSecretSentinel = "not-a-secret";\n'
-        )
-      ]
-    },
-    'reject-altered-cli-preimage.v1.json': {
-      version: SCHEMA_VERSION,
-      records: [altered('cli.mjs', '\n// synthetic alteration\n')]
-    },
-    'reject-altered-cookie-preimage.v1.json': {
-      version: SCHEMA_VERSION,
-      records: [altered('cookie.mjs', '\n// synthetic alteration\n')]
-    }
-  };
-}
-
-async function collectRegularFiles(root) {
-  let rootStat;
-  try {
-    rootStat = await fs.lstat(root);
-  } catch (error) {
-    throw new Error(`engine root is unavailable: ${root}`, { cause: error });
-  }
-  if (!rootStat.isDirectory() || rootStat.isSymbolicLink())
-    throw new Error(`engine root must be a real directory: ${root}`);
-
-  const records = [];
-  async function visit(relativeDirectory) {
-    const directory = path.join(root, relativeDirectory);
-    const entries = await fs.readdir(directory, { withFileTypes: true });
-    entries.sort((left, right) => compareLexical(left.name, right.name));
-    for (const entry of entries) {
-      const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
-      normalizedRelative(relativePath, 'inventory path');
-      const fullPath = path.join(root, relativePath);
-      const stat = await fs.lstat(fullPath);
-      if (stat.isSymbolicLink())
-        throw new Error(`symbolic links are not allowed in engine inventory: ${relativePath}`);
-      if (stat.isDirectory()) {
-        await visit(relativePath);
-      } else if (stat.isFile()) {
-        const bytes = await fs.readFile(fullPath);
-        records.push({
-          path: relativePath,
-          type: 'file',
-          mode: modeString(stat.mode),
-          sha256: sha256(bytes),
-          bytes
-        });
-      } else {
-        throw new Error(`unsupported engine entry type: ${relativePath}`);
-      }
-    }
-  }
-  await visit('');
-  records.sort((left, right) => compareLexical(left.path, right.path));
-  return records;
-}
-
-function comparableInventory(records) {
-  return records.map(({ path: relativePath, type, mode, sha256: digest }) => ({
-    path: relativePath,
-    type,
-    mode,
-    sha256: digest
-  }));
-}
-
-/** Verifies that the four legacy engine trees have identical regular-file inventories. */
-export async function assertFourWayParity() {
-  const inventories = [];
-  for (const relativeRoot of LEGACY_ENGINE_ROOTS)
-    inventories.push(await collectRegularFiles(path.join(REPOSITORY_ROOT, relativeRoot)));
-  const canonical = comparableInventory(inventories[0]);
-  for (let index = 1; index < inventories.length; index += 1) {
-    if (!sameValue(comparableInventory(inventories[index]), canonical)) {
-      throw new Error(`four-way engine parity mismatch: ${LEGACY_ENGINE_ROOTS[index]}`);
-    }
-  }
-  return inventories[0];
-}
-
-/** Builds the deterministic fixture data from the fixed canonical engine root. */
-export async function buildRelocationFixtureBundle() {
-  const inventory = await assertFourWayParity();
-  const recordsByPath = new Map(inventory.map((record) => [record.path, record]));
-  const entries = inventory.map((record) => {
-    const exception = exceptionFor(record.path);
-    const entry = {
-      source: sourceFor(record.path),
-      destination: destinationFor(record.path),
-      type: record.type,
-      mode: record.mode,
-      preSha256: record.sha256,
-      postSha256: null,
-      exceptionKind: exception?.exceptionKind || null,
-      permittedTransforms: exception ? [...exception.permittedTransforms] : []
-    };
-    if (exception) entry.preimageRef = record.path;
-    if (entry.destination !== null) {
-      const postimage = exception ? replayEntry(entry, record.bytes) : record.bytes;
-      entry.postSha256 = sha256(postimage);
-    }
-    return entry;
-  });
-  const manifest = { version: SCHEMA_VERSION, entries };
-  validateManifest(manifest);
-
-  const preimages = {
-    version: SCHEMA_VERSION,
-    records: EXCEPTION_PATHS.map((relativePath) => {
-      const record = recordsByPath.get(relativePath);
-      if (!record)
-        throw new Error(`declared exception is absent from canonical engine: ${relativePath}`);
-      return {
-        path: relativePath,
-        type: record.type,
-        mode: record.mode,
-        sha256: record.sha256,
-        bytesBase64: record.bytes.toString('base64')
-      };
-    })
-  };
-  validatePreimageBundle(preimages, manifest);
-
-  const positive = {
-    version: SCHEMA_VERSION,
-    records: preimages.records.map((record) => ({
-      preimageRef: record.path,
-      path: record.path,
-      type: record.type,
-      mode: record.mode,
-      sha256: record.sha256,
-      bytesSha256: sha256(decodeBase64(record.bytesBase64, `preimage ${record.path} bytesBase64`))
-    }))
-  };
-  validatePositiveAdmission(positive, preimages, manifest);
-
-  const negatives = negativeAdmissionFixtures(preimages);
-  for (const filename of NEGATIVE_ADMISSION_FILENAMES) {
-    const negative = negatives[filename];
-    try {
-      validatePreimageAdmission(negative.records, manifest);
-    } catch {
-      continue;
-    }
-    throw new Error(`synthetic negative admission fixture was admitted: ${filename}`);
-  }
-  return { manifest, preimages, positive, negatives };
-}
-
-function prettyJson(value) {
-  return `${JSON.stringify(value, null, 2)}\n`;
-}
-
-/** Generates the committed fixture bundle using only the fixed canonical source tree. */
-export async function generateRelocationFixtures() {
-  const bundle = await buildRelocationFixtureBundle();
-  const fixtureDirectory = path.join(REPOSITORY_ROOT, FIXTURE_ROOT);
-  await fs.mkdir(path.join(fixtureDirectory, ADMISSION_DIRECTORY), { recursive: true });
-  await fs.writeFile(path.join(fixtureDirectory, MANIFEST_FILENAME), prettyJson(bundle.manifest));
-  await fs.writeFile(path.join(fixtureDirectory, PREIMAGES_FILENAME), prettyJson(bundle.preimages));
-  await fs.writeFile(
-    path.join(fixtureDirectory, ADMISSION_DIRECTORY, POSITIVE_ADMISSION_FILENAME),
-    prettyJson(bundle.positive)
+function retiredV1LiveOperation(operation) {
+  throw new Error(
+    `v1 ${operation} is retired after the v2 migration; use scripts/engine-relocation-v2.mjs for live topology operations`
   );
-  for (const filename of NEGATIVE_ADMISSION_FILENAMES) {
-    await fs.writeFile(
-      path.join(fixtureDirectory, ADMISSION_DIRECTORY, filename),
-      prettyJson(bundle.negatives[filename])
-    );
-  }
-  return {
-    manifestPath: fixturePath(REPOSITORY_ROOT, MANIFEST_FILENAME),
-    preimagesPath: fixturePath(REPOSITORY_ROOT, PREIMAGES_FILENAME),
-    positiveAdmissionPath: admissionPath(REPOSITORY_ROOT, POSITIVE_ADMISSION_FILENAME),
-    negativeAdmissionPaths: NEGATIVE_ADMISSION_FILENAMES.map((filename) =>
-      admissionPath(REPOSITORY_ROOT, filename)
-    )
-  };
+}
+
+/**
+ * Historical compatibility export. v1 source-tree parity is no longer a valid
+ * live-topology check because those source trees were removed during migration.
+ */
+export async function assertFourWayParity() {
+  retiredV1LiveOperation('source-tree parity');
+}
+
+/**
+ * Historical compatibility export. Committed v1 fixtures are immutable replay
+ * evidence and must not be regenerated from a live tree.
+ */
+export async function buildRelocationFixtureBundle() {
+  retiredV1LiveOperation('fixture generation');
+}
+
+/** Historical compatibility export that fails closed instead of writing fixtures. */
+export async function generateRelocationFixtures() {
+  retiredV1LiveOperation('fixture generation');
 }
 
 async function readJson(filePath, label) {
@@ -824,19 +604,23 @@ async function readJson(filePath, label) {
 export async function readRelocationFixtures({
   fixtureRoot = path.join(REPOSITORY_ROOT, FIXTURE_ROOT)
 } = {}) {
-  const manifest = await readJson(path.join(fixtureRoot, MANIFEST_FILENAME), 'relocation manifest');
+  const resolvedFixtureRoot = assertHistoricalFixtureRoot(fixtureRoot);
+  const manifest = await readJson(
+    path.join(resolvedFixtureRoot, MANIFEST_FILENAME),
+    'relocation manifest'
+  );
   const preimages = await readJson(
-    path.join(fixtureRoot, PREIMAGES_FILENAME),
+    path.join(resolvedFixtureRoot, PREIMAGES_FILENAME),
     'relocation preimage bundle'
   );
   const positive = await readJson(
-    path.join(fixtureRoot, ADMISSION_DIRECTORY, POSITIVE_ADMISSION_FILENAME),
+    path.join(resolvedFixtureRoot, ADMISSION_DIRECTORY, POSITIVE_ADMISSION_FILENAME),
     'positive admission fixture'
   );
   const negatives = {};
   for (const filename of NEGATIVE_ADMISSION_FILENAMES) {
     negatives[filename] = await readJson(
-      path.join(fixtureRoot, ADMISSION_DIRECTORY, filename),
+      path.join(resolvedFixtureRoot, ADMISSION_DIRECTORY, filename),
       `negative admission fixture ${filename}`
     );
   }
@@ -852,18 +636,6 @@ export async function readRelocationFixtures({
     throw new Error(`negative admission fixture was admitted: ${filename}`);
   }
   return { manifest, preimages, positive, negatives };
-}
-
-async function assertLegacyEnginesRemoved(repoRoot) {
-  for (const relativeRoot of LEGACY_ENGINE_ROOTS) {
-    try {
-      await fs.lstat(path.join(repoRoot, relativeRoot));
-    } catch (error) {
-      if (error && error.code === 'ENOENT') continue;
-      throw error;
-    }
-    throw new Error(`legacy engine path remains after relocation: ${relativeRoot}`);
-  }
 }
 
 function assertExactPolicyValue(actual, expected, label) {
@@ -915,52 +687,6 @@ export function assertOuterPackagePolicy(packageManifest) {
   return packageManifest;
 }
 
-function tarballEngineBinTargetPaths(bin) {
-  const prefix = './engine/';
-  return new Set(
-    Object.values(bin)
-      .filter((target) => target.startsWith(prefix))
-      .map((target) =>
-        normalizedRelative(target.slice(2), 'outer package bin target').slice('engine/'.length)
-      )
-  );
-}
-
-function tarballEngineMode(entry, binTargetPaths) {
-  return binTargetPaths.has(relativeFromDestination(entry.destination)) ? '0755' : entry.mode;
-}
-
-async function verifyEngineTree(
-  root,
-  entries,
-  label,
-  expectedModeForEntry = (entry) => entry.mode
-) {
-  const actual = await collectRegularFiles(root);
-  const expected = new Map(
-    entries.map((entry) => [relativeFromDestination(entry.destination), entry])
-  );
-  const actualPaths = actual.map((record) => record.path);
-  const expectedPaths = [...expected.keys()].sort(compareLexical);
-  if (!sameValue(actualPaths, expectedPaths)) {
-    const extras = actualPaths.filter((item) => !expected.has(item));
-    const missing = expectedPaths.filter((item) => !actualPaths.includes(item));
-    throw new Error(
-      `${label} engine inventory mismatch (extra: ${extras.join(', ') || 'none'}; missing: ${missing.join(', ') || 'none'})`
-    );
-  }
-  for (const record of actual) {
-    const entry = expected.get(record.path);
-    if (
-      record.type !== entry.type ||
-      record.mode !== expectedModeForEntry(entry) ||
-      record.sha256 !== entry.postSha256
-    ) {
-      throw new Error(`${label} engine file mismatch: ${record.path}`);
-    }
-  }
-}
-
 function replayExceptions(manifest, preimages) {
   const preimagesByPath = new Map(preimages.records.map((record) => [record.path, record]));
   for (const entry of manifest.entries) {
@@ -980,66 +706,73 @@ function replayExceptions(manifest, preimages) {
   }
 }
 
-/**
- * Verifies a relocated worktree and, when supplied, an unpacked tarball root.
- * It consumes only committed fixtures and relocated outputs; legacy sources are
- * required to be absent and are never read.
- */
-export async function verifyRelocation({
-  repoRoot = REPOSITORY_ROOT,
-  fixtureRoot = path.join(repoRoot, FIXTURE_ROOT),
-  tarballRoot = null
-} = {}) {
-  const fixtures = await readRelocationFixtures({ fixtureRoot });
-  replayExceptions(fixtures.manifest, fixtures.preimages);
-  await assertLegacyEnginesRemoved(repoRoot);
-
-  const outerManifest = await readJson(
-    path.join(repoRoot, 'mcp/package.json'),
-    'outer package manifest'
+function isWithin(parent, candidate) {
+  const relative = path.relative(parent, candidate);
+  return (
+    relative === '' ||
+    (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
   );
-  assertOuterPackagePolicy(outerManifest);
-  try {
-    const rootManifest = await readJson(
-      path.join(repoRoot, 'package.json'),
-      'root package manifest'
-    );
-    assertNoRetiredDependency(rootManifest, 'root package manifest');
-  } catch (error) {
-    if (error?.cause?.code !== 'ENOENT') throw error;
-  }
+}
 
-  const outputEntries = fixtures.manifest.entries.filter((entry) => entry.destination !== null);
-  await verifyEngineTree(path.join(repoRoot, OUTPUT_ENGINE_ROOT), outputEntries, 'worktree');
-  if (tarballRoot !== null) {
-    if (typeof tarballRoot !== 'string' || tarballRoot.length === 0)
-      throw new Error('tarballRoot must be an unpacked package directory');
-    const binTargetPaths = tarballEngineBinTargetPaths(outerManifest.bin);
-    await verifyEngineTree(path.join(tarballRoot, 'engine'), outputEntries, 'tarball', (entry) =>
-      tarballEngineMode(entry, binTargetPaths)
+function assertHistoricalFixtureRoot(fixtureRoot) {
+  if (typeof fixtureRoot !== 'string' || fixtureRoot.length === 0)
+    throw new Error('historical v1 fixtureRoot must be a non-empty path');
+  const resolvedFixtureRoot = path.resolve(fixtureRoot);
+  const liveAdapterRoot = path.resolve(REPOSITORY_ROOT, HISTORICAL_V1_DESTINATION_ROOT);
+  if (
+    isWithin(liveAdapterRoot, resolvedFixtureRoot) ||
+    (path.basename(resolvedFixtureRoot) === 'engine' &&
+      path.basename(path.dirname(resolvedFixtureRoot)) === 'mcp')
+  ) {
+    throw new Error(
+      `historical v1 verification cannot target the live adapter tree: ${HISTORICAL_V1_DESTINATION_ROOT}`
     );
   }
-  return { entries: outputEntries.length, tarballVerified: tarballRoot !== null };
+  return resolvedFixtureRoot;
+}
+
+/**
+ * Replays only committed v1 fixture evidence. It never reads a live engine
+ * tree, which keeps v1 auditable without making it a topology authority.
+ */
+export async function verifyHistoricalRelocation({
+  fixtureRoot = path.join(REPOSITORY_ROOT, HISTORICAL_V1_FIXTURE_ROOT)
+} = {}) {
+  const fixtures = await readRelocationFixtures({
+    fixtureRoot: assertHistoricalFixtureRoot(fixtureRoot)
+  });
+  replayExceptions(fixtures.manifest, fixtures.preimages);
+  return {
+    exceptions: fixtures.manifest.entries.filter((entry) => entry.preimageRef !== undefined).length
+  };
+}
+
+/**
+ * @deprecated Historical replay compatibility export. It accepts only a v1
+ * fixtureRoot and deliberately rejects all live topology options.
+ */
+export async function verifyRelocation(options = {}) {
+  if (!options || typeof options !== 'object' || Array.isArray(options))
+    throw new Error('historical v1 verification options must be an object');
+  const unsupported = Object.keys(options).filter((key) => key !== 'fixtureRoot');
+  if (unsupported.length > 0) {
+    throw new Error(
+      `historical v1 verification does not accept live topology options: ${unsupported.join(', ')}`
+    );
+  }
+  return verifyHistoricalRelocation(options);
 }
 
 function usage() {
-  return 'Usage: node scripts/engine-relocation-manifest.mjs generate | verify [--tarball-root <unpacked-package-dir>]';
+  return 'v1 relocation CLI is retired; use node scripts/engine-relocation-v2.mjs for live topology operations';
 }
 
-async function runCli(argv) {
-  const [mode, ...args] = argv;
-  if (mode === 'generate' && args.length === 0) {
-    const result = await generateRelocationFixtures();
-    process.stdout.write(`${JSON.stringify(result)}\n`);
-    return;
-  }
-  if (mode === 'verify') {
-    let tarballRoot = null;
-    if (args.length === 2 && args[0] === '--tarball-root') tarballRoot = path.resolve(args[1]);
-    else if (args.length !== 0) throw new Error(usage());
-    const result = await verifyRelocation({ tarballRoot });
-    process.stdout.write(`${JSON.stringify(result)}\n`);
-    return;
+export async function runCli(argv) {
+  const [operation] = argv;
+  if (operation === 'generate' || operation === 'verify') {
+    throw new Error(
+      `v1 live ${operation} is retired after the v2 migration; use scripts/engine-relocation-v2.mjs`
+    );
   }
   throw new Error(usage());
 }

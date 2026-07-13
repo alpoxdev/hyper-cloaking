@@ -5,16 +5,17 @@ import { parse } from 'acorn';
 import {
   MANAGED_EXCLUDED_SEGMENTS,
   OWNED_CANONICAL_MANIFEST
-} from '../mcp/engine/agents/lib/sync-mirror.mjs';
+} from '../packages/mcp-engine/src/agents/lib/sync-mirror.mjs';
 import {
-  assertOuterPackagePolicy,
   LEGACY_ENGINE_ROOTS,
-  verifyRelocation
-} from './engine-relocation-manifest.mjs';
+  verifyHistoricalRelocation
+} from './engine-relocation-v1-historical.mjs';
+import { verifyLiveRelocation } from './engine-relocation-v2.mjs';
 
 const root = process.cwd();
 const pluginRoot = 'plugins/hyper-cloaking';
 const expectedVersion = '0.0.1';
+const LOCAL_WORKSPACE_ROOTS = Object.freeze(['packages/mcp-engine', 'packages/mcp-server', 'mcp']);
 const skillNames = ['hyper-cloaking'];
 const rootSkillNames = ['hyper-cloaking'];
 const errors = [];
@@ -123,6 +124,19 @@ function validateVersionMetadata(file, manifest) {
     fail(`${file} schemaVersion must be ${expectedVersion}`);
   }
 }
+function validateLocalWorkspaceTopology(manifest) {
+  if (manifest.private !== true) fail('package.json must remain private');
+
+  const workspaces = Array.isArray(manifest.workspaces)
+    ? manifest.workspaces
+    : manifest.workspaces?.packages;
+  if (JSON.stringify(workspaces) !== JSON.stringify(LOCAL_WORKSPACE_ROOTS)) {
+    fail(`package.json workspaces must be ${JSON.stringify(LOCAL_WORKSPACE_ROOTS)}`);
+    return;
+  }
+
+  for (const workspaceRoot of LOCAL_WORKSPACE_ROOTS) requireFile(`${workspaceRoot}/package.json`);
+}
 
 function validatePluginVersionMetadata(file, plugin) {
   if (!plugin || typeof plugin !== 'object') return;
@@ -230,7 +244,8 @@ function validateNoStalePublicIdentity() {
 }
 export const RETIRED_ENGINE_PACKAGE = 'hyper-cloaking-engine';
 const OUTER_ENGINE_BIN_MANIFEST = 'mcp/package.json';
-const HISTORICAL_RELOCATION_MANIFEST = 'mcp/test/fixtures/engine-relocation-manifest.v1.json';
+const HISTORICAL_RELOCATION_FIXTURE_ROOT = 'mcp/test/fixtures';
+const HISTORICAL_RELOCATION_MANIFEST = `${HISTORICAL_RELOCATION_FIXTURE_ROOT}/engine-relocation-manifest.v1.json`;
 const retiredEnginePackagePattern = RETIRED_ENGINE_PACKAGE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const legacyEnginePath = new RegExp(
   LEGACY_ENGINE_ROOTS.map((root) => root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
@@ -508,6 +523,7 @@ function retiredIdentityScanRecords() {
     'package.json',
     'package-lock.json',
     'mcp',
+    'packages',
     'tests',
     'scripts',
     'artifacts',
@@ -548,41 +564,37 @@ function validateNoRetiredEngineIdentity() {
   for (const { message } of findRetiredEngineIdentityViolations(retiredIdentityScanRecords()))
     fail(message);
 }
-function validateRelocationQualityScope(packageManifest) {
-  const lint = packageManifest.scripts?.lint;
-  const format = packageManifest.scripts?.format;
-  const formatCheck = packageManifest.scripts?.['format:check'];
-  if (!lint?.includes('mcp/engine/**/*.mjs'))
-    fail('package.json lint must cover mcp/engine/**/*.mjs');
-
-  requireFile('.prettierignore');
-  if (
-    existsSync(fullPath('.prettierignore')) &&
-    !readText('.prettierignore').split(/\r?\n/).includes('mcp/engine/')
-  ) {
-    fail('.prettierignore must exclude ledger-bound mcp/engine/');
-  }
+function validateAuthoredSourceQualityScope(packageManifest) {
+  const scripts = packageManifest.scripts || {};
+  const requiredScopes = [
+    'scripts/**/*.mjs',
+    'tests/**/*.mjs',
+    'packages/mcp-engine/src/**/*.mjs',
+    'packages/mcp-engine/test/**/*.mjs',
+    'packages/mcp-engine/scripts/**/*.mjs',
+    'packages/mcp-server/src/**/*.mjs',
+    'packages/mcp-server/test/**/*.mjs',
+    'packages/mcp-server/scripts/**/*.mjs',
+    'mcp/test/**/*.mjs'
+  ];
+  const generatedScopes = ['packages/mcp-engine/dist', 'packages/mcp-server/dist', 'mcp/dist'];
 
   for (const [name, command] of [
-    ['format', format],
-    ['format:check', formatCheck]
+    ['lint', scripts.lint],
+    ['format', scripts.format],
+    ['format:check', scripts['format:check']]
   ]) {
     if (!command) {
       fail(`package.json must define ${name}`);
       continue;
     }
-    // The relocation ledger proves mcp/engine payload bytes. Prettier must not rewrite that
-    // immutable payload; .prettierignore, lint, and relocation verification enforce the boundary.
-    if (command.includes('mcp/engine/**/*.mjs'))
-      fail(`package.json ${name} must exclude ledger-bound mcp/engine/**/*.mjs`);
-    for (const requiredScope of [
-      'scripts/**/*.mjs',
-      'tests/**/*.mjs',
-      'mcp/src/**/*.mjs',
-      'mcp/test/**/*.mjs'
-    ]) {
+    for (const requiredScope of requiredScopes) {
       if (!command.includes(requiredScope))
         fail(`package.json ${name} must cover ${requiredScope}`);
+    }
+    for (const generatedScope of generatedScopes) {
+      if (command.includes(generatedScope))
+        fail(`package.json ${name} must exclude generated ${generatedScope}`);
     }
   }
 }
@@ -731,7 +743,8 @@ function validateAgentContracts(packageManifest, packageLock) {
     requireText(file, 'hyper-cloaking-parent-dispatcher', 'installed parent dispatcher command');
   }
 
-  const schemaFile = 'mcp/engine/agents/schemas/hyper-cloaking-agent-output.schema.json';
+  const schemaFile =
+    'packages/mcp-engine/src/agents/schemas/hyper-cloaking-agent-output.schema.json';
   const schema = parseJson(schemaFile);
   if (schema.$schema !== 'https://json-schema.org/draft/2020-12/schema')
     fail(`${schemaFile} must use JSON Schema 2020-12`);
@@ -771,8 +784,8 @@ function requireText(file, needle, label = needle) {
 }
 
 function validateClientSupportSurfaces() {
-  requireText('mcp/engine/mcp-config.mjs', 'openclaw', 'OpenClaw MCP client target');
-  requireText('mcp/engine/mcp-config.mjs', 'hermes', 'Hermes MCP client target');
+  requireText('packages/mcp-engine/src/mcp-config.mjs', 'openclaw', 'OpenClaw MCP client target');
+  requireText('packages/mcp-engine/src/mcp-config.mjs', 'hermes', 'Hermes MCP client target');
 
   for (const file of [
     'skills/hyper-cloaking/SKILL.md',
@@ -806,6 +819,7 @@ async function main() {
   const codexPlugin = parseJson(`${pluginRoot}/.codex-plugin/plugin.json`);
 
   validateVersionMetadata('package.json', packageManifest);
+  validateLocalWorkspaceTopology(packageManifest);
   validateVersionMetadata('.claude-plugin/marketplace.json', claudeMarketplace);
   validatePluginVersionMetadata(
     '.claude-plugin/marketplace.json plugins[0]',
@@ -832,17 +846,21 @@ async function main() {
   validateSkillPaths(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin.skills);
   validateAgentContracts(packageManifest, packageLock);
 
-  async function validateRelocatedEngine() {
-    const outerPackage = parseJson('mcp/package.json');
+  async function validateHistoricalV1Replay() {
     try {
-      assertOuterPackagePolicy(outerPackage);
+      await verifyHistoricalRelocation({
+        fixtureRoot: fullPath(HISTORICAL_RELOCATION_FIXTURE_ROOT)
+      });
     } catch (error) {
-      fail(`mcp/package.json violates relocation outer-package policy: ${error.message}`);
+      fail(`historical v1 relocation replay failed: ${error.message}`);
     }
+  }
+
+  async function validateLiveEngineTopology() {
     try {
-      await verifyRelocation({ repoRoot: root });
+      await verifyLiveRelocation({ repoRoot: root });
     } catch (error) {
-      fail(`engine relocation verification failed: ${error.message}`);
+      fail(`v2 live engine topology verification failed: ${error.message}`);
     }
   }
 
@@ -882,8 +900,9 @@ async function main() {
   validateEngineTestRelocation();
   validateLegacyEnginePathsAbsent();
   validateNoRetiredEngineIdentity();
-  validateRelocationQualityScope(packageManifest);
-  await validateRelocatedEngine();
+  validateAuthoredSourceQualityScope(packageManifest);
+  await validateHistoricalV1Replay();
+  await validateLiveEngineTopology();
 
   if (errors.length > 0) {
     console.error(errors.map((error) => `- ${error}`).join('\n'));

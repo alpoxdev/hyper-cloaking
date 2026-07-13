@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   guardAllowedOrigin,
   normalizeAllowedOrigins
-} from '../../../../../mcp/engine/agents/lib/allowed-origin-guard.mjs';
+} from '../../../../../packages/mcp-engine/src/agents/lib/allowed-origin-guard.mjs';
 
 const classify = () => ({ disposition: 'ok', reason: 'public target' });
 

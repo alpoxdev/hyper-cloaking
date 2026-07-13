@@ -11,7 +11,7 @@ import {
   loadCookieConfig,
   parseCookieYaml,
   selectCookieRecords
-} from '../../../mcp/engine/cookie.mjs';
+} from '../../../packages/mcp-engine/src/cookie.mjs';
 
 test('cookie JSON payload parser rejects unsupported shapes', () => {
   assert.deepEqual(cookiesFromJsonPayload([]), []);

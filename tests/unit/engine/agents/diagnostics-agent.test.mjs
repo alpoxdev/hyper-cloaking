@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import fsp from 'node:fs/promises';
-import { runDiagnostics } from '../../../../mcp/engine/agents/diagnostics-agent.mjs';
+import { runDiagnostics } from '../../../../packages/mcp-engine/src/agents/diagnostics-agent.mjs';
 
 function setupEnvelope(
   failure = {

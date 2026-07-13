@@ -10,11 +10,11 @@ import {
   installNavigationSafety,
   runCli,
   runLiveVerification
-} from '../../../mcp/engine/cli.mjs';
-import { generateMcpConfig, mcpCommand } from '../../../mcp/engine/mcp-config.mjs';
-import { buildNoSandboxWarningSafeCloakOptions } from '../../../mcp/engine/browser-utils.mjs';
-import { resolveHome } from '../../../mcp/engine/config.mjs';
-import { resolveWorkspace } from '../../../mcp/engine/cookie.mjs';
+} from '../../../packages/mcp-engine/src/cli.mjs';
+import { generateMcpConfig, mcpCommand } from '../../../packages/mcp-engine/src/mcp-config.mjs';
+import { buildNoSandboxWarningSafeCloakOptions } from '../../../packages/mcp-engine/src/browser-utils.mjs';
+import { resolveHome } from '../../../packages/mcp-engine/src/config.mjs';
+import { resolveWorkspace } from '../../../packages/mcp-engine/src/cookie.mjs';
 
 async function runJson(args) {
   let stdout = '';

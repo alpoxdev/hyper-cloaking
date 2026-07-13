@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runBrowserTask } from '../../../../mcp/engine/agents/browser-task-agent.mjs';
+import { runBrowserTask } from '../../../../packages/mcp-engine/src/agents/browser-task-agent.mjs';
 
 const input = {
   schemaVersion: 1,

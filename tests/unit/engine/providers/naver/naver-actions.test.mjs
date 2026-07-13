@@ -4,10 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
-import { NetworkReadError } from '../../../../../mcp/engine/providers/network.mjs';
-import { naverSelectors } from '../../../../../mcp/engine/providers/naver/selectors.mjs';
-import { analyzePosts } from '../../../../../mcp/engine/providers/naver/actions/analyze.mjs';
+import { validateProviderSchema } from '../../../../../packages/mcp-engine/src/providers/schema.mjs';
+import { NetworkReadError } from '../../../../../packages/mcp-engine/src/providers/network.mjs';
+import { naverSelectors } from '../../../../../packages/mcp-engine/src/providers/naver/selectors.mjs';
+import { analyzePosts } from '../../../../../packages/mcp-engine/src/providers/naver/actions/analyze.mjs';
 import {
   normalizeBlogCommentRef,
   normalizeBlogPostRef,
@@ -16,7 +16,7 @@ import {
   normalizeCafePostRef,
   normalizeCafeRef,
   normalizeDraftRef
-} from '../../../../../mcp/engine/providers/naver/actions/ids.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/naver/actions/ids.mjs';
 import {
   getBlogList,
   getBlogPost,
@@ -25,7 +25,7 @@ import {
   searchBlog,
   searchCafe,
   searchWeb
-} from '../../../../../mcp/engine/providers/naver/actions/reads.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/naver/actions/reads.mjs';
 import {
   blockedNaverAction,
   commentBlogPost,
@@ -33,9 +33,9 @@ import {
   createCafePost,
   setBlogPostLiked,
   setCafePostLiked
-} from '../../../../../mcp/engine/providers/naver/actions/writes.mjs';
-import { naverProvider } from '../../../../../mcp/engine/providers/naver/metadata.mjs';
-import { naverReadPromotions } from '../../../../../mcp/engine/providers/naver/network.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/naver/actions/writes.mjs';
+import { naverProvider } from '../../../../../packages/mcp-engine/src/providers/naver/metadata.mjs';
+import { naverReadPromotions } from '../../../../../packages/mcp-engine/src/providers/naver/network.mjs';
 
 function safeTarget() {
   return { disposition: 'ok', reason: 'public-https', risks: [] };

@@ -1,22 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { genericProvider } from '../../../../mcp/engine/providers/generic.mjs';
+import { genericProvider } from '../../../../packages/mcp-engine/src/providers/generic.mjs';
 import {
   getProvider,
   providers,
   resolveProviderForUrl,
   validateProviderRegistry
-} from '../../../../mcp/engine/providers/index.mjs';
-import { coupangProvider } from '../../../../mcp/engine/providers/coupang/metadata.mjs';
+} from '../../../../packages/mcp-engine/src/providers/index.mjs';
+import { coupangProvider } from '../../../../packages/mcp-engine/src/providers/coupang/metadata.mjs';
 import {
   buildProviderRegistry,
   hostMatchesDomain,
   resolveProviderForUrl as resolveProviderForUrlFromRegistry,
   validateProviderRegistry as validateProviderRegistryFromRegistry
-} from '../../../../mcp/engine/providers/registry.mjs';
-import { xProvider } from '../../../../mcp/engine/providers/x.mjs';
-import { tiktokProvider } from '../../../../mcp/engine/providers/tiktok/metadata.mjs';
+} from '../../../../packages/mcp-engine/src/providers/registry.mjs';
+import { xProvider } from '../../../../packages/mcp-engine/src/providers/x.mjs';
+import { tiktokProvider } from '../../../../packages/mcp-engine/src/providers/tiktok/metadata.mjs';
 
 test('validateProviderRegistry passes for the built-in provider set', () => {
   const result = validateProviderRegistry();

@@ -1,0 +1,771 @@
+{
+  "version": 2,
+  "canonicalRoot": "packages/mcp-engine/src",
+  "adapterRoot": "mcp/engine",
+  "canonical": [
+    {
+      "role": "canonical",
+      "path": "action-runtime/action-result.mjs",
+      "sha256": "2b7c72268e669189db74188bcf9f13b8b044b60840b5cd8cfb1c7413016be456",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "action-runtime/guardrails.mjs",
+      "sha256": "2d44cb36c9f6db56224b07ccc77650abf73e81c4a8b68ee0a858f2ad88b63219",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/browser-task-agent.mjs",
+      "sha256": "319436b7c078d3bb35be529f9b0ce2dcc05444c6b683dd4f484cee7af72b4a85",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/diagnostics-agent.mjs",
+      "sha256": "b0944e85f17921ed9c083fc63cf5bf8230ef19a677db7fe8e83e09589547d539",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/evidence-writer.mjs",
+      "sha256": "db89bf9a7a756db8793a1db6171304dec01f825aa92d08fa6e4796b6f364877e",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/lib/allowed-origin-guard.mjs",
+      "sha256": "619ce1618ca4112029d29d447c862469b41ba2dae514d39a05817adeef1b1f8c",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/lib/sync-mirror.mjs",
+      "sha256": "beeeecd312c9f681ad1545f17d82813d1bd87038f3bcdfc4d8ea9d4f911fdac1",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/parent-dispatcher.mjs",
+      "sha256": "f0fcb2c3f757d11012b3d080db67e78e1722fae3deae926a7a96b469e0c02b9b",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/parent-verify.mjs",
+      "sha256": "8cac583c04a6638e65829ceec2e786be0e678a1bb80f84ae91c76ccf527833c0",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/schemas/hyper-cloaking-agent-output.ko.md",
+      "sha256": "0722fa099139b57e9b298b18351534e1be836e369d59efb10bacc5d4980f91ab",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/schemas/hyper-cloaking-agent-output.schema.json",
+      "sha256": "a4d018a7505765a4ba2430ea6fb11ce16cd5202feb84ea18440350fd05942717",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "agents/setup-agent.mjs",
+      "sha256": "4113e186e10320a6ade7a0992603381894b7006210c356e84df6da0d9830c0d7",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "browser-utils.mjs",
+      "sha256": "229c7770a59dd5ad4f37112ecd752779534e40219060f79fc7cfdbbdadad83bd",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "cli.mjs",
+      "sha256": "e7d25ff4a083ae7b7f60e64bbfc4bf2a48f7ca36aa8e1c8b2093f35b7232bcda",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "config.mjs",
+      "sha256": "ec646797874fb42005005b71c1291b8d530ff751c7f3922a05f3295bdbff6268",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "cookie.mjs",
+      "sha256": "c0406c14bb98bd5be174c98e2ba6983e1f20b9fbbbc4b6ab64577c6692f48835",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "credentials.mjs",
+      "sha256": "eecd8ac16d891b3ed89999ca13064a185b298960767a17373195d1db2536087e",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "diagnostics.mjs",
+      "sha256": "429fd0b7dad24e608cf2df7e4f905ee8db9dd11d22061fab62bb4a57c7ba23fa",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "evidence-boundary.mjs",
+      "sha256": "4f538ec5a232eccde87e04ddcfc29bb9655cd2e6803da79b8ad0d67a452ada63",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "index.mjs",
+      "sha256": "262721fb45f5087e2ea271d1acebbef1f12da5382d810dc227efbcfc12e65fd2",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "input-core.mjs",
+      "sha256": "d77795d1ddfd0cb3167b82f241fec6196531b2bede977d801a48f467e2c528b8",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "keyboard.mjs",
+      "sha256": "be301c6d2b493c4f1da2804d38499d354733ca5087cad54692ce7f7adf91840f",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "mcp-config.mjs",
+      "sha256": "c405ebcc666665232a30468583e1737a2b110d276b57ee587d5ca4cc01df3e7e",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "mouse.mjs",
+      "sha256": "eea1d59497b6d7691c6d44df9524d1fbbb27a3848b48ff592813cbe44ce20b8a",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "outcome.mjs",
+      "sha256": "0586f692d03419e54e782927cd4d1c79bf0bb1245cc75ba5c1ab59a25a26365f",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/actions/analyze.mjs",
+      "sha256": "abd064d0682cd2926fe2562337d7ed817b17f8e822ddf56f45a0d73111699e54",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/actions/ids.mjs",
+      "sha256": "2fa2c8668ddf1e03b81a53794873cb7ba57316794b6e05d4e59f241cf2795bf8",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/actions/reads.mjs",
+      "sha256": "2b81f50f0cc9a91ba3690d36717e4e251ee1ada67e3219786b94975db9a9e4b6",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/actions/writes.mjs",
+      "sha256": "9b5bafbcbd07bbc75285206ac3fb7fff36decdafa965e3bf269ba335573d5280",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/index.mjs",
+      "sha256": "332b76a723f9a9b083364b476bfaf198154ea0cc956935ea363de06e81e07af2",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/metadata.mjs",
+      "sha256": "97daea8ac48d180c119a7158f99fedd7f607d75e1c28ecdf09582a9cb5fa0fbd",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/network.mjs",
+      "sha256": "ac3c81cbc385fac217925b5e7d54917fce2118a42524820c2ab8ba1cb6b40d69",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/selectors.mjs",
+      "sha256": "0c7b587c06b5e232bfa7a68b123dc4c858318de97a9fdf48482a147c06c26881",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/coupang/session.mjs",
+      "sha256": "6fe89566e563eaf8d9e19aca9ee4e9774f8a9a73f0e6b467923fc99d95741291",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/generic.mjs",
+      "sha256": "4f6f0343cb2259dbfbb87e56110abc71f941da9e82cdfb4446dfd2f4b4034b7f",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/index.mjs",
+      "sha256": "85d63aa7f6e92f5408cbc7b3e5bc3b4c834093ff18f9c8ca80a90a2e7a89cda0",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/actions/analyze.mjs",
+      "sha256": "e1a9f83a080dc1895ff551e3b627d3b88bf9c63886e51aa5bac9ae54df49c5f0",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/actions/dm.mjs",
+      "sha256": "ae0dd627d8a20c421fcd6dea406997f8b8b83012099ab4856a9e6fe7e89c2487",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/actions/posts.mjs",
+      "sha256": "f811d7cb1f472120397779aa5b7fc18e9d02282350c52b92a648a3225e0c5f1c",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/actions/reactions.mjs",
+      "sha256": "190826f5c1c1c2dd9e38b424e81a4c3b2002f912d3f529e7d093a744f7d2cdac",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/actions/user.mjs",
+      "sha256": "8c75b9ca49d8d60f5b0413d38b81ba932fa6db8b37ad9236ffa205b24d5c0818",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/index.mjs",
+      "sha256": "6e8b2136eb5dca56e7aedd797a29a115df95feca99cd545a2444af872eac6d07",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/metadata.mjs",
+      "sha256": "a4035bfb80fc229eb609ab6aa1492d8a4c33fc8502b86502a5e7daf632331f3e",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/network.mjs",
+      "sha256": "a73fb7dde3f450fa5ecf7017a4c0fa20c34669ab17635e9fa0934ad5f263f360",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/selectors.mjs",
+      "sha256": "9f387726640f62ee09ae236ecf306a58d81c76d45d079fce39a0ddc4c1ff018f",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/instagram/session.mjs",
+      "sha256": "66aa9f32510549621b913507953c6d3af04d7eefa539be018cc3c552c18c9ad2",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver.mjs",
+      "sha256": "8b0f480c35b90accead4d48215b70b354e3f3bfa4a6c84189d1b3a42ab411514",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/actions/analyze.mjs",
+      "sha256": "2b534bf96197a2e16a354e10f3bcbd5230c25877d345ec1d060666d906391289",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/actions/ids.mjs",
+      "sha256": "ebe480ed12399550fd3f2a694026ef079d552dbe950b3ac594b19f7b9539ae45",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/actions/reads.mjs",
+      "sha256": "f39876110da297ccd5bb6626320c539846de0fededf56450906288f0bd961bbe",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/actions/writes.mjs",
+      "sha256": "25496d476b192c7aedf3617f8793fb95281499f30f7ea8fe2063d5c8bd6cbd40",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/index.mjs",
+      "sha256": "9933427f7e0dfa36fe1e2dfdae57dcaacb1b4ce73425d3a4c530ba0e8b533087",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/metadata.mjs",
+      "sha256": "eb89a5b0134ad7863541f23726d8acf186f0d773451f6ad76d80df237895f6ed",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/network.mjs",
+      "sha256": "78b94c42f90da323003facf1cc30b178fabbbb01d029c2fc5f5d35d91717bf37",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/selectors.mjs",
+      "sha256": "34e4c0e2868709c62b326d3e6cc86644dd0a53e4ae767df3dcca4d1f952abda4",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/naver/session.mjs",
+      "sha256": "d03dd92f4cf358d1395c6745e4ebb96da323d1e5f2bb39203e19918c108492b1",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/network.mjs",
+      "sha256": "8ebad3bf18f5fc4095b76367e9f870ff4eb4cc7685021f24af20e01bdadd4206",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/registry.mjs",
+      "sha256": "5cdd10a98143c48b9ffe288a6a7f10370aac2eb0b8090bf506207256569bc29f",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/schema.mjs",
+      "sha256": "f52bc9ed386ab77ca3ea76bf8c7809cbe8e8dbc851f13a969997c4d4a2c8164d",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/session.mjs",
+      "sha256": "f695658d2399ab184e61b76531ef2f25837f348340df6e5f2828568daaa07c79",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/actions/analyze.mjs",
+      "sha256": "2d359bb74b1e7f513e5b9acac60e75bed51da8ae1e1e0f578dc568ed099f83ad",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/actions/ids.mjs",
+      "sha256": "d931fc22971b01a7712a121b1afe83be0674d45d253cfdec3cba5ed6d54c0d76",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/actions/reads.mjs",
+      "sha256": "effe3bc5283f9fd62f223ac1cf28bd2cd59f684e5fa0f860bad9e06accc181ef",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/actions/writes.mjs",
+      "sha256": "0bb2ac3d8f9bb36cc7e6475c1bfacb05ff5bbc7f5f0b3f7977f620472d8eb2f8",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/index.mjs",
+      "sha256": "c45a6fcb0a93df5da8965ddf0d28152d85226d3d4be0f8d0ff4ff95fc65be0c8",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/metadata.mjs",
+      "sha256": "046cb8bcc7ed23ebaa21436a405bf9b255755397e8cbe5fa3cc90311f628e36b",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/network.mjs",
+      "sha256": "135b0a4cf045c0ee643fb278650b1d74a52d7ec25fad43269cc02d72c9c9920c",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/selectors.mjs",
+      "sha256": "db59afbfc42e9df0b36962161f78aaba0a8b003f6dc799bece103b80bd37c7ba",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/tiktok/session.mjs",
+      "sha256": "243c6470c6c281ed24f6bc1cbdfe00da40148f169777e6d9707a5a2a850bb91b",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x.mjs",
+      "sha256": "1d023cca5b38af1ae75655d232b4598f8b18ac46f3eaf20186dd5bd4e180ca6b",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/actions/analyze.mjs",
+      "sha256": "c9ad0fe621b2857760bd8da30dd0fb423a869b13cd35f98ab64279004e28e721",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/actions/ids.mjs",
+      "sha256": "b2a8c3559d606ab3ff612ecd9db8ce6ded131b16f0c0bb903c957297bbe3cb8c",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/actions/reads.mjs",
+      "sha256": "c6998e320f421ceee1e4de9371b06855773586e91ed7bb90c26178bdf816ec70",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/actions/writes.mjs",
+      "sha256": "14a496fd0f2601063ef8812c6f816e99f04144d14745182f4f87008039efe475",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/index.mjs",
+      "sha256": "67aaced83389a0b1e4271b4dfd5459f76fe71acea723e0c0166ef486ddb61319",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/metadata.mjs",
+      "sha256": "0edeb5ebe873acaafd66cb480f9f5aa97475815bc410d344b9a3e38fdb879a8e",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/network.mjs",
+      "sha256": "3a4e4dd8b30b56483b27933e831446acb1b4a05243c389a4b4b1779a0a0507de",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/selectors.mjs",
+      "sha256": "b1bfcbb639e7e341ee59f9d7b2de09eadc03950f8e3082e66fcac68cc61b97d2",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/x/session.mjs",
+      "sha256": "b38dc36e52fbbe990760499522bb45820a0162c8dc0cf754e449d0059c0cc18c",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/actions/analyze.mjs",
+      "sha256": "2fb7661676ea4bcd13f661dfb2001f0ba41413904778c84a23da0a9c07e45389",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/actions/channel.mjs",
+      "sha256": "2c48817efa3b7d01e86e7b95a1cc781e8567ea75a1d52af41e2495be8643b30b",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/actions/ids.mjs",
+      "sha256": "270f3320137593710512573c037fedd927b8743000729d902e7eb02480618741",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/actions/reactions.mjs",
+      "sha256": "104aacb1da31b68704b748dfd37fc886ae56568ba4baa18e95f7f81b3ee6082d",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/actions/search.mjs",
+      "sha256": "f51858c549d757eafc6569cf1f0e0c8ca8f2663153d7243c6e65e827bf8ab4c6",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/actions/video.mjs",
+      "sha256": "c8f3019acad55d0002b652e25eb8ccdb549a47743da8bb8a35dcd8830a49e191",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/index.mjs",
+      "sha256": "c50c20ed4d96158aa95073b271bfa810567daf27153ba90991f1b241d5e4aa73",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/metadata.mjs",
+      "sha256": "975057941574f73ca69c88c1bee0a366b3f647d62f2c599f3775931b442d8ee0",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/network.mjs",
+      "sha256": "df883ba27fd13d96eff1a3c6fbbcdaa0f42ec96952de0a9cf08570e1cf56009c",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/selectors.mjs",
+      "sha256": "031dec5384ec48d727fd59ee3614540a29964bf429b79ebcb3ab71ceab5d92c2",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "providers/youtube/session.mjs",
+      "sha256": "72b484afcb4a57f7bd3ba0bfa212674a752a5a3030e0830a211d7b2377dd3d9a",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "recon-scope.mjs",
+      "sha256": "6912be5cc99fe8871c8a4ffcbc7a36fc2201b729084f7cc296a6feab54d6633f",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "run-shapes.mjs",
+      "sha256": "eef6f87e7c70b263e44940bdb9135b4d693085fcd72e5eb07b21edcfe689ce70",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "scroll.mjs",
+      "sha256": "123539e46fe6584b89b6a0431568e9fb82c0975596cb852b785d8744e4eabef8",
+      "mode": "0644"
+    },
+    {
+      "role": "canonical",
+      "path": "target-safety.mjs",
+      "sha256": "cb9b1a04dbd5b077b0b3e673067e4bff33abd7f8bd8291cbee4db8c649d34c16",
+      "mode": "0644"
+    }
+  ],
+  "adapters": [
+    {
+      "role": "adapter",
+      "path": "action-runtime/action-result.mjs",
+      "sha256": "b07cb93271571aa028fcf1cd2c80d7fd93e3daca5002c7e7c492902f71b2ed78",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/action-runtime/action-result",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "action-runtime/guardrails.mjs",
+      "sha256": "6d48d3064c3cb8d96ecc26883682bda5a62bc9966abca5eedd8ff9b10d07e01f",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/action-runtime/guardrails",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "agents/parent-dispatcher.mjs",
+      "sha256": "6066b70ae0b5fa29f71d1a844e1ffec9c5fa16a1014d7afca03799e7e0911c34",
+      "mode": "0755",
+      "adapterKind": "executable",
+      "canonicalPackage": "@mcp/engine/agents/parent-dispatcher",
+      "runner": "runParentDispatcher"
+    },
+    {
+      "role": "adapter",
+      "path": "agents/parent-verify.mjs",
+      "sha256": "b9d09019104297a8013a4b1c445550f34bbb1964029cc56f3027b8c679ebe14e",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/agents/parent-verify",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "browser-utils.mjs",
+      "sha256": "6a3e087de3a0c620dd68100fa24871d311c2ee0cf36b1fd6af61b54f29cb38fe",
+      "mode": "0755",
+      "adapterKind": "executable",
+      "canonicalPackage": "@mcp/engine/browser-utils",
+      "runner": "runBrowserUtilsCli"
+    },
+    {
+      "role": "adapter",
+      "path": "cli.mjs",
+      "sha256": "722abf709486f3b29d74b052c12406c2361c5fb6fe287d1f6a05273909691c5f",
+      "mode": "0755",
+      "adapterKind": "executable",
+      "canonicalPackage": "@mcp/engine/cli",
+      "runner": "runEngineCli"
+    },
+    {
+      "role": "adapter",
+      "path": "config.mjs",
+      "sha256": "ec6485a0eb6e16ddcfd3afdde917fd7724e837493d099d31f17bcc027047470e",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/config",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "cookie.mjs",
+      "sha256": "b2667d7c77e2cb16983bbd3d08e90872c61f2c7b649eee75167491bdea0c90b0",
+      "mode": "0755",
+      "adapterKind": "executable",
+      "canonicalPackage": "@mcp/engine/cookie",
+      "runner": "runCookieCli"
+    },
+    {
+      "role": "adapter",
+      "path": "credentials.mjs",
+      "sha256": "f3c458c4dcf04e4cd364b3229bc0d5479682e4c7b6585129cdc369312d96c9f1",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/credentials",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "diagnostics.mjs",
+      "sha256": "a03564720d87af8c8c063727f8f897d3e34d75c9026990ec1c6bcd718c78155c",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/diagnostics",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "evidence-boundary.mjs",
+      "sha256": "3700c46135c69d69b94cb4257e5333686eb26e5daefc586830096753ef2124a3",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/evidence-boundary",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "outcome.mjs",
+      "sha256": "233211ff1b1cab04c75022f326045fb9547a2d5bd2a3916fbbc8e48c0a11eaa6",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/outcome",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "providers/coupang/index.mjs",
+      "sha256": "70def79c66b721c49a84eb5db9b20877e114d73c75131d37e43552f5bd4ad8c4",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/providers/coupang",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "providers/index.mjs",
+      "sha256": "7e0ee277401ac163b6232761c8607d1d84a3221e801368370f913029726fbd7d",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/providers",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "providers/instagram/index.mjs",
+      "sha256": "39c83f19b868c254a330128316d7c10bd247828e831998ebc63f7ba218a4d175",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/providers/instagram",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "providers/naver/index.mjs",
+      "sha256": "f8826bdbb3d7438b6af50cdf887f5a56652db23167cf600fe403fd0202582f98",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/providers/naver",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "providers/tiktok/index.mjs",
+      "sha256": "bb4bee458f2ebb434a1aa78cf9fb4684c2e486bd381973c003eb50694937a4c9",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/providers/tiktok",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "providers/x/index.mjs",
+      "sha256": "a436b77919e891620eaaabd5ed550bd5ed9d7e888d5f53f50a499aded0d5aeb0",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/providers/x",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "providers/youtube/index.mjs",
+      "sha256": "46476e760948a988fe038bedfbca1668c7f75aabcbdde5342f27bfcad67d4902",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/providers/youtube",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "recon-scope.mjs",
+      "sha256": "f15084b246fc71a01aa5c027fbadadf0baf842af5e9d0047c0bd23a20bc9ba32",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/recon-scope",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "run-shapes.mjs",
+      "sha256": "6c2d08ef32f6b9aaf2ae183b28615dca3f8ec4e2dcabf7296650270c76d6b148",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/run-shapes",
+      "runner": null
+    },
+    {
+      "role": "adapter",
+      "path": "target-safety.mjs",
+      "sha256": "14875b657876324671ff5e0a131b11bb723fbabf3edd491f11a128564429c7ec",
+      "mode": "0644",
+      "adapterKind": "import-only",
+      "canonicalPackage": "@mcp/engine/target-safety",
+      "runner": null
+    }
+  ]
+}

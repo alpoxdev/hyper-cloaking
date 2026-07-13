@@ -4,26 +4,26 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
-import { NetworkReadError } from '../../../../../mcp/engine/providers/network.mjs';
-import { coupangProvider } from '../../../../../mcp/engine/providers/coupang/metadata.mjs';
-import { coupangReadPromotions } from '../../../../../mcp/engine/providers/coupang/network.mjs';
-import { analyzeProducts } from '../../../../../mcp/engine/providers/coupang/actions/analyze.mjs';
+import { validateProviderSchema } from '../../../../../packages/mcp-engine/src/providers/schema.mjs';
+import { NetworkReadError } from '../../../../../packages/mcp-engine/src/providers/network.mjs';
+import { coupangProvider } from '../../../../../packages/mcp-engine/src/providers/coupang/metadata.mjs';
+import { coupangReadPromotions } from '../../../../../packages/mcp-engine/src/providers/coupang/network.mjs';
+import { analyzeProducts } from '../../../../../packages/mcp-engine/src/providers/coupang/actions/analyze.mjs';
 import {
   normalizeCartLineRef,
   normalizeOrderItemRef,
   normalizeProductRef
-} from '../../../../../mcp/engine/providers/coupang/actions/ids.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/coupang/actions/ids.mjs';
 import {
   getProduct,
   searchProducts
-} from '../../../../../mcp/engine/providers/coupang/actions/reads.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/coupang/actions/reads.mjs';
 import {
   addToCart,
   blockedCoupangAction,
   setSavedState,
   submitOwnOrderReview
-} from '../../../../../mcp/engine/providers/coupang/actions/writes.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/coupang/actions/writes.mjs';
 
 function safety() {
   return { disposition: 'ok', reason: 'public-https', risks: [] };

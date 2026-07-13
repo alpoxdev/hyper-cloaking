@@ -9,17 +9,17 @@ const packageManifest = JSON.parse(
   await fs.readFile(path.join(repositoryRoot, 'package.json'), 'utf8')
 );
 
-test('relocation quality scripts lint the engine while preserving ledger-bound bytes', async () => {
+test('relocation quality scripts lint canonical source and route live topology through v2', async () => {
   const { lint, format, 'format:check': formatCheck } = packageManifest.scripts;
 
-  assert.match(lint, /mcp\/engine\/\*\*\/\*.mjs/);
+  assert.match(lint, /packages\/mcp-engine\/src\/\*\*\/\*.mjs/);
   for (const command of [format, formatCheck]) {
     assert.doesNotMatch(command, /mcp\/engine\/\*\*\/\*.mjs/);
     for (const scope of [
       'scripts/**/*.mjs',
       'tests/**/*.mjs',
-      'mcp/src/**/*.mjs',
-      'mcp/test/**/*.mjs'
+      'mcp/test/**/*.mjs',
+      'packages/mcp-engine/src/**/*.mjs'
     ]) {
       assert.ok(command.includes(scope), `${scope} must remain in the formatter scope`);
     }
@@ -28,6 +28,8 @@ test('relocation quality scripts lint the engine while preserving ledger-bound b
   assert.match(prettierIgnore, /^mcp\/engine\/$/m);
 
   const validator = await fs.readFile(path.join(repositoryRoot, 'scripts/validate.mjs'), 'utf8');
-  assert.match(validator, /validateRelocationQualityScope/);
-  assert.match(validator, /ledger-bound mcp\/engine\/\*\*\/\*.mjs/);
+  assert.match(validator, /validateAuthoredSourceQualityScope/);
+  assert.match(validator, /validateHistoricalV1Replay/);
+  assert.match(validator, /validateLiveEngineTopology/);
+  assert.match(validator, /verifyLiveRelocation/);
 });

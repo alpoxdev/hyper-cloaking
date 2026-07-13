@@ -1,77 +1,5 @@
-/**
- * Canonical TikTok provider surface: metadata, session construction, selectors,
- * normalized reads, and the supported action implementations.
- *
- * Read actions return provider-normalized records; write actions enforce the
- * provider's safety policy and may throw typed navigation, challenge, target,
- * validation, or action errors. The public barrel intentionally exposes no
- * mirror-tree implementation.
- */
-export { tiktokProvider } from './metadata.mjs';
-export { buildTikTokSession } from './session.mjs';
-export { tiktokSelectors, TIKTOK_SELECTORS_VERSION } from './selectors.mjs';
-export { executeTikTokRead, tiktokReadPromotions } from './network.mjs';
-
-import { analyzeVideos } from './actions/analyze.mjs';
-import {
-  assertCommentRef,
-  assertDraftRef,
-  assertThreadRef,
-  assertUserRef,
-  assertVideoRef,
-  normalizeCommentRef,
-  normalizeDraftRef,
-  normalizeThreadRef,
-  normalizeUserRef,
-  normalizeVideoRef
-} from './actions/ids.mjs';
-import {
-  getUser,
-  getUserVideos,
-  getVideo,
-  listDMThreads,
-  readDMThread,
-  searchVideos
-} from './actions/reads.mjs';
-import {
-  blockedTikTokAction,
-  commentVideo,
-  createUploadDraft,
-  publishDraft,
-  replyToComment,
-  replyToDM,
-  setFollowing,
-  setLiked,
-  setReposted,
-  setSaved
-} from './actions/writes.mjs';
-
-export const tiktokActions = {
-  getUser,
-  getUserVideos,
-  getVideo,
-  searchVideos,
-  listDMThreads,
-  readDMThread,
-  analyzeVideos,
-  setLiked,
-  setSaved,
-  setFollowing,
-  setReposted,
-  commentVideo,
-  replyToComment,
-  replyToDM,
-  createUploadDraft,
-  publishDraft,
-  blockedTikTokAction,
-  normalizeUserRef,
-  normalizeVideoRef,
-  normalizeCommentRef,
-  normalizeThreadRef,
-  normalizeDraftRef
-};
-
 export {
+  TIKTOK_SELECTORS_VERSION,
   analyzeVideos,
   assertCommentRef,
   assertDraftRef,
@@ -79,8 +7,10 @@ export {
   assertUserRef,
   assertVideoRef,
   blockedTikTokAction,
+  buildTikTokSession,
   commentVideo,
   createUploadDraft,
+  executeTikTokRead,
   getUser,
   getUserVideos,
   getVideo,
@@ -98,5 +28,9 @@ export {
   setFollowing,
   setLiked,
   setReposted,
-  setSaved
-};
+  setSaved,
+  tiktokActions,
+  tiktokProvider,
+  tiktokReadPromotions,
+  tiktokSelectors
+} from '@mcp/engine/providers/tiktok';

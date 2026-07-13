@@ -10,7 +10,7 @@ import {
   isPrivateIpLiteral,
   isUnsafeScheme,
   normalizeOrigin
-} from '../../../mcp/engine/target-safety.mjs';
+} from '../../../packages/mcp-engine/src/target-safety.mjs';
 
 test('classifies public https FQDN as ok', () => {
   const result = classifyTargetUrl('https://example.com/path?q=1');

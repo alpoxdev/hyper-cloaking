@@ -26,7 +26,7 @@ import {
   setDefaultCredentialProfile,
   validateCredentialStore,
   withCredentialProfileOperation
-} from '../../../mcp/engine/credentials.mjs';
+} from '../../../packages/mcp-engine/src/credentials.mjs';
 
 const evidenceHash = 'e'.repeat(64);
 

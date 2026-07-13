@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-export const CANONICAL_ROOT = 'mcp/src';
+export const CANONICAL_ROOT = 'packages/mcp-server/src';
 export const CANONICAL_TARGETS = [
-  { key: 'mcp-src', root: 'mcp/src', policy: 'strict' },
-  { key: 'mcp-engine', root: 'mcp/engine', policy: 'bounded' }
+  { key: 'mcp-src', root: 'packages/mcp-server/src', policy: 'strict' },
+  { key: 'mcp-engine', root: 'packages/mcp-engine/src', policy: 'bounded' }
 ];
 export function canonicalTarget(key) {
   return CANONICAL_TARGETS.find((target) => target.key === key);

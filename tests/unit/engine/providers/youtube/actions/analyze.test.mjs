@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { analyzeChannel } from '../../../../../../mcp/engine/providers/youtube/actions/analyze.mjs';
+import { analyzeChannel } from '../../../../../../packages/mcp-engine/src/providers/youtube/actions/analyze.mjs';
 
 test('analyzeChannel handles the empty case', () => {
   const result = analyzeChannel([]);

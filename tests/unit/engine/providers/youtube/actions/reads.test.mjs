@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { analyzeChannel } from '../../../../../../mcp/engine/providers/youtube/actions/analyze.mjs';
-import { getChannel } from '../../../../../../mcp/engine/providers/youtube/actions/channel.mjs';
-import { searchVideos } from '../../../../../../mcp/engine/providers/youtube/actions/search.mjs';
-import { getVideo } from '../../../../../../mcp/engine/providers/youtube/actions/video.mjs';
+import { analyzeChannel } from '../../../../../../packages/mcp-engine/src/providers/youtube/actions/analyze.mjs';
+import { getChannel } from '../../../../../../packages/mcp-engine/src/providers/youtube/actions/channel.mjs';
+import { searchVideos } from '../../../../../../packages/mcp-engine/src/providers/youtube/actions/search.mjs';
+import { getVideo } from '../../../../../../packages/mcp-engine/src/providers/youtube/actions/video.mjs';
 import {
   youtubeSelectors,
   resolveYouTubeExtractionTier,
   resolveYouTubeSelector
-} from '../../../../../../mcp/engine/providers/youtube/selectors.mjs';
-import { NetworkReadError } from '../../../../../../mcp/engine/providers/network.mjs';
+} from '../../../../../../packages/mcp-engine/src/providers/youtube/selectors.mjs';
+import { NetworkReadError } from '../../../../../../packages/mcp-engine/src/providers/network.mjs';
 
 const VIDEO_A = 'aBcDeFgHiJ1';
 const VIDEO_B = 'zYxWvUtSrQ2';

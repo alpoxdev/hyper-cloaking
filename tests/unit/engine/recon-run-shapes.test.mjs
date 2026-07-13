@@ -10,12 +10,12 @@ import {
   isSameOrigin,
   makeEvidencePlan,
   normalizeOrigin
-} from '../../../mcp/engine/recon-scope.mjs';
+} from '../../../packages/mcp-engine/src/recon-scope.mjs';
 import {
   appendRunShape,
   clearRunShapes,
   sanitizeRunShape
-} from '../../../mcp/engine/run-shapes.mjs';
+} from '../../../packages/mcp-engine/src/run-shapes.mjs';
 
 test('recon scope recognizes same and approved origins without network activity', () => {
   assert.equal(normalizeOrigin('https://Example.com:443/a'), 'https://example.com');

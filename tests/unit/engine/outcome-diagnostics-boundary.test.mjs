@@ -1,16 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { evaluateOutcome, makeOutcomeReport } from '../../../mcp/engine/outcome.mjs';
+import { evaluateOutcome, makeOutcomeReport } from '../../../packages/mcp-engine/src/outcome.mjs';
 import {
   classifyChallengeObservation,
   makeFailureDiagnostic
-} from '../../../mcp/engine/diagnostics.mjs';
+} from '../../../packages/mcp-engine/src/diagnostics.mjs';
 import {
   markUntrustedBrowserContent,
   redactEvidenceText,
   summarizeEvidenceRef
-} from '../../../mcp/engine/evidence-boundary.mjs';
+} from '../../../packages/mcp-engine/src/evidence-boundary.mjs';
 
 test('evaluateOutcome passes and fails deterministic multi-criteria without filesystem probing', () => {
   const observation = {

@@ -16,15 +16,15 @@ import {
   standardReadEnvelope,
   validateObservedPrivateCapability,
   withObservedPrivateReplay
-} from '../../../../mcp/engine/providers/network.mjs';
+} from '../../../../packages/mcp-engine/src/providers/network.mjs';
 import {
   executeInstagramRead,
   instagramReadPromotions
-} from '../../../../mcp/engine/providers/instagram/network.mjs';
+} from '../../../../packages/mcp-engine/src/providers/instagram/network.mjs';
 import {
   executeYouTubeRead,
   youtubeReadPromotions
-} from '../../../../mcp/engine/providers/youtube/network.mjs';
+} from '../../../../packages/mcp-engine/src/providers/youtube/network.mjs';
 
 const promoted = {
   sanitizedFixtures: true,

@@ -1,17 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { genericProvider } from '../../../../mcp/engine/providers/generic.mjs';
-import { coupangProvider } from '../../../../mcp/engine/providers/coupang/metadata.mjs';
-import { naverProvider } from '../../../../mcp/engine/providers/naver/metadata.mjs';
+import { genericProvider } from '../../../../packages/mcp-engine/src/providers/generic.mjs';
+import { coupangProvider } from '../../../../packages/mcp-engine/src/providers/coupang/metadata.mjs';
+import { naverProvider } from '../../../../packages/mcp-engine/src/providers/naver/metadata.mjs';
 import {
   FORBIDDEN_PROVIDER_FIELDS,
   validateProviderSchema
-} from '../../../../mcp/engine/providers/schema.mjs';
-import { validateProviderRegistry as validateProviderRegistryFromRegistry } from '../../../../mcp/engine/providers/registry.mjs';
-import { xProvider } from '../../../../mcp/engine/providers/x.mjs';
-import { tiktokProvider } from '../../../../mcp/engine/providers/tiktok/metadata.mjs';
-import { buildProviderSession, OffOriginError } from '../../../../mcp/engine/providers/session.mjs';
+} from '../../../../packages/mcp-engine/src/providers/schema.mjs';
+import { validateProviderRegistry as validateProviderRegistryFromRegistry } from '../../../../packages/mcp-engine/src/providers/registry.mjs';
+import { xProvider } from '../../../../packages/mcp-engine/src/providers/x.mjs';
+import { tiktokProvider } from '../../../../packages/mcp-engine/src/providers/tiktok/metadata.mjs';
+import {
+  buildProviderSession,
+  OffOriginError
+} from '../../../../packages/mcp-engine/src/providers/session.mjs';
 
 test('valid built-in providers pass schema validation', () => {
   for (const provider of [

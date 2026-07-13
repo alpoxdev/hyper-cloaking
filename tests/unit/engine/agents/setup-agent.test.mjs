@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runSetup } from '../../../../mcp/engine/agents/setup-agent.mjs';
+import { runSetup } from '../../../../packages/mcp-engine/src/agents/setup-agent.mjs';
 
 function fakeRunCli({ validate = { ok: true }, config } = {}) {
   const calls = [];

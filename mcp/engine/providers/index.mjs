@@ -1,51 +1,8 @@
-/**
- * Canonical provider registry facade. Metadata loads without provider action
- * modules so resolution remains side-effect-light.
- */
-// Assembles the provider registry from templates and re-exports the public
-// registry API (getProvider, resolveProviderForUrl, validateProviderRegistry).
-
-import { genericProvider } from './generic.mjs';
-// Import the provider metadata directly (not the action barrel) so building the
-// registry stays lean — it must not eager-load the browser-automation/fs action
-// stack. Action consumers import the provider-specific `<provider>/index.mjs`.
-import { coupangProvider } from './coupang/metadata.mjs';
-import { instagramProvider } from './instagram/metadata.mjs';
-import { naverProvider } from './naver.mjs';
-import {
+export {
   GENERIC_PROVIDER_ID,
-  buildProviderRegistry,
-  getProvider as getProviderFromRegistry,
+  getProvider,
   hostMatchesDomain,
-  resolveProviderForUrl as resolveProviderForUrlFromRegistry,
-  validateProviderRegistry as validateProviderRegistryFromRegistry
-} from './registry.mjs';
-import { xProvider } from './x.mjs';
-import { tiktokProvider } from './tiktok/metadata.mjs';
-import { youtubeProvider } from './youtube/metadata.mjs';
-
-export const providers = [
-  genericProvider,
-  naverProvider,
-  instagramProvider,
-  youtubeProvider,
-  coupangProvider,
-  tiktokProvider,
-  xProvider
-];
-
-const registry = buildProviderRegistry(providers);
-
-export function getProvider(id) {
-  return getProviderFromRegistry(registry, id);
-}
-
-export function resolveProviderForUrl(url) {
-  return resolveProviderForUrlFromRegistry(registry, url);
-}
-
-export function validateProviderRegistry() {
-  return validateProviderRegistryFromRegistry(providers);
-}
-
-export { GENERIC_PROVIDER_ID, hostMatchesDomain };
+  providers,
+  resolveProviderForUrl,
+  validateProviderRegistry
+} from '@mcp/engine/providers';

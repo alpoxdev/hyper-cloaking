@@ -7,16 +7,21 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import {
-  OUTER_PACKAGE_POLICY,
-  assertOuterPackagePolicy,
-  verifyRelocation
-} from '../../scripts/engine-relocation-manifest.mjs';
 
 const packageName = '@alpoxdev/hyper-cloaking';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(here, '../..');
 const mcpRoot = path.join(repositoryRoot, 'mcp');
+const canonicalPackages = Object.freeze({
+  engine: {
+    name: '@mcp/engine',
+    root: path.join(repositoryRoot, 'packages', 'mcp-engine')
+  },
+  server: {
+    name: '@mcp/server',
+    root: path.join(repositoryRoot, 'packages', 'mcp-server')
+  }
+});
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const workspaceEnvironmentKeys = [
   'INIT_CWD',
@@ -34,7 +39,6 @@ const workspaceEnvironmentKeys = [
   'NPM_CONFIG_LOCAL_PREFIX',
   'NPM_CONFIG_PREFIX',
   'NPM_CONFIG_WORKSPACE',
-  'NPM_CONFIG_WORKSPACES',
   'NPM_CONFIG_WORKSPACES_UPDATE'
 ];
 const expectedToolNames = [
@@ -64,14 +68,12 @@ function isWithin(parent, child) {
   );
 }
 
-function consumerEnvironment({ home, cache, userConfig }) {
+function consumerEnvironment(overrides = {}) {
   const environment = {
     ...process.env,
-    HOME: home,
-    npm_config_cache: cache,
-    npm_config_userconfig: userConfig,
-    NPM_CONFIG_CACHE: cache,
-    NPM_CONFIG_USERCONFIG: userConfig
+    ...overrides,
+    npm_config_offline: 'true',
+    NPM_CONFIG_OFFLINE: 'true'
   };
   for (const key of workspaceEnvironmentKeys) delete environment[key];
   return environment;
@@ -110,6 +112,23 @@ async function runChecked(command, args, options) {
   return result;
 }
 
+async function packLocalPackage(root, packDirectory, environment) {
+  const packed = await runChecked(
+    npmCommand,
+    ['pack', '--offline', '--ignore-scripts', '--json', '--pack-destination', packDirectory],
+    { cwd: root, env: environment }
+  );
+  const [tarball] = JSON.parse(packed.stdout);
+  assert.equal(typeof tarball?.filename, 'string', 'npm pack reports an emitted tarball filename');
+  assert.ok(Array.isArray(tarball.files), 'npm pack reports the tarball file inventory');
+  const tarballPath = path.join(packDirectory, tarball.filename);
+  await fs.access(tarballPath);
+  return {
+    files: tarball.files.map(({ path: filePath }) => filePath).sort(),
+    path: tarballPath
+  };
+}
+
 async function realpathInside(parent, child, label) {
   const realParent = await fs.realpath(parent);
   const realChild = await fs.realpath(child);
@@ -121,7 +140,90 @@ async function realpathInside(parent, child, label) {
   return realChild;
 }
 
-function packageProbeSource(allowedExports) {
+function localTarballSpecifier(consumerRoot, tarballPath) {
+  return `file:${path.relative(consumerRoot, tarballPath)}`;
+}
+const installedPackageNames = Object.freeze({
+  engine: canonicalPackages.engine.name,
+  server: canonicalPackages.server.name,
+  legacy: packageName
+});
+
+function installedPackageRoot(consumerModules, packageKey) {
+  return path.join(consumerModules, ...installedPackageNames[packageKey].split('/'));
+}
+
+async function writeConsumerManifest(consumerRoot, name, dependencies) {
+  await fs.writeFile(
+    path.join(consumerRoot, 'package.json'),
+    `${JSON.stringify({ name, private: true, type: 'module', dependencies }, null, 2)}\n`
+  );
+}
+
+async function installLocalTopology({ root, name, dependencies, installed, environment }) {
+  const consumerRoot = path.join(root, name);
+  await fs.mkdir(consumerRoot, { recursive: true });
+  await writeConsumerManifest(consumerRoot, name, dependencies);
+  await runChecked(
+    npmCommand,
+    ['install', '--offline', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false'],
+    { cwd: consumerRoot, env: environment }
+  );
+
+  const consumerModules = path.join(consumerRoot, 'node_modules');
+  for (const packageKey of installed) {
+    const packageRoot = await realpathInside(
+      consumerModules,
+      installedPackageRoot(consumerModules, packageKey),
+      `${name} installed ${packageKey} package`
+    );
+    const installedManifest = JSON.parse(
+      await fs.readFile(path.join(packageRoot, 'package.json'), 'utf8')
+    );
+    assert.equal(
+      installedManifest.name,
+      installedPackageNames[packageKey],
+      `${name} installed the expected ${packageKey} tarball`
+    );
+  }
+  for (const packageKey of Object.keys(installedPackageNames)) {
+    if (installed.includes(packageKey)) continue;
+    await assert.rejects(
+      fs.access(installedPackageRoot(consumerModules, packageKey)),
+      { code: 'ENOENT' },
+      `${name} does not install ${packageKey}`
+    );
+  }
+  return consumerRoot;
+}
+
+async function assertLegacyTarballInventory(tarball) {
+  const legacyManifest = JSON.parse(await fs.readFile(path.join(mcpRoot, 'package.json'), 'utf8'));
+  const expectedFiles = new Set(['package.json']);
+  for (const entry of [
+    legacyManifest.main,
+    ...Object.values(legacyManifest.bin),
+    ...Object.values(legacyManifest.exports)
+  ]) {
+    assert.match(entry, /^\.\//, `legacy package entry is package-relative: ${entry}`);
+    expectedFiles.add(entry.slice(2));
+  }
+
+  assert.deepEqual(
+    tarball.files,
+    [...expectedFiles].sort(),
+    'legacy tarball contains only its manifest, server adapter, registration helper, and declared engine adapters'
+  );
+  assert.equal(
+    tarball.files.some((file) =>
+      /^(?:src|test|scripts)\/|^dist\/(?:engine|src|test|scripts)\//.test(file)
+    ),
+    false,
+    'legacy tarball contains no raw source or duplicate canonical engine payload'
+  );
+}
+
+function packageProbeSource(allowedExports, canonicalSpecifiers) {
   return `
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -135,6 +237,7 @@ import {
 } from '${packageName}/register';
 
 const allowedExports = ${JSON.stringify(allowedExports)};
+const canonicalSpecifiers = ${JSON.stringify(canonicalSpecifiers)};
 const unavailableExports = [
   '${packageName}/engine/providers/network.mjs',
   '${packageName}/engine/agents/setup-agent.mjs',
@@ -145,6 +248,20 @@ for (const specifier of allowedExports) {
   resolvedExports[specifier] = fileURLToPath(import.meta.resolve(specifier));
   await import(specifier);
 }
+const canonicalResolved = {};
+for (const specifier of canonicalSpecifiers) {
+  canonicalResolved[specifier] = fileURLToPath(import.meta.resolve(specifier));
+  await import(specifier);
+}
+
+const legacyServer = await import('${packageName}');
+const canonicalServer = await import('@mcp/server');
+for (const exportName of ['SERVER_INFO', 'createServer', 'main']) {
+  if (legacyServer[exportName] !== canonicalServer[exportName]) {
+    throw new Error(\`legacy server did not delegate \${exportName} to @mcp/server\`);
+  }
+}
+
 const registeredServerCommand = serverCommand();
 const installedServerPath = fileURLToPath(import.meta.resolve('${packageName}'));
 if (
@@ -191,6 +308,7 @@ for (const specifier of unavailableExports) {
 process.stdout.write(
   JSON.stringify({
     resolvedExports,
+    canonicalResolved,
     browserDependencies,
     registeredServerCommand,
     rejected
@@ -198,18 +316,165 @@ process.stdout.write(
 );
 `;
 }
+function missingCanonicalPeerProbeSource() {
+  return `
+const specifiers = ['@mcp/engine', '@mcp/server', '${packageName}'];
+const failures = [];
+for (const specifier of specifiers) {
+  try {
+    await import(specifier);
+  } catch (error) {
+    failures.push({
+      code: error?.code ?? null,
+      message: error?.message ?? '',
+      specifier
+    });
+    continue;
+  }
+  throw new Error(\`lone legacy consumer unexpectedly resolved \${specifier}\`);
+}
+process.stdout.write(JSON.stringify(failures));
+`;
+}
 
 test(
-  'packed MCP installs as an isolated consumer with only curated exports and entry points',
+  'isolated offline local-tarball topology matrix assembles canonical and legacy packages',
+  { timeout: 120_000 },
+  async (t) => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'hyper-cloaking-topology-matrix-'));
+    const packDirectory = path.join(root, 'pack');
+    const environment = consumerEnvironment();
+    t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+    assert.equal(
+      isWithin(repositoryRoot, root),
+      false,
+      'topology consumers stay outside the worktree'
+    );
+    await fs.mkdir(packDirectory, { recursive: true });
+    const engineTarball = await packLocalPackage(
+      canonicalPackages.engine.root,
+      packDirectory,
+      environment
+    );
+    const serverTarball = await packLocalPackage(
+      canonicalPackages.server.root,
+      packDirectory,
+      environment
+    );
+    const legacyTarball = await packLocalPackage(mcpRoot, packDirectory, environment);
+    await assertLegacyTarballInventory(legacyTarball);
+
+    const loneLegacyEnvironment = consumerEnvironment({
+      npm_config_cache: path.join(root, 'empty-npm-cache'),
+      NPM_CONFIG_CACHE: path.join(root, 'empty-npm-cache')
+    });
+    const loneLegacyRoot = await installLocalTopology({
+      root,
+      name: 'legacy-alone',
+      dependencies: {
+        [packageName]: localTarballSpecifier(path.join(root, 'legacy-alone'), legacyTarball.path)
+      },
+      installed: ['legacy'],
+      environment: loneLegacyEnvironment
+    });
+    const loneLegacyProbePath = path.join(loneLegacyRoot, 'missing-canonical-peers.mjs');
+    await fs.writeFile(loneLegacyProbePath, missingCanonicalPeerProbeSource());
+    const loneLegacyProbe = await runChecked(process.execPath, [loneLegacyProbePath], {
+      cwd: loneLegacyRoot,
+      env: loneLegacyEnvironment
+    });
+    const loneLegacyFailures = JSON.parse(loneLegacyProbe.stdout);
+    assert.deepEqual(
+      loneLegacyFailures.map(({ code, specifier }) => ({ code, specifier })),
+      [
+        { code: 'ERR_MODULE_NOT_FOUND', specifier: '@mcp/engine' },
+        { code: 'ERR_MODULE_NOT_FOUND', specifier: '@mcp/server' },
+        { code: 'ERR_MODULE_NOT_FOUND', specifier: packageName }
+      ],
+      'lone legacy installation leaves canonical peers absent and legacy imports unavailable'
+    );
+    assert.match(
+      loneLegacyFailures[0].message,
+      /Cannot find package '@mcp\/engine'/,
+      'the missing canonical engine import fails clearly'
+    );
+    assert.match(
+      loneLegacyFailures[1].message,
+      /Cannot find package '@mcp\/server'/,
+      'the missing canonical server import fails clearly'
+    );
+    assert.match(
+      loneLegacyFailures[2].message,
+      /Cannot find package '@mcp\/server'/,
+      'the legacy adapter identifies its missing canonical server peer'
+    );
+
+    const topologies = [
+      {
+        name: 'engine-only',
+        installed: ['engine'],
+        dependencies(consumerRoot) {
+          return {
+            [canonicalPackages.engine.name]: localTarballSpecifier(consumerRoot, engineTarball.path)
+          };
+        }
+      },
+      {
+        name: 'server-and-engine',
+        installed: ['engine', 'server'],
+        dependencies(consumerRoot) {
+          return {
+            [canonicalPackages.engine.name]: localTarballSpecifier(
+              consumerRoot,
+              engineTarball.path
+            ),
+            [canonicalPackages.server.name]: localTarballSpecifier(consumerRoot, serverTarball.path)
+          };
+        }
+      },
+      {
+        name: 'legacy-with-explicit-local-peers',
+        installed: ['engine', 'server', 'legacy'],
+        dependencies(consumerRoot) {
+          return {
+            [canonicalPackages.engine.name]: localTarballSpecifier(
+              consumerRoot,
+              engineTarball.path
+            ),
+            [canonicalPackages.server.name]: localTarballSpecifier(
+              consumerRoot,
+              serverTarball.path
+            ),
+            [packageName]: localTarballSpecifier(consumerRoot, legacyTarball.path)
+          };
+        }
+      }
+    ];
+
+    for (const topology of topologies) {
+      await t.test(topology.name, async () => {
+        const consumerRoot = path.join(root, topology.name);
+        await installLocalTopology({
+          root,
+          name: topology.name,
+          dependencies: topology.dependencies(consumerRoot),
+          installed: topology.installed,
+          environment
+        });
+      });
+    }
+  }
+);
+
+test(
+  'all-three local tarballs execute the legacy MCP contract without workspace links or registry access',
   { timeout: 120_000 },
   async (t) => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'hyper-cloaking-package-consumer-'));
     const packDirectory = path.join(root, 'pack');
     const consumerRoot = path.join(root, 'consumer');
-    const home = path.join(root, 'home');
-    const cache = path.join(root, 'npm-cache');
-    const userConfig = path.join(root, 'npmrc');
-    const environment = consumerEnvironment({ home, cache, userConfig });
+    const environment = consumerEnvironment();
     t.after(() => fs.rm(root, { recursive: true, force: true }));
 
     assert.equal(
@@ -219,98 +484,151 @@ test(
     );
     await Promise.all([
       fs.mkdir(packDirectory, { recursive: true }),
-      fs.mkdir(consumerRoot, { recursive: true }),
-      fs.mkdir(home, { recursive: true }),
-      fs.mkdir(cache, { recursive: true })
-    ]);
-    await Promise.all([
-      fs.writeFile(userConfig, ''),
-      fs.writeFile(path.join(consumerRoot, 'package.json'), '{"private":true,"type":"module"}\n')
+      fs.mkdir(consumerRoot, { recursive: true })
     ]);
 
-    const packed = await runChecked(
-      npmCommand,
-      ['pack', '--json', '--pack-destination', packDirectory],
-      { cwd: mcpRoot, env: environment }
+    const engineTarball = await packLocalPackage(
+      canonicalPackages.engine.root,
+      packDirectory,
+      environment
     );
-    const [tarball] = JSON.parse(packed.stdout);
-    assert.equal(
-      typeof tarball?.filename,
-      'string',
-      'npm pack reports the emitted tarball filename'
+    const serverTarball = await packLocalPackage(
+      canonicalPackages.server.root,
+      packDirectory,
+      environment
     );
-    const tarballPath = path.join(packDirectory, tarball.filename);
-    await fs.access(tarballPath);
+    const legacyTarball = await packLocalPackage(mcpRoot, packDirectory, environment);
+    await assertLegacyTarballInventory(legacyTarball);
+
+    await fs.writeFile(
+      path.join(consumerRoot, 'package.json'),
+      `${JSON.stringify(
+        {
+          name: 'isolated-hyper-cloaking-consumer',
+          private: true,
+          type: 'module',
+          dependencies: {
+            [canonicalPackages.engine.name]: localTarballSpecifier(
+              consumerRoot,
+              engineTarball.path
+            ),
+            [canonicalPackages.server.name]: localTarballSpecifier(
+              consumerRoot,
+              serverTarball.path
+            ),
+            [packageName]: localTarballSpecifier(consumerRoot, legacyTarball.path)
+          }
+        },
+        null,
+        2
+      )}\n`
+    );
 
     await runChecked(
       npmCommand,
       [
         'install',
+        '--offline',
         '--ignore-scripts',
         '--no-audit',
         '--no-fund',
-        '--package-lock=false',
-        tarballPath
+        '--package-lock=false'
       ],
       { cwd: consumerRoot, env: environment }
     );
 
     const consumerModules = path.join(consumerRoot, 'node_modules');
-    const installedRoot = path.join(consumerModules, '@alpoxdev', 'hyper-cloaking');
-    const realInstalledRoot = await realpathInside(
-      consumerModules,
-      installedRoot,
-      'installed package'
+    const installedRoots = {
+      legacy: path.join(consumerModules, '@alpoxdev', 'hyper-cloaking'),
+      engine: path.join(consumerModules, '@mcp', 'engine'),
+      server: path.join(consumerModules, '@mcp', 'server')
+    };
+    const [realLegacyRoot, realEngineRoot, realServerRoot] = await Promise.all([
+      realpathInside(consumerModules, installedRoots.legacy, 'installed legacy package'),
+      realpathInside(consumerModules, installedRoots.engine, 'installed canonical engine'),
+      realpathInside(consumerModules, installedRoots.server, 'installed canonical server')
+    ]);
+    const [sourceLegacyRoot, sourceEngineRoot, sourceServerRoot] = await Promise.all([
+      fs.realpath(mcpRoot),
+      fs.realpath(canonicalPackages.engine.root),
+      fs.realpath(canonicalPackages.server.root)
+    ]);
+    assert.notEqual(
+      realLegacyRoot,
+      sourceLegacyRoot,
+      'legacy package must not resolve to the worktree'
     );
     assert.notEqual(
-      realInstalledRoot,
-      await fs.realpath(mcpRoot),
-      'consumer must not resolve to the worktree package'
+      realEngineRoot,
+      sourceEngineRoot,
+      'engine package must not resolve to the worktree'
     );
-    await realpathInside(
-      consumerModules,
-      path.join(installedRoot, 'dist', 'server.mjs'),
-      'installed server entry'
+    assert.notEqual(
+      realServerRoot,
+      sourceServerRoot,
+      'server package must not resolve to the worktree'
     );
-    await realpathInside(
-      consumerModules,
-      path.join(installedRoot, 'engine', 'cli.mjs'),
-      'installed engine entry'
-    );
+    await Promise.all([
+      realpathInside(
+        consumerModules,
+        path.join(installedRoots.legacy, 'dist', 'server.mjs'),
+        'legacy server entry'
+      ),
+      realpathInside(
+        consumerModules,
+        path.join(installedRoots.legacy, 'engine', 'cli.mjs'),
+        'legacy engine adapter'
+      ),
+      realpathInside(
+        consumerModules,
+        path.join(installedRoots.engine, 'dist', 'index.mjs'),
+        'canonical engine entry'
+      ),
+      realpathInside(
+        consumerModules,
+        path.join(installedRoots.server, 'dist', 'index.mjs'),
+        'canonical server entry'
+      )
+    ]);
 
-    const installedManifest = JSON.parse(
-      await fs.readFile(path.join(installedRoot, 'package.json'), 'utf8')
-    );
-    assert.equal(installedManifest.name, packageName);
-    assertOuterPackagePolicy(installedManifest);
-    assert.deepEqual(
-      installedManifest.exports,
-      OUTER_PACKAGE_POLICY.exports,
-      'installed package keeps its curated exports'
-    );
-    assert.deepEqual(
-      installedManifest.bin,
-      OUTER_PACKAGE_POLICY.bin,
-      'installed package keeps all five bin entries'
-    );
+    const [installedLegacyManifest, installedEngineManifest, installedServerManifest] =
+      await Promise.all(
+        Object.values(installedRoots).map(async (installedRoot) =>
+          JSON.parse(await fs.readFile(path.join(installedRoot, 'package.json'), 'utf8'))
+        )
+      );
+    assert.equal(installedLegacyManifest.name, packageName);
     assert.equal(
-      Object.hasOwn(installedManifest.dependencies || {}, 'hyper-cloaking-engine'),
-      false
+      Object.hasOwn(installedLegacyManifest, 'dependencies'),
+      false,
+      'legacy tarball has no runtime dependencies that could trigger registry resolution'
     );
-
-    const ledger = await verifyRelocation({ repoRoot: repositoryRoot, tarballRoot: installedRoot });
+    assert.deepEqual(installedLegacyManifest.peerDependencies, {
+      '@mcp/engine': '^1.0.0',
+      '@mcp/server': '^1.0.0'
+    });
+    assert.deepEqual(installedLegacyManifest.peerDependenciesMeta, {
+      '@mcp/engine': { optional: true },
+      '@mcp/server': { optional: true }
+    });
+    assert.equal(installedEngineManifest.name, canonicalPackages.engine.name);
+    assert.equal(installedServerManifest.name, canonicalPackages.server.name);
     assert.equal(
-      ledger.tarballVerified,
-      true,
-      'relocation ledger verifies the installed tarball engine'
+      Object.hasOwn(installedLegacyManifest.peerDependencies, 'hyper-cloaking-engine'),
+      false,
+      'legacy package does not retain the retired engine package peer'
     );
-    assert.ok(ledger.entries > 0, 'relocation ledger includes engine entries');
 
-    const allowedExports = Object.keys(OUTER_PACKAGE_POLICY.exports)
+    const allowedExports = Object.keys(installedLegacyManifest.exports)
       .filter((entry) => entry !== './package.json')
       .map((entry) => (entry === '.' ? packageName : `${packageName}${entry.slice(1)}`));
+    const canonicalSpecifiers = [
+      canonicalPackages.engine.name,
+      '@mcp/engine/cli',
+      canonicalPackages.server.name
+    ];
     const probePath = path.join(consumerRoot, 'package-probe.mjs');
-    await fs.writeFile(probePath, packageProbeSource(allowedExports));
+    await fs.writeFile(probePath, packageProbeSource(allowedExports, canonicalSpecifiers));
     const probe = await runChecked(process.execPath, [probePath], {
       cwd: consumerRoot,
       env: environment
@@ -318,7 +636,14 @@ test(
     const probeResult = JSON.parse(probe.stdout);
     assert.deepEqual(Object.keys(probeResult.resolvedExports).sort(), [...allowedExports].sort());
     for (const [specifier, resolved] of Object.entries(probeResult.resolvedExports)) {
-      await realpathInside(consumerModules, resolved, `${specifier} export`);
+      await realpathInside(consumerModules, resolved, `${specifier} legacy export`);
+    }
+    assert.deepEqual(
+      Object.keys(probeResult.canonicalResolved).sort(),
+      [...canonicalSpecifiers].sort()
+    );
+    for (const [specifier, resolved] of Object.entries(probeResult.canonicalResolved)) {
+      await realpathInside(consumerModules, resolved, `${specifier} canonical export`);
     }
     for (const [specifier, resolved] of Object.entries(probeResult.browserDependencies)) {
       await realpathInside(consumerModules, resolved, `${specifier} external dependency`);
@@ -326,9 +651,8 @@ test(
     assert.equal(probeResult.registeredServerCommand.command, process.execPath);
     assert.equal(
       await fs.realpath(probeResult.registeredServerCommand.args[0]),
-      await fs.realpath(path.join(installedRoot, 'dist', 'server.mjs'))
+      await fs.realpath(path.join(installedRoots.legacy, 'dist', 'server.mjs'))
     );
-    await fs.access(probeResult.registeredServerCommand.args[0]);
     await realpathInside(
       consumerModules,
       probeResult.registeredServerCommand.args[0],
@@ -346,14 +670,17 @@ test(
       { specifier: 'hyper-cloaking-engine', code: 'ERR_MODULE_NOT_FOUND' }
     ]);
 
-    for (const [binName, entry] of Object.entries(OUTER_PACKAGE_POLICY.bin)) {
-      if (!entry.startsWith('./engine/')) continue;
+    const engineBins = Object.entries(installedLegacyManifest.bin).filter(([, entry]) =>
+      entry.startsWith('./engine/')
+    );
+    assert.equal(engineBins.length, 4, 'legacy package retains its four engine compatibility bins');
+    for (const [binName, entry] of engineBins) {
       const binPath = path.join(consumerModules, '.bin', binName);
-      const entryPath = path.join(installedRoot, entry.slice(2));
+      const entryPath = path.join(installedRoots.legacy, entry.slice(2));
       assert.equal(
         await fs.realpath(binPath),
         await fs.realpath(entryPath),
-        `${binName} bin targets the installed engine entry`
+        `${binName} bin targets the installed engine adapter`
       );
       const argumentsForEntry = binName === 'hyper-cloaking-parent-dispatcher' ? [] : ['--help'];
       const expectedExitCode = binName === 'hyper-cloaking-parent-dispatcher' ? 2 : 0;
@@ -438,7 +765,6 @@ test(
             sameSite: Lax
 `
     );
-
     const cookieInspect = await runChecked(
       path.join(consumerModules, '.bin', 'hyper-cloaking-cookie'),
       ['inspect', '--url', 'https://example.com/', '--workspace', helperWorkspace, '--json'],
@@ -481,8 +807,8 @@ test(
     const mcpBinPath = path.join(consumerModules, '.bin', 'hyper-cloaking-mcp');
     assert.equal(
       await fs.realpath(mcpBinPath),
-      await fs.realpath(path.join(installedRoot, 'dist', 'server.mjs')),
-      'installed MCP bin targets the installed server entry'
+      await fs.realpath(path.join(installedRoots.legacy, 'dist', 'server.mjs')),
+      'installed MCP bin targets the installed server adapter'
     );
     const transport = new StdioClientTransport({
       command: mcpBinPath,

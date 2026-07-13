@@ -1,13 +1,14 @@
 {
   "name": "@alpoxdev/hyper-cloaking",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alpoxdev/hyper-cloaking.git",
     "directory": "mcp"
   },
-  "description": "Stateful stdio MCP server exposing the hyper-cloaking CloakBrowser engine as typed tools.",
+  "description": "Legacy compatibility package for the Hyper Cloaking MCP server and engine.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -52,22 +53,20 @@
     "./engine/agents/parent-dispatcher.mjs": "./engine/agents/parent-dispatcher.mjs",
     "./engine/agents/parent-verify.mjs": "./engine/agents/parent-verify.mjs"
   },
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
-    "build": "esbuild src/server.mjs --bundle --platform=node --format=esm --target=node20 --outfile=dist/server.mjs --external:cloakbrowser --external:playwright-core --banner:js=\"#!/usr/bin/env node\"",
-    "test": "node --test test/*.test.mjs",
-    "bench": "node bench.mjs",
-    "prepack": "npm run build"
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/legacy-compat.contract.test.mjs test/engine-relocation-v1-historical.contract.test.mjs test/engine-relocation-v2.contract.test.mjs test/register.contract.test.mjs test/package-consumer.contract.test.mjs"
   },
-  "dependencies": {
-    "ajv": "^8.20.0",
-    "cloakbrowser": "^0.4.10",
-    "playwright-core": "^1.61.1"
+  "peerDependencies": {
+    "@mcp/engine": "^1.0.0",
+    "@mcp/server": "^1.0.0"
   },
-  "devDependencies": {
-    "@modelcontextprotocol/sdk": "1.29.0",
-    "esbuild": "^0.28.1"
+  "peerDependenciesMeta": {
+    "@mcp/engine": {
+      "optional": true
+    },
+    "@mcp/server": {
+      "optional": true
+    }
   }
 }

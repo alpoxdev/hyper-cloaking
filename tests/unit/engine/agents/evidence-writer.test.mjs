@@ -7,7 +7,7 @@ import fsp from 'node:fs/promises';
 import {
   persistEvidence,
   recoverEvidencePublication
-} from '../../../../mcp/engine/agents/evidence-writer.mjs';
+} from '../../../../packages/mcp-engine/src/agents/evidence-writer.mjs';
 
 async function fixture() {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'hyper-evidence-'));

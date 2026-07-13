@@ -4,15 +4,15 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
-import { NetworkReadError } from '../../../../../mcp/engine/providers/network.mjs';
-import { analyzeVideos } from '../../../../../mcp/engine/providers/tiktok/actions/analyze.mjs';
+import { validateProviderSchema } from '../../../../../packages/mcp-engine/src/providers/schema.mjs';
+import { NetworkReadError } from '../../../../../packages/mcp-engine/src/providers/network.mjs';
+import { analyzeVideos } from '../../../../../packages/mcp-engine/src/providers/tiktok/actions/analyze.mjs';
 import {
   normalizeCommentRef,
   normalizeThreadRef,
   normalizeUserRef,
   normalizeVideoRef
-} from '../../../../../mcp/engine/providers/tiktok/actions/ids.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/tiktok/actions/ids.mjs';
 import {
   getUser,
   getUserVideos,
@@ -20,16 +20,16 @@ import {
   listDMThreads,
   readDMThread,
   searchVideos
-} from '../../../../../mcp/engine/providers/tiktok/actions/reads.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/tiktok/actions/reads.mjs';
 import {
   blockedTikTokAction,
   createUploadDraft,
   publishDraft,
   replyToDM,
   setLiked
-} from '../../../../../mcp/engine/providers/tiktok/actions/writes.mjs';
-import { tiktokProvider } from '../../../../../mcp/engine/providers/tiktok/metadata.mjs';
-import { tiktokReadPromotions } from '../../../../../mcp/engine/providers/tiktok/network.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/tiktok/actions/writes.mjs';
+import { tiktokProvider } from '../../../../../packages/mcp-engine/src/providers/tiktok/metadata.mjs';
+import { tiktokReadPromotions } from '../../../../../packages/mcp-engine/src/providers/tiktok/network.mjs';
 
 function safeTarget() {
   return { disposition: 'ok', reason: 'public-https', risks: [] };

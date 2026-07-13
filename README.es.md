@@ -41,7 +41,7 @@ npx skills add . --list   # ver qué ofrece la fuente
 npx skills add .          # instalar en el proyecto actual
 ```
 
-Requiere **Node.js ≥ 20** y acceso a red para obtener `cloakbrowser` y `playwright-core`. El resto lo instala y repara la skill en la primera ejecución.
+Requiere **Node.js ≥ 20** y acceso a red para obtener `cloakbrowser` y `playwright-core`. Compila los paquetes del workspace local como se describe abajo; ningún paquete de la migración se instala automáticamente en la primera ejecución.
 
 ## 💬 Pruébalo
 
@@ -59,11 +59,11 @@ No hay comandos que aprender. Pídele a tu agente con normalidad —— la skill
 
 ## ⚙️ Por qué funciona
 
-- **Un navegador sigiloso real, no un User-Agent parcheado** —— el servidor local gestionado `hyper-cloaking-mcp` ejecuta CloakBrowser con huellas de navegador genuinas en lugar de limitarse a cambiar una cabecera.
+- **Un navegador sigiloso real, no un User-Agent parcheado** —— el `@mcp/server` canónico compilado localmente ejecuta CloakBrowser con huellas de navegador genuinas en lugar de limitarse a cambiar una cabecera; `hyper-cloaking-mcp` es un comando de compatibilidad heredado.
 - **Al ritmo humano por defecto** —— cada ejecución operativa fuerza `humanize: true`: movimiento de ratón, escritura y desplazamiento a cadencia humana, para que los flujos automatizados largos no se atasquen ni se rompan a mitad de tarea.
 - **Pasa por controles antes de lanzarse** —— la clasificación de seguridad del objetivo, la base de autorización, los orígenes permitidos y una ronda de preguntas previas ocurren *antes* de que se abra ningún navegador.
 - **Sin evidencia no está hecho** —— que una página cargue nunca es "completado". La tarea solo termina cuando el resultado está probado, y devuelve un resultado estructurado.
-- **Configuración sin complicaciones** —— el paquete instalado expone el servidor MCP gestionado y las herramientas tipadas; las compilaciones de código fuente son solo para desarrollar el repositorio.
+- **Configuración de workspace local** —— compila `@mcp/engine` y `@mcp/server` canónicos en este repositorio; `@alpoxdev/hyper-cloaking` proporciona adaptadores de compatibilidad heredados.
 
 ## 🆚 Navegador MCP normal vs `+ Hyper Cloaking`
 
@@ -73,7 +73,7 @@ No hay comandos que aprender. Pídele a tu agente con normalidad —— la skill
 | Confirmar primero que la tarea está autorizada | ✖ sin control | ✓ controles de seguridad y previos al lanzamiento |
 | Reutilizar cookies del sitio sin filtrarlas | ✖ manual, valores en bruto | ✓ normalizadas, enmascaradas, nunca commiteadas |
 | Confiar en que "hecho" significa hecho | ✖ carga de página = éxito | ✓ resultado validado con evidencia |
-| Poner en marcha el navegador sigiloso | ✖ instalación y cableado manual | ✓ instalación/reparación automática + config MCP |
+| Poner en marcha el navegador sigiloso | ✖ instalación y cableado manual | ✓ compilación local del workspace + configuración MCP |
 | **Saltar logins, CAPTCHA, sistemas antifraude** | ✖ | ✖ **lo rechaza, por diseño** (ver Límites) |
 
 Lo que el navegador normal no puede hacer es la primera fila: **comportarse como un humano en una tarea que realmente tienes permiso de ejecutar.**
@@ -87,12 +87,12 @@ Una petición como *"usa CloakBrowser para este sitio"* se convierte en un flujo
 
 1. **Control de seguridad del objetivo** —— clasifica el objetivo como permitido / rechazado / requiere aclaración, y registra la base de autorización y los orígenes permitidos.
 2. **Control de preguntas previas** —— recopila la URL del objetivo, los orígenes permitidos, el modo headless, el modo/cuenta de cookies y la preferencia de mantener abierto, mediante la interfaz nativa de preguntas estructuradas del host.
-3. **Control de configuración** —— verifica Node.js y el servidor MCP local gestionado; instala o repara lo que falte.
+3. **Control de configuración** —— verifica Node.js y el servidor MCP canónico compilado localmente; la instalación o reparación de paquetes del registro no forma parte de esta ruta.
 4. **Espacio de trabajo en tiempo de ejecución** —— inicializa `~/.hyper-cloaking/` para `cookie.yml`, perfiles, descargas, evidencia, logs y estado.
 5. **Manejo de cookies** —— normaliza y carga cookies que coincidan con el sitio (JSON exportado de Chrome, arrays de Playwright, entradas multicuenta) mediante un helper dedicado, sin almacenar nunca valores en bruto en el repositorio.
 6. **Resolución del ejecutable** —— localiza el binario de Chromium de CloakBrowser en caché bajo `~/.hyper-cloaking/cache/cloakbrowser/`.
 7. **Lanzamiento al ritmo humano** —— se ejecuta con `humanize: true` obligatorio en cada ejecución operativa (ratón, escritura y desplazamiento a ritmo humano).
-8. **Configuración de MCP** —— usa el servidor gestionado empaquetado y el renderizador de registro con el ejecutable Node actual y su ruta de servidor resuelta.
+8. **Configuración de MCP** —— usa el servidor canónico compilado localmente con el ejecutable Node actual; los registros heredados apuntan a adaptadores de compatibilidad.
 9. **Ejecución de la tarea + validación del resultado** —— realiza la tarea solicitada y la completa solo cuando la evidencia prueba el resultado (la carga de página por sí sola nunca es completar).
 10. **Informe estructurado** —— devuelve `targetSafety`, `outcome`, `failure`, `contentBoundary` y `learning`; guarda informes y capturas bajo `~/.hyper-cloaking/evidence/`.
 
@@ -112,73 +112,64 @@ Hyper Cloaking es una herramienta para **navegación autorizada**, no una forma 
 
 ## Configuración del MCP local gestionado
 
-### Paquete instalado
+### Paquetes de workspace local
 
-Para usuarios con instalación, `@alpoxdev/hyper-cloaking` distribuye el servidor MCP local gestionado y las utilidades del motor. Instálalo en el proyecto que aloja el cliente:
+Esta migración es solo de workspace local. La publicación en un registro no se ha realizado intencionalmente. El literal `npm install @mcp/...` sigue pendiente de autoridad sobre el scope y aprobación de lanzamiento; los nombres `@mcp/*` de este documento solo se resuelven mediante los workspaces de este repositorio y no indican disponibilidad en un registro.
 
-```bash
-npm install @alpoxdev/hyper-cloaking
-```
-
-`hyper-cloaking-mcp` inicia el servidor stdio. Genera un registro para el cliente que uses desde el export de renderizado compatible:
+Desde la raíz del repositorio, instala las dependencias declaradas, compila los paquetes locales y ejecuta el servidor canónico:
 
 ```bash
-node --input-type=module -e "import { generateServerRegistration } from '@alpoxdev/hyper-cloaking/register'; console.log(JSON.stringify(generateServerRegistration('direct'), null, 2))"
-node --input-type=module -e "import { generateServerRegistration } from '@alpoxdev/hyper-cloaking/register'; console.log(JSON.stringify(generateServerRegistration('codex'), null, 2))"
-node --input-type=module -e "import { generateServerRegistration } from '@alpoxdev/hyper-cloaking/register'; console.log(JSON.stringify(generateServerRegistration('json'), null, 2))"
+npm install
+npm run build
+node "$(pwd)/packages/mcp-server/dist/cli.mjs"
 ```
 
-Aplica el registro generado a Codex, Claude Code/Cursor JSON, OpenClaw, Hermes o al cliente MCP emparejado con la sesión de Gajae-Code. Lanzamiento directo:
+`@mcp/engine` es el paquete de motor canónico y `@mcp/server` es el paquete de servidor stdio canónico. `@mcp/server` depende de la API pública exportada por `@mcp/engine`, incluidos subpaths públicos como `@mcp/engine/browser-utils` y `@mcp/engine/providers`; no debe acceder a rutas de código fuente del motor.
 
-```bash
-hyper-cloaking-mcp
+```js
+import { createServer } from '@mcp/server';
+import { launchCloakBrowser } from '@mcp/engine';
+import { humanClick } from '@mcp/engine/browser-utils';
+import { resolveProviderForUrl } from '@mcp/engine/providers';
 ```
+
+`@alpoxdev/hyper-cloaking` es el workspace local de compatibilidad heredada. Los imports existentes `@alpoxdev/hyper-cloaking/...`, las rutas `mcp/engine/...` y los comandos `hyper-cloaking-*` usan adaptadores de compatibilidad hacia los paquetes locales canónicos. Consérvalos solo para clientes existentes; las integraciones nuevas usan los paquetes canónicos anteriores. El renderizador de registro de compatibilidad local permanece en `./mcp/register.mjs`. El tarball heredado declara `@mcp/engine` y `@mcp/server` como peers opcionales: instala explícitamente los tarballs locales de ambos paquetes canónicos junto con él. No tiene resolución ni alternativa mediante registro; las importaciones de runtime canónicas y heredadas fallan claramente hasta que se proporcionen esos peers.
 
 Usa las herramientas tipadas en este orden: `cloak_setup` → `cloak_status` → `cloak_launch` → `cloak_navigate` → `cloak_snapshot` → `cloak_click`/`cloak_type`/`cloak_scroll` → `cloak_screenshot` → consulta `cloak_provider_capabilities` → `cloak_provider_read` o `cloak_provider_write` → `cloak_teardown`. Usa las herramientas de cookies y credenciales (`cloak_cookies_list`, `cloak_cookies_status`, `cloak_credentials`) cuando sea necesario. Los proveedores compatibles son **Naver, Instagram, YouTube, X, Coupang, TikTok**; los proveedores desconocidos fallan de forma segura.
 
-### Comandos y exports del motor
+### Superficies de paquete y compatibilidad
 
-Todo el código del motor tiene un único propietario físico en `mcp/engine/` y se distribuye dentro del paquete publicado. Los usuarios con instalación usan estas superficies de comandos y exports:
-
-| Superficie | Forma instalada |
+| Superficie | Forma local |
 |---|---|
-| MCP stdio gestionado | `hyper-cloaking-mcp` |
-| CLI del motor: `validate`, `smoke`, `mcp-config`, `live`, `credentials` | `hyper-cloaking-engine <subcommand>` |
-| Helper de navegador: `init`, `cookies` | `hyper-cloaking-browser-utils <subcommand>` |
-| Helper de cookies: `inspect`, `import-json` | `hyper-cloaking-cookie <subcommand>` |
-| Despachador padre | `hyper-cloaking-parent-dispatcher --input-stdin --json` |
-| Renderizador de registro | `@alpoxdev/hyper-cloaking/register` |
+| Motor canónico | `@mcp/engine` y sus subpaths públicos documentados |
+| MCP stdio canónico | `@mcp/server`, compilado localmente en `packages/mcp-server/dist/cli.mjs` |
+| Imports y comandos heredados | Adaptadores de compatibilidad `@alpoxdev/hyper-cloaking`, `mcp/engine/...` y `hyper-cloaking-*` |
+| Renderizador de registro | Adaptador de compatibilidad `./mcp/register.mjs` |
 
-La fila del motor es una etiqueta de comando ejecutable, no un paquete npm ni un especificador de importación. El uso programático se limita a los exports explícitamente seleccionados de `@alpoxdev/hyper-cloaking/engine/...`; no dependas de rutas no listadas ni de imports directos de providers.
-
-```bash
-hyper-cloaking-engine validate --json
-hyper-cloaking-browser-utils init
-hyper-cloaking-cookie inspect --url https://www.instagram.com/example/ --site instagram --json
-```
+Las entradas de API del motor anteriores son especificadores de importación del workspace local, no instrucciones de instalación desde un registro. Los módulos de acción específicos de cada provider no son una superficie de integración de usuario compatible; usa las herramientas MCP provider tipadas.
 
 <details>
 <summary><strong>Providers y módulos de acción de Instagram —— detalles</strong></summary>
 
-**Providers (solo metadatos).** `hyper-cloaking-engine live --provider <id>` selecciona **solo metadatos** —— pistas de dominio/origen y cookie/perfil para `naver`, `instagram`, `youtube`, `x`, `coupang`, `tiktok` o `generic`. Los providers nunca autorizan orígenes más amplios ni eluden los controles de seguridad, reconocimiento o preguntas previas; un provider desconocido falla de forma segura (fail closed).
+**Providers (solo metadatos).** El modo `live --provider <id>` del motor canónico selecciona **solo metadatos** —— pistas de dominio/origen y cookie/perfil para `naver`, `instagram`, `youtube`, `x`, `coupang`, `tiktok` o `generic`. Los providers nunca autorizan orígenes más amplios ni eluden los controles de seguridad, reconocimiento o preguntas previas; un provider desconocido falla de forma segura (fail closed).
 
 **Módulos de acción de Instagram.** Las herramientas tipadas de MCP provider anteriores son la vía compatible para el usuario; los imports directos de providers no son una superficie de integración pública. Se mantienen las barreras existentes: las escrituras son dry-run por defecto, las respuestas de DM solo apuntan a conversaciones existentes (sin contacto en frío), y las respuestas masivas tienen tope, límite de tasa, confirmación humana y son reanudables.
 
 </details>
 
-### Compilación de código fuente del repositorio
+### Compilación del workspace local
 
-Los siguientes comandos son solo instrucciones de desarrollo del repositorio. Los usuarios con instalación deben usar los comandos y exports del paquete anteriores:
+Estas instrucciones funcionan solo desde este checkout; no instalan ningún paquete de la migración desde un registro:
 
 ```bash
-npm --workspace mcp run build
-node --input-type=module -e "import { generateServerRegistration } from './mcp/register.mjs'; console.log(JSON.stringify(generateServerRegistration('claude-code'), null, 2))"
-node "$(pwd)/mcp/dist/server.mjs"
+npm install
+npm run build
+node "$(pwd)/packages/mcp-server/dist/cli.mjs"
 ```
 
 El paquete upstream Playwright MCP queda solo como contexto histórico/de comparación y no es la ruta operativa recomendada.
 
-La verificación sin credenciales construye el bundle de distribución, completa el handshake stdio, inicia una sesión CloakBrowser humanizada real, comprueba el estado y la cierra. Las lecturas/escrituras reales por provider siguen siendo pruebas live condicionadas a credenciales y autorización; CI no simula que hayan pasado.
+La verificación sin credenciales construye los bundles de distribución locales, completa el handshake stdio, inicia una sesión CloakBrowser humanizada real, comprueba el estado y la cierra. Las lecturas/escrituras reales por provider siguen siendo pruebas live condicionadas a credenciales y autorización; CI no simula que hayan pasado.
 
 ## Espacio de trabajo en tiempo de ejecución
 
@@ -198,9 +189,9 @@ Todo el estado en tiempo de ejecución vive bajo `~/.hyper-cloaking/` (sobrescri
 ## Estructura del repositorio
 
 ```text
-mcp/engine/                         # único propietario del motor, distribuido por @alpoxdev/hyper-cloaking
-mcp/register.mjs                    # renderizador de registro compatible
-mcp/src/                             # código fuente del servidor MCP gestionado
+packages/mcp-engine/                # paquete local canónico @mcp/engine
+packages/mcp-server/                # @mcp/server local canónico; usa subpaths de API pública del motor
+mcp/                                # adaptadores y renderizador de compatibilidad local @alpoxdev/hyper-cloaking
 plugins/hyper-cloaking/skills/hyper-cloaking/ # skill canónica (SKILL.md, rules, references)
 skills/hyper-cloaking/              # mirror raíz de la skill canónica
 .claude/skills/hyper-cloaking/      # mirror de skill de Claude Code
@@ -214,19 +205,17 @@ Los directorios de skill se mantienen replicados byte a byte. Valida la paridad 
 
 ## Desarrollo
 
-Estos son comandos de compilación de código fuente del repositorio, no configuración para usuarios con instalación:
+Estos son comandos de compilación y prueba del workspace local, no instrucciones de instalación desde un registro:
 
 ```bash
-npm --workspace mcp run build # bundle MCP de código fuente
-npm run validate              # comprobaciones de estructura y paridad de mirrors
-npm run lint                  # oxlint sobre plugins, scripts y tests
-npm run format                # escritura con prettier
-npm test                      # pruebas E2E raíz y pruebas unitarias del motor
-npm run ci                    # comprobación de CI local completa
-node mcp/engine/cli.mjs validate --json   # autoverificación del motor (sin red)
+npm install
+npm run build
+npm --workspace @mcp/engine run test
+npm --workspace @mcp/server run test
+npm --workspace @alpoxdev/hyper-cloaking run test
 ```
 
-`npm test` ejecuta la suite E2E raíz (`tests/e2e/`) y las pruebas unitarias del motor en `tests/unit/engine/`, que importan el único código fuente de `mcp/engine/`. `npm run validate` demuestra la paridad byte a byte entre los directorios de skill replicados.
+`npm run build` compila localmente los workspaces canónicos de motor y servidor. Los comandos de prueba de paquete ejercitan los paquetes canónicos y los adaptadores de compatibilidad heredados de este checkout.
 Después de la primera ejecución correcta de GitHub Actions, configura un Ruleset para la rama `main` solo tras confirmar que las comprobaciones de trabajo requeridas se llaman `quality` y `Node 20 compatibility`; este repositorio no aplica esa configuración automáticamente.
 
 ---

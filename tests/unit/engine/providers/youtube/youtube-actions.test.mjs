@@ -19,10 +19,10 @@ import {
   subscribeChannel,
   shareVideo,
   saveToPlaylist
-} from '../../../../../mcp/engine/providers/youtube/index.mjs';
-import { providers } from '../../../../../mcp/engine/providers/index.mjs';
-import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
-import { youtubeSelectors } from '../../../../../mcp/engine/providers/youtube/selectors.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/youtube/index.mjs';
+import { providers } from '../../../../../packages/mcp-engine/src/providers/index.mjs';
+import { validateProviderSchema } from '../../../../../packages/mcp-engine/src/providers/schema.mjs';
+import { youtubeSelectors } from '../../../../../packages/mcp-engine/src/providers/youtube/selectors.mjs';
 const TEST_STATE_ROOT = await fs.mkdtemp(path.join(os.tmpdir(), 'youtube-actions-test-'));
 test.after(async () => fs.rm(TEST_STATE_ROOT, { recursive: true, force: true }));
 

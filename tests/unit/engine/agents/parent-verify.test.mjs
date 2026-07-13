@@ -5,7 +5,7 @@ import {
   compileAgentEnvelopeValidator,
   runParentVerifyCli,
   verifyAgentEnvelope
-} from '../../../../mcp/engine/agents/parent-verify.mjs';
+} from '../../../../packages/mcp-engine/src/agents/parent-verify.mjs';
 
 const setupResult = {
   agentType: 'setup',

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { analyzePosts } from '../../../../../../mcp/engine/providers/instagram/actions/analyze.mjs';
+import { analyzePosts } from '../../../../../../packages/mcp-engine/src/providers/instagram/actions/analyze.mjs';
 
 test('analyzePosts handles the empty case', () => {
   const r = analyzePosts([]);

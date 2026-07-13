@@ -3,15 +3,13 @@
  *
  * Client registration renderer for the hyper-cloaking-mcp server.
  *
- * Mirrors the shapes in engine/mcp-config.mjs (which configure the EXTERNAL
- * @playwright/mcp binary) but targets THIS stdio server, so each supported client
- * registers `hyper-cloaking-mcp` as a single stdio server. Rendering only; it
- * never launches the server.
+ * Renders configuration for the consumer-installed legacy server bin. Rendering
+ * only; it never launches the server.
  */
 
 import { fileURLToPath } from 'node:url';
 
-const LOCAL_SERVER_PATH = fileURLToPath(new URL('./dist/server.mjs', import.meta.url));
+const LEGACY_SERVER_PATH = fileURLToPath(new URL('./dist/server.mjs', import.meta.url));
 
 /**
  * Public server identifier used in every client registration.
@@ -53,7 +51,7 @@ export function normalizeClient(client = 'direct') {
 }
 
 /**
- * Default launch command for the built local server bundle.
+ * Default launch command for the consumer-local legacy server bin.
  *
  * @param {{ command?: string, args?: string[] }} [options] Command override.
  * @returns {{ command: string, args: string[] }} Command spec.
@@ -61,7 +59,7 @@ export function normalizeClient(client = 'direct') {
 export function serverCommand(options = {}) {
   return {
     command: options.command ?? process.execPath,
-    args: options.args ?? [LOCAL_SERVER_PATH]
+    args: options.args ?? [LEGACY_SERVER_PATH]
   };
 }
 

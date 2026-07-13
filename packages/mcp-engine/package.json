@@ -1,0 +1,49 @@
+{
+  "name": "@mcp/engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Canonical Hyper Cloaking engine runtime.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/index.mjs",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./browser-utils": "./dist/browser-utils.mjs",
+    "./cli": "./dist/cli.mjs",
+    "./cookie": "./dist/cookie.mjs",
+    "./config": "./dist/config.mjs",
+    "./credentials": "./dist/credentials.mjs",
+    "./target-safety": "./dist/target-safety.mjs",
+    "./outcome": "./dist/outcome.mjs",
+    "./diagnostics": "./dist/diagnostics.mjs",
+    "./evidence-boundary": "./dist/evidence-boundary.mjs",
+    "./recon-scope": "./dist/recon-scope.mjs",
+    "./run-shapes": "./dist/run-shapes.mjs",
+    "./action-runtime/action-result": "./dist/action-runtime/action-result.mjs",
+    "./action-runtime/guardrails": "./dist/action-runtime/guardrails.mjs",
+    "./providers": "./dist/providers/index.mjs",
+    "./providers/instagram": "./dist/providers/instagram/index.mjs",
+    "./providers/naver": "./dist/providers/naver/index.mjs",
+    "./providers/youtube": "./dist/providers/youtube/index.mjs",
+    "./providers/coupang": "./dist/providers/coupang/index.mjs",
+    "./providers/tiktok": "./dist/providers/tiktok/index.mjs",
+    "./providers/x": "./dist/providers/x/index.mjs",
+    "./agents/parent-dispatcher": "./dist/agents/parent-dispatcher.mjs",
+    "./agents/parent-verify": "./dist/agents/parent-verify.mjs"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "cloakbrowser": "^0.4.10",
+    "playwright-core": "^1.61.1"
+  }
+}

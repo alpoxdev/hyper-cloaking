@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   buildInstagramSession,
   OffOriginError
-} from '../../../../../mcp/engine/providers/instagram/session.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/instagram/session.mjs';
 import {
   listDMThreads,
   normalizeThreadRef,
@@ -13,24 +13,24 @@ import {
   readDMThread,
   replyToDM,
   replyToMany
-} from '../../../../../mcp/engine/providers/instagram/actions/dm.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/instagram/actions/dm.mjs';
 import {
   commentPost,
   likePost,
   normalizePostRef,
   savePost,
   sharePost
-} from '../../../../../mcp/engine/providers/instagram/actions/reactions.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/instagram/actions/reactions.mjs';
 import {
   getUser,
   normalizeUsername,
   profileUrl,
   InvalidUsernameError
-} from '../../../../../mcp/engine/providers/instagram/actions/user.mjs';
-import { getUserPosts } from '../../../../../mcp/engine/providers/instagram/actions/posts.mjs';
-import { NetworkReadError } from '../../../../../mcp/engine/providers/network.mjs';
-import { providers } from '../../../../../mcp/engine/providers/index.mjs';
-import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/instagram/actions/user.mjs';
+import { getUserPosts } from '../../../../../packages/mcp-engine/src/providers/instagram/actions/posts.mjs';
+import { NetworkReadError } from '../../../../../packages/mcp-engine/src/providers/network.mjs';
+import { providers } from '../../../../../packages/mcp-engine/src/providers/index.mjs';
+import { validateProviderSchema } from '../../../../../packages/mcp-engine/src/providers/schema.mjs';
 
 function mockPage(url) {
   return { url: () => url };

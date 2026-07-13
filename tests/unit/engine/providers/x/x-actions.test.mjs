@@ -4,14 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
-import { NetworkReadError } from '../../../../../mcp/engine/providers/network.mjs';
-import { analyzePosts } from '../../../../../mcp/engine/providers/x/actions/analyze.mjs';
+import { validateProviderSchema } from '../../../../../packages/mcp-engine/src/providers/schema.mjs';
+import { NetworkReadError } from '../../../../../packages/mcp-engine/src/providers/network.mjs';
+import { analyzePosts } from '../../../../../packages/mcp-engine/src/providers/x/actions/analyze.mjs';
 import {
   normalizePostRef,
   normalizeThreadRef,
   normalizeUserRef
-} from '../../../../../mcp/engine/providers/x/actions/ids.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/x/actions/ids.mjs';
 import {
   getPost,
   getThread,
@@ -20,7 +20,7 @@ import {
   listDMThreads,
   readDMThread,
   searchPosts
-} from '../../../../../mcp/engine/providers/x/actions/reads.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/x/actions/reads.mjs';
 import {
   blockedXAction,
   createPost,
@@ -28,9 +28,9 @@ import {
   replyToDM,
   replyToPost,
   setLiked
-} from '../../../../../mcp/engine/providers/x/actions/writes.mjs';
-import { xProvider } from '../../../../../mcp/engine/providers/x/metadata.mjs';
-import { xReadPromotions } from '../../../../../mcp/engine/providers/x/network.mjs';
+} from '../../../../../packages/mcp-engine/src/providers/x/actions/writes.mjs';
+import { xProvider } from '../../../../../packages/mcp-engine/src/providers/x/metadata.mjs';
+import { xReadPromotions } from '../../../../../packages/mcp-engine/src/providers/x/network.mjs';
 
 function safeTarget() {
   return { disposition: 'ok', reason: 'public-https', risks: [] };

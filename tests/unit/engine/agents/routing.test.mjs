@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dispatchParent } from '../../../../mcp/engine/agents/parent-dispatcher.mjs';
+import { dispatchParent } from '../../../../packages/mcp-engine/src/agents/parent-dispatcher.mjs';
 
 const request = {
   schemaVersion: 1,

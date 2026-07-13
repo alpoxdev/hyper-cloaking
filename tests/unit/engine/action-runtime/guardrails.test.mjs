@@ -16,8 +16,8 @@ import {
   loadBulkLedger,
   recordBulkProgress,
   DEFAULT_BULK_CAP
-} from '../../../../mcp/engine/action-runtime/guardrails.mjs';
-import { makeActionResult } from '../../../../mcp/engine/action-runtime/action-result.mjs';
+} from '../../../../packages/mcp-engine/src/action-runtime/guardrails.mjs';
+import { makeActionResult } from '../../../../packages/mcp-engine/src/action-runtime/action-result.mjs';
 
 async function tmpStateDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'hc-guardrails-'));
