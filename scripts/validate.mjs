@@ -1,11 +1,16 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parse } from 'acorn';
 import {
   MANAGED_EXCLUDED_SEGMENTS,
   OWNED_CANONICAL_MANIFEST
-} from '../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/lib/sync-mirror.mjs';
-import { enumerateMjsFiles } from './jsdoc-inventory.mjs';
-import { analyzeFile } from './audit-jsdoc.mjs';
+} from '../mcp/engine/agents/lib/sync-mirror.mjs';
+import {
+  assertOuterPackagePolicy,
+  LEGACY_ENGINE_ROOTS,
+  verifyRelocation
+} from './engine-relocation-manifest.mjs';
 
 const root = process.cwd();
 const pluginRoot = 'plugins/hyper-cloaking';
@@ -34,8 +39,18 @@ function requireFile(file) {
   if (!existsSync(fullPath(file))) fail(`Missing ${file}`);
 }
 
+function pathExists(file) {
+  try {
+    lstatSync(fullPath(file));
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
 function rejectPathExists(file, reason) {
-  if (existsSync(fullPath(file))) fail(`${file} must not exist: ${reason}`);
+  if (pathExists(file)) fail(`${file} must not exist: ${reason}`);
 }
 
 function parseJson(file) {
@@ -92,40 +107,12 @@ function assertSame(left, right) {
   if (readText(left) !== readText(right))
     fail(`${right} is not byte-for-byte mirrored from ${left}`);
 }
-function listRelativeFiles(dir) {
-  const base = fullPath(dir);
-  if (!existsSync(base)) return [];
-  const output = [];
-  const skipDirs = new Set(['.git', '.gjc', '.omc', '.omx', '.impeccable', 'node_modules']);
-  function walk(current) {
-    for (const entry of readdirSync(current, { withFileTypes: true })) {
-      const absolute = path.join(current, entry.name);
-      const relative = toPosix(path.relative(base, absolute));
-      if (entry.isDirectory()) {
-        if (skipDirs.has(entry.name)) continue;
-        walk(absolute);
-      } else if (entry.isFile()) {
-        output.push(relative);
-      }
-    }
-    return output;
-  }
-  return walk(base).toSorted();
-}
-
-function assertDirectorySame(left, right) {
+function assertOwnedFilesSame(left, right) {
   requireFile(left);
   requireFile(right);
   if (!existsSync(fullPath(left)) || !existsSync(fullPath(right))) return;
-  const leftFiles = listRelativeFiles(left);
-  const rightFiles = listRelativeFiles(right);
-  if (JSON.stringify(leftFiles) !== JSON.stringify(rightFiles)) {
-    fail(`${right} file inventory is not mirrored from ${left}`);
-    return;
-  }
-  for (const relative of leftFiles) {
+  for (const relative of OWNED_CANONICAL_MANIFEST)
     assertSame(toPosix(path.join(left, relative)), toPosix(path.join(right, relative)));
-  }
 }
 
 function validateVersionMetadata(file, manifest) {
@@ -166,7 +153,8 @@ function walkFiles(start) {
   for (const entry of statEntries) {
     const file = toPosix(path.join(start, entry.name));
     if (entry.isDirectory()) {
-      if (['.git', '.gjc', 'node_modules'].includes(entry.name)) continue;
+      if (['.git', '.gjc', '.omc', '.omx', '.impeccable', 'node_modules'].includes(entry.name))
+        continue;
       files.push(...walkFiles(file));
     } else if (entry.isFile()) {
       files.push(file);
@@ -240,12 +228,372 @@ function validateNoStalePublicIdentity() {
     }
   }
 }
+export const RETIRED_ENGINE_PACKAGE = 'hyper-cloaking-engine';
+const OUTER_ENGINE_BIN_MANIFEST = 'mcp/package.json';
+const HISTORICAL_RELOCATION_MANIFEST = 'mcp/test/fixtures/engine-relocation-manifest.v1.json';
+const retiredEnginePackagePattern = RETIRED_ENGINE_PACKAGE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const legacyEnginePath = new RegExp(
+  LEGACY_ENGINE_ROOTS.map((root) => root.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+);
+
+function isPackageManifest(file) {
+  return file === 'package.json' || file.endsWith('/package.json');
+}
+
+function isDocumentationFile(file) {
+  return file.endsWith('.md');
+}
+
+function isJavaScriptFile(file) {
+  return /\.(?:[cm]?js)$/.test(file);
+}
+
+function parseRecordJson(record) {
+  try {
+    return JSON.parse(record.content);
+  } catch {
+    return null;
+  }
+}
+
+function isRetiredEngineSpecifier(value) {
+  return value === RETIRED_ENGINE_PACKAGE || value?.startsWith(`${RETIRED_ENGINE_PACKAGE}/`);
+}
+
+function moduleSpecifierValue(node) {
+  if (node?.type === 'Literal' && typeof node.value === 'string') return node.value;
+  if (node?.type !== 'TemplateLiteral' || node.expressions.length !== 0) return null;
+  return node.quasis[0]?.value.cooked ?? node.quasis[0]?.value.raw ?? null;
+}
+
+function findRetiredEngineImports(record) {
+  let program;
+  try {
+    program = parse(record.content, {
+      allowHashBang: true,
+      ecmaVersion: 'latest',
+      sourceType: 'module'
+    });
+  } catch (error) {
+    return [
+      {
+        rule: 'unparseable-javascript',
+        message: `${record.file} could not be parsed for retired engine imports: ${error.message}`
+      }
+    ];
+  }
+
+  const violations = [];
+  const nodes = [program];
+  while (nodes.length > 0) {
+    const node = nodes.pop();
+    if (!node || typeof node !== 'object') continue;
+
+    const source =
+      node.type === 'ImportDeclaration' ||
+      node.type === 'ExportNamedDeclaration' ||
+      node.type === 'ExportAllDeclaration' ||
+      node.type === 'ImportExpression'
+        ? moduleSpecifierValue(node.source)
+        : node.type === 'CallExpression' &&
+            node.callee?.type === 'Identifier' &&
+            node.callee.name === 'require'
+          ? moduleSpecifierValue(node.arguments?.[0])
+          : null;
+    if (isRetiredEngineSpecifier(source)) {
+      violations.push({
+        rule: 'retired-import',
+        message: `${record.file} must not import from the retired engine package`
+      });
+    }
+
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) {
+        for (const child of value) if (child && typeof child === 'object') nodes.push(child);
+      } else if (value && typeof value === 'object') {
+        nodes.push(value);
+      }
+    }
+  }
+  return violations;
+}
+
+function hasRetiredLockfileDependency(dependencies) {
+  if (!dependencies || typeof dependencies !== 'object') return false;
+  return Object.entries(dependencies).some(
+    ([name, dependency]) =>
+      name === RETIRED_ENGINE_PACKAGE || hasRetiredLockfileDependency(dependency?.dependencies)
+  );
+}
+
+function hasRetiredLockfileIdentity(lockfile) {
+  const packageIdentity = Object.entries(lockfile?.packages || {}).some(([location, manifest]) => {
+    const normalizedLocation = location.replaceAll('\\', '/');
+    if (new RegExp(`(?:^|/)node_modules/${retiredEnginePackagePattern}$`).test(normalizedLocation))
+      return true;
+    if (manifest?.name === RETIRED_ENGINE_PACKAGE) return true;
+    return Object.hasOwn(manifest?.dependencies || {}, RETIRED_ENGINE_PACKAGE);
+  });
+  return packageIdentity || hasRetiredLockfileDependency(lockfile?.dependencies);
+}
+
+function isNamedHistoricalFixtureSource(file, line) {
+  return file === HISTORICAL_RELOCATION_MANIFEST && /^\s*"source"\s*:\s*"[^"]+"/.test(line);
+}
+
+function isNegatedDocumentationContext(line) {
+  const english = new RegExp(
+    String.raw`${retiredEnginePackagePattern}[^\n]{0,120}\b(?:never|not|no\s+longer)\b[^\n]{0,40}\b(?:npm\s+)?(?:package|dependency|workspace|import(?:\s+specifier)?|specifier)\b|\bdo\s+not\b[^\n]{0,140}${retiredEnginePackagePattern}[^\n]{0,64}\b(?:as\s+)?(?:an?\s+)?(?:npm\s+)?(?:package|dependency|workspace|import(?:\s+specifier)?|specifier)\b`,
+    'i'
+  );
+  const korean = new RegExp(
+    String.raw`${retiredEnginePackagePattern}[^\n]{0,120}(?:npm\s+)?(?:package|import|specifier)(?:가|은|는|로)?[^\n]{0,24}(?:아니|아닙|없|취급하지\s*않)`,
+    'i'
+  );
+  return english.test(line) || korean.test(line);
+}
+
+function documentationClauses(line) {
+  const boundary = new RegExp(
+    String.raw`(?:[.;:!?]\s*|\s+[—–-]\s+|,\s*(?=[^.;:!?]*${retiredEnginePackagePattern})|\s+(?:and|yet|but|however|although|whereas|그리고|하지만|그러나)\s+(?=[^.;:!?]*${retiredEnginePackagePattern}))`,
+    'iu'
+  );
+  return line.split(boundary);
+}
+
+function documentationClauseViolation(file, clause) {
+  if (!clause.includes(RETIRED_ENGINE_PACKAGE)) return null;
+  const occurrences = [...clause.matchAll(new RegExp(retiredEnginePackagePattern, 'g'))].length;
+  if (occurrences > 1) {
+    return {
+      rule: 'documentation-identity',
+      message: `${file} must separate each retired engine identity occurrence into an independently valid clause`
+    };
+  }
+
+  const packageInstall = new RegExp(
+    String.raw`\b(?:npm|pnpm|yarn)\s+(?:install|i|add)\b[^\n]*${retiredEnginePackagePattern}|\binstall\s+(?:the\s+)?[\x60'"]?${retiredEnginePackagePattern}`,
+    'i'
+  );
+  if (packageInstall.test(clause)) {
+    return {
+      rule: 'documentation-install',
+      message: `${file} must not document installation of the retired engine package`
+    };
+  }
+  const importReference = new RegExp(
+    String.raw`\b(?:import\s*(?:[\w*{}\s,]*\s+from\s*)?|export\s*(?:[\w*{}\s,]*\s+from\s*)?|require\s*\(|import\s*\()\s*[\x60'"]${retiredEnginePackagePattern}`,
+    'i'
+  );
+  if (importReference.test(clause)) {
+    return {
+      rule: 'documentation-import',
+      message: `${file} must not document importing from the retired engine package`
+    };
+  }
+  if (isNegatedDocumentationContext(clause)) return null;
+  if (/\b(?:npm\s+)?(?:package|dependency|workspace)\b/i.test(clause)) {
+    return {
+      rule: 'documentation-package',
+      message: `${file} must not document the retired engine as a package identity`
+    };
+  }
+  if (/\b(?:installed\s+)?(?:executable\s+)?command labels?\b/i.test(clause)) return null;
+  if (
+    clause.includes(`\`${RETIRED_ENGINE_PACKAGE} `) ||
+    new RegExp(`^\\s*${retiredEnginePackagePattern}\\s+\\S+`).test(clause)
+  )
+    return null;
+  return {
+    rule: 'documentation-identity',
+    message: `${file} may mention the retired engine only as an executable command`
+  };
+}
+
+function documentationViolation(file, line) {
+  for (const clause of documentationClauses(line)) {
+    const violation = documentationClauseViolation(file, clause);
+    if (violation) return violation;
+  }
+  return null;
+}
+
+export function findRetiredEngineIdentityViolations(records) {
+  const violations = [];
+
+  for (const record of records) {
+    const { file, content } = record;
+    if (isPackageManifest(file)) {
+      const manifest = parseRecordJson(record);
+      if (manifest?.name === RETIRED_ENGINE_PACKAGE) {
+        violations.push({
+          rule: 'package-identity',
+          message: `${file} must not use the retired engine package identity`
+        });
+      }
+      for (const field of [
+        'dependencies',
+        'devDependencies',
+        'optionalDependencies',
+        'peerDependencies'
+      ]) {
+        if (Object.hasOwn(manifest?.[field] || {}, RETIRED_ENGINE_PACKAGE)) {
+          violations.push({
+            rule: 'package-dependency',
+            message: `${file} must not retain ${RETIRED_ENGINE_PACKAGE} in ${field}`
+          });
+        }
+      }
+      const workspaces = manifest?.workspaces;
+      const workspacePaths = Array.isArray(workspaces) ? workspaces : workspaces?.packages;
+      if (Array.isArray(workspacePaths) && workspacePaths.includes(RETIRED_ENGINE_PACKAGE)) {
+        violations.push({
+          rule: 'package-workspace',
+          message: `${file} must not retain the retired engine workspace identity`
+        });
+      }
+      if (
+        Object.hasOwn(manifest?.bin || {}, RETIRED_ENGINE_PACKAGE) &&
+        file !== OUTER_ENGINE_BIN_MANIFEST
+      ) {
+        violations.push({
+          rule: 'package-bin',
+          message: `${file} may retain ${RETIRED_ENGINE_PACKAGE} only in ${OUTER_ENGINE_BIN_MANIFEST} bin`
+        });
+      }
+    }
+
+    if (file === 'package-lock.json') {
+      const lockfile = parseRecordJson(record);
+      if (hasRetiredLockfileIdentity(lockfile)) {
+        violations.push({
+          rule: 'lockfile-package-identity',
+          message: `${file} must not retain the retired engine package identity`
+        });
+      }
+    }
+
+    if (file.startsWith('artifacts/') && content.includes(RETIRED_ENGINE_PACKAGE)) {
+      violations.push({
+        rule: 'artifact-retired-package-identity',
+        message: `${file} must not retain the retired engine package identity`
+      });
+    }
+
+    if (file === 'scripts/engine-relocation-manifest.mjs') continue;
+
+    if (isJavaScriptFile(file)) violations.push(...findRetiredEngineImports(record));
+    for (const line of content.split('\n')) {
+      if (isDocumentationFile(file)) {
+        const documentationContext = documentationViolation(file, line);
+        if (documentationContext) {
+          violations.push(documentationContext);
+          continue;
+        }
+      }
+      if (legacyEnginePath.test(line) && !isNamedHistoricalFixtureSource(file, line)) {
+        violations.push({
+          rule: 'legacy-engine-path',
+          message: `${file} must not retain a legacy engine filesystem path`
+        });
+      }
+    }
+  }
+
+  return violations;
+}
+
+function retiredIdentityScanRecords() {
+  const scanTargets = [
+    'package.json',
+    'package-lock.json',
+    'mcp',
+    'tests',
+    'scripts',
+    'artifacts',
+    pluginRoot,
+    '.agents',
+    '.claude',
+    'skills'
+  ];
+  const files = new Set();
+  for (const target of scanTargets) {
+    if (!existsSync(fullPath(target))) continue;
+    if (target.endsWith('.json')) {
+      files.add(target);
+      continue;
+    }
+    for (const file of walkFiles(target)) files.add(file);
+  }
+  for (const entry of readdirSync(fullPath('.'), { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.endsWith('.md')) files.add(entry.name);
+  }
+
+  return [...files]
+    .filter(
+      (file) =>
+        file.endsWith('.md') ||
+        file.endsWith('.mjs') ||
+        file.endsWith('.cjs') ||
+        file.endsWith('.js') ||
+        file.endsWith('.json') ||
+        isPackageManifest(file) ||
+        file === 'package-lock.json' ||
+        file === HISTORICAL_RELOCATION_MANIFEST
+    )
+    .map((file) => ({ file, content: readText(file) }));
+}
+
+function validateNoRetiredEngineIdentity() {
+  for (const { message } of findRetiredEngineIdentityViolations(retiredIdentityScanRecords()))
+    fail(message);
+}
+function validateRelocationQualityScope(packageManifest) {
+  const lint = packageManifest.scripts?.lint;
+  const format = packageManifest.scripts?.format;
+  const formatCheck = packageManifest.scripts?.['format:check'];
+  if (!lint?.includes('mcp/engine/**/*.mjs'))
+    fail('package.json lint must cover mcp/engine/**/*.mjs');
+
+  requireFile('.prettierignore');
+  if (
+    existsSync(fullPath('.prettierignore')) &&
+    !readText('.prettierignore').split(/\r?\n/).includes('mcp/engine/')
+  ) {
+    fail('.prettierignore must exclude ledger-bound mcp/engine/');
+  }
+
+  for (const [name, command] of [
+    ['format', format],
+    ['format:check', formatCheck]
+  ]) {
+    if (!command) {
+      fail(`package.json must define ${name}`);
+      continue;
+    }
+    // The relocation ledger proves mcp/engine payload bytes. Prettier must not rewrite that
+    // immutable payload; .prettierignore, lint, and relocation verification enforce the boundary.
+    if (command.includes('mcp/engine/**/*.mjs'))
+      fail(`package.json ${name} must exclude ledger-bound mcp/engine/**/*.mjs`);
+    for (const requiredScope of [
+      'scripts/**/*.mjs',
+      'tests/**/*.mjs',
+      'mcp/src/**/*.mjs',
+      'mcp/test/**/*.mjs'
+    ]) {
+      if (!command.includes(requiredScope))
+        fail(`package.json ${name} must cover ${requiredScope}`);
+    }
+  }
+}
 
 // Headings under which removed skill-local helper command strings may appear (bounded migration block).
 const migrationBlockHeadings = new Set([
   '## Engine-only migration: removed commands',
   '## Engine-only migration: removed helper commands',
-  '## Engine-only 마이그레이션: 제거된 명령'
+  '## Engine-only 마이그레이션: 제거된 명령',
+  '## Removed skill-local helper commands',
+  '## 제거된 skill-local helper 명령'
 ]);
 
 function validateEngineOnlyMigration() {
@@ -306,7 +654,7 @@ function validateEngineOnlyMigration() {
 // Deliberate-bump tripwire: the number of *.test.mjs files expected under
 // tests/unit/engine/. Bump this constant only when engine unit tests are
 // intentionally added or removed, so an accidental drop is caught here.
-const TESTS_BASELINE = 29;
+const TESTS_BASELINE = 31;
 
 function countTestFiles(start) {
   if (!existsSync(fullPath(start))) return 0;
@@ -322,20 +670,18 @@ function countTestFiles(start) {
   return count;
 }
 
+function validateLegacyEnginePathsAbsent() {
+  for (const engineRoot of LEGACY_ENGINE_ROOTS)
+    rejectPathExists(engineRoot, 'legacy engine roots must be removed rather than symlinked');
+}
+
 function validateEngineTestRelocation() {
   // Enumerated named roots only — NEVER a repo-root **/engine glob, which would
   // also match the relocated tests/unit/engine tree and permanently fail this guard.
-  const engineRoots = [
-    `${pluginRoot}/skills/hyper-cloaking/engine`,
-    '.agents/skills/hyper-cloaking/engine',
-    '.claude/skills/hyper-cloaking/engine',
-    'skills/hyper-cloaking/engine'
-  ];
-  for (const engineRoot of engineRoots) {
+  for (const engineRoot of LEGACY_ENGINE_ROOTS) {
     const count = countTestFiles(engineRoot);
-    if (count > 0) {
+    if (count > 0)
       fail(`${engineRoot} must not contain colocated *.test.mjs files (found ${count})`);
-    }
   }
 
   const unitEngineCount = countTestFiles('tests/unit/engine');
@@ -382,10 +728,10 @@ function validateAgentContracts(packageManifest, packageLock) {
     `${canonical}/rules/hyper-cloaking-workflow.ko.md`
   ]) {
     requireText(file, '3A.', 'portable parent-executed routing marker');
-    requireText(file, 'parent-dispatcher.mjs', 'internal parent dispatcher');
+    requireText(file, 'hyper-cloaking-parent-dispatcher', 'installed parent dispatcher command');
   }
 
-  const schemaFile = `${canonical}/engine/agents/schemas/hyper-cloaking-agent-output.schema.json`;
+  const schemaFile = 'mcp/engine/agents/schemas/hyper-cloaking-agent-output.schema.json';
   const schema = parseJson(schemaFile);
   if (schema.$schema !== 'https://json-schema.org/draft/2020-12/schema')
     fail(`${schemaFile} must use JSON Schema 2020-12`);
@@ -425,12 +771,8 @@ function requireText(file, needle, label = needle) {
 }
 
 function validateClientSupportSurfaces() {
-  requireText(
-    'skills/hyper-cloaking/engine/mcp-config.mjs',
-    'openclaw',
-    'OpenClaw MCP client target'
-  );
-  requireText('skills/hyper-cloaking/engine/mcp-config.mjs', 'hermes', 'Hermes MCP client target');
+  requireText('mcp/engine/mcp-config.mjs', 'openclaw', 'OpenClaw MCP client target');
+  requireText('mcp/engine/mcp-config.mjs', 'hermes', 'Hermes MCP client target');
 
   for (const file of [
     'skills/hyper-cloaking/SKILL.md',
@@ -455,185 +797,103 @@ function validateClientSupportSurfaces() {
   }
 }
 
-const packageManifest = parseJson('package.json');
-const packageLock = parseJson('package-lock.json');
-const claudeMarketplace = parseJson('.claude-plugin/marketplace.json');
-const codexMarketplace = parseJson('.agents/plugins/marketplace.json');
-const claudePlugin = parseJson(`${pluginRoot}/.claude-plugin/plugin.json`);
-const codexPlugin = parseJson(`${pluginRoot}/.codex-plugin/plugin.json`);
+async function main() {
+  const packageManifest = parseJson('package.json');
+  const packageLock = parseJson('package-lock.json');
+  const claudeMarketplace = parseJson('.claude-plugin/marketplace.json');
+  const codexMarketplace = parseJson('.agents/plugins/marketplace.json');
+  const claudePlugin = parseJson(`${pluginRoot}/.claude-plugin/plugin.json`);
+  const codexPlugin = parseJson(`${pluginRoot}/.codex-plugin/plugin.json`);
 
-validateVersionMetadata('package.json', packageManifest);
-validateVersionMetadata('.claude-plugin/marketplace.json', claudeMarketplace);
-validatePluginVersionMetadata(
-  '.claude-plugin/marketplace.json plugins[0]',
-  claudeMarketplace.plugins?.[0]
-);
-validateVersionMetadata(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin);
-validateVersionMetadata(`${pluginRoot}/.codex-plugin/plugin.json`, codexPlugin);
+  validateVersionMetadata('package.json', packageManifest);
+  validateVersionMetadata('.claude-plugin/marketplace.json', claudeMarketplace);
+  validatePluginVersionMetadata(
+    '.claude-plugin/marketplace.json plugins[0]',
+    claudeMarketplace.plugins?.[0]
+  );
+  validateVersionMetadata(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin);
+  validateVersionMetadata(`${pluginRoot}/.codex-plugin/plugin.json`, codexPlugin);
 
-if (packageManifest.name !== 'hyper-cloaking') fail('Package name must be hyper-cloaking');
-if (claudeMarketplace.name !== 'hyper-cloaking')
-  fail('Claude marketplace name must be hyper-cloaking');
-if (claudeMarketplace.plugins?.[0]?.source !== './plugins/hyper-cloaking')
-  fail('Claude marketplace source must point at ./plugins/hyper-cloaking');
-if (codexMarketplace.plugins?.[0]?.source?.path !== './plugins/hyper-cloaking')
-  fail('Codex marketplace source.path must point at ./plugins/hyper-cloaking');
-if (claudePlugin.name !== 'hyper-cloaking') fail('Claude plugin name must be hyper-cloaking');
-if (codexPlugin.name !== 'hyper-cloaking') fail('Codex plugin name must be hyper-cloaking');
-if (codexPlugin.skills !== './skills/') fail('Codex plugin skills path must be ./skills/');
+  if (packageManifest.name !== 'hyper-cloaking') fail('Package name must be hyper-cloaking');
+  if (claudeMarketplace.name !== 'hyper-cloaking')
+    fail('Claude marketplace name must be hyper-cloaking');
+  if (claudeMarketplace.plugins?.[0]?.source !== './plugins/hyper-cloaking')
+    fail('Claude marketplace source must point at ./plugins/hyper-cloaking');
+  if (codexMarketplace.plugins?.[0]?.source?.path !== './plugins/hyper-cloaking')
+    fail('Codex marketplace source.path must point at ./plugins/hyper-cloaking');
+  if (claudePlugin.name !== 'hyper-cloaking') fail('Claude plugin name must be hyper-cloaking');
+  if (codexPlugin.name !== 'hyper-cloaking') fail('Codex plugin name must be hyper-cloaking');
+  if (codexPlugin.skills !== './skills/') fail('Codex plugin skills path must be ./skills/');
 
-validateSkillPaths(
-  '.claude-plugin/marketplace.json plugins[0]',
-  claudeMarketplace.plugins?.[0]?.skills
-);
-validateSkillPaths(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin.skills);
-validateAgentContracts(packageManifest, packageLock);
+  validateSkillPaths(
+    '.claude-plugin/marketplace.json plugins[0]',
+    claudeMarketplace.plugins?.[0]?.skills
+  );
+  validateSkillPaths(`${pluginRoot}/.claude-plugin/plugin.json`, claudePlugin.skills);
+  validateAgentContracts(packageManifest, packageLock);
 
-for (const helper of [
-  'engine/config.mjs',
-  'engine/mcp-config.mjs',
-  'engine/cli.mjs',
-  'engine/browser-utils.mjs',
-  'engine/cookie.mjs',
-  'engine/input-core.mjs',
-  'engine/mouse.mjs',
-  'engine/keyboard.mjs',
-  'engine/scroll.mjs',
-  'engine/target-safety.mjs',
-  'engine/outcome.mjs',
-  'engine/diagnostics.mjs',
-  'engine/evidence-boundary.mjs',
-  'engine/recon-scope.mjs',
-  'engine/run-shapes.mjs',
-  'engine/agents/setup-agent.mjs',
-  'engine/agents/browser-task-agent.mjs',
-  'engine/agents/diagnostics-agent.mjs',
-  'engine/agents/parent-dispatcher.mjs',
-  'engine/agents/parent-verify.mjs',
-  'engine/agents/evidence-writer.mjs',
-  'engine/agents/lib/allowed-origin-guard.mjs',
-  'engine/agents/lib/sync-mirror.mjs',
-  'engine/agents/schemas/hyper-cloaking-agent-output.schema.json',
-  'engine/agents/schemas/hyper-cloaking-agent-output.ko.md',
-  'engine/providers/schema.mjs',
-  'engine/providers/registry.mjs',
-  'engine/providers/generic.mjs',
-  'engine/providers/naver.mjs',
-  'engine/providers/session.mjs',
-  'engine/providers/instagram/index.mjs',
-  'engine/providers/instagram/metadata.mjs',
-  'engine/providers/instagram/selectors.mjs',
-  'engine/providers/instagram/session.mjs',
-  'engine/providers/instagram/actions/user.mjs',
-  'engine/providers/instagram/actions/posts.mjs',
-  'engine/providers/instagram/actions/analyze.mjs',
-  'engine/providers/instagram/actions/reactions.mjs',
-  'engine/providers/instagram/actions/dm.mjs',
-  'engine/action-runtime/guardrails.mjs',
-  'engine/action-runtime/action-result.mjs',
-  'engine/providers/youtube/index.mjs',
-  'engine/providers/youtube/metadata.mjs',
-  'engine/providers/youtube/selectors.mjs',
-  'engine/providers/youtube/session.mjs',
-  'engine/providers/youtube/actions/ids.mjs',
-  'engine/providers/youtube/actions/search.mjs',
-  'engine/providers/youtube/actions/video.mjs',
-  'engine/providers/youtube/actions/channel.mjs',
-  'engine/providers/youtube/actions/analyze.mjs',
-  'engine/providers/youtube/actions/reactions.mjs',
-  'engine/providers/coupang/index.mjs',
-  'engine/providers/coupang/metadata.mjs',
-  'engine/providers/coupang/selectors.mjs',
-  'engine/providers/coupang/session.mjs',
-  'engine/providers/coupang/network.mjs',
-  'engine/providers/coupang/actions/ids.mjs',
-  'engine/providers/coupang/actions/reads.mjs',
-  'engine/providers/coupang/actions/analyze.mjs',
-  'engine/providers/coupang/actions/writes.mjs',
-  'engine/providers/tiktok/index.mjs',
-  'engine/providers/tiktok/metadata.mjs',
-  'engine/providers/tiktok/selectors.mjs',
-  'engine/providers/tiktok/session.mjs',
-  'engine/providers/tiktok/network.mjs',
-  'engine/providers/tiktok/actions/ids.mjs',
-  'engine/providers/tiktok/actions/reads.mjs',
-  'engine/providers/tiktok/actions/analyze.mjs',
-  'engine/providers/tiktok/actions/writes.mjs',
-  'engine/providers/naver.mjs',
-  'engine/providers/naver/index.mjs',
-  'engine/providers/naver/metadata.mjs',
-  'engine/providers/naver/selectors.mjs',
-  'engine/providers/naver/session.mjs',
-  'engine/providers/naver/network.mjs',
-  'engine/providers/naver/actions/ids.mjs',
-  'engine/providers/naver/actions/reads.mjs',
-  'engine/providers/naver/actions/analyze.mjs',
-  'engine/providers/naver/actions/writes.mjs',
-  'engine/providers/x/index.mjs',
-  'engine/providers/x/metadata.mjs',
-  'engine/providers/x/selectors.mjs',
-  'engine/providers/x/session.mjs',
-  'engine/providers/x/network.mjs',
-  'engine/providers/x/actions/ids.mjs',
-  'engine/providers/x/actions/reads.mjs',
-  'engine/providers/x/actions/analyze.mjs',
-  'engine/providers/x/actions/writes.mjs',
-  'engine/providers/x.mjs',
-  'engine/providers/index.mjs'
-]) {
-  requireFile(`${pluginRoot}/skills/hyper-cloaking/${helper}`);
-  requireFile(`skills/hyper-cloaking/${helper}`);
-}
-
-for (const skillName of skillNames) {
-  const canonical = `${pluginRoot}/skills/${skillName}/SKILL.md`;
-  validateSkill(canonical, skillName);
-  validateSkill(`.agents/skills/${skillName}/SKILL.md`, skillName);
-  validateSkill(`.claude/skills/${skillName}/SKILL.md`, skillName);
-  if (rootSkillNames.includes(skillName)) validateSkill(`skills/${skillName}/SKILL.md`, skillName);
-  assertSame(canonical, `.agents/skills/${skillName}/SKILL.md`);
-  assertSame(canonical, `.claude/skills/${skillName}/SKILL.md`);
-  if (rootSkillNames.includes(skillName)) assertSame(canonical, `skills/${skillName}/SKILL.md`);
-}
-const hyperCanonicalDir = `${pluginRoot}/skills/hyper-cloaking`;
-assertDirectorySame(hyperCanonicalDir, '.agents/skills/hyper-cloaking');
-assertDirectorySame(hyperCanonicalDir, '.claude/skills/hyper-cloaking');
-assertDirectorySame(hyperCanonicalDir, 'skills/hyper-cloaking');
-
-const hyperModules = enumerateMjsFiles(hyperCanonicalDir);
-for (const relativePath of hyperModules) {
-  const modulePath = `${hyperCanonicalDir}/${relativePath}`;
-  const source = readFileSync(fullPath(modulePath), 'utf8');
-  if (!source.includes('/**')) fail(`${modulePath} must contain high-signal JSDoc`);
-  const analysis = analyzeFile(fullPath(modulePath));
-  if (analysis.error) fail(`${modulePath} JSDoc audit parse failure: ${analysis.error.message}`);
-}
-
-const expectedSkillDirs = [...skillNames].toSorted();
-for (const dir of [`${pluginRoot}/skills`, '.agents/skills', '.claude/skills', 'skills']) {
-  const actualSkillDirs = readdirSync(fullPath(dir), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .toSorted();
-  if (JSON.stringify(actualSkillDirs) !== JSON.stringify(expectedSkillDirs)) {
-    fail(
-      `${dir} directories ${JSON.stringify(actualSkillDirs)} do not match expected ${JSON.stringify(expectedSkillDirs)}`
-    );
+  async function validateRelocatedEngine() {
+    const outerPackage = parseJson('mcp/package.json');
+    try {
+      assertOuterPackagePolicy(outerPackage);
+    } catch (error) {
+      fail(`mcp/package.json violates relocation outer-package policy: ${error.message}`);
+    }
+    try {
+      await verifyRelocation({ repoRoot: root });
+    } catch (error) {
+      fail(`engine relocation verification failed: ${error.message}`);
+    }
   }
+
+  for (const skillName of skillNames) {
+    const canonical = `${pluginRoot}/skills/${skillName}/SKILL.md`;
+    validateSkill(canonical, skillName);
+    validateSkill(`.agents/skills/${skillName}/SKILL.md`, skillName);
+    validateSkill(`.claude/skills/${skillName}/SKILL.md`, skillName);
+    if (rootSkillNames.includes(skillName))
+      validateSkill(`skills/${skillName}/SKILL.md`, skillName);
+    assertSame(canonical, `.agents/skills/${skillName}/SKILL.md`);
+    assertSame(canonical, `.claude/skills/${skillName}/SKILL.md`);
+    if (rootSkillNames.includes(skillName)) assertSame(canonical, `skills/${skillName}/SKILL.md`);
+  }
+
+  const hyperCanonicalDir = `${pluginRoot}/skills/hyper-cloaking`;
+  assertOwnedFilesSame(hyperCanonicalDir, '.agents/skills/hyper-cloaking');
+  assertOwnedFilesSame(hyperCanonicalDir, '.claude/skills/hyper-cloaking');
+  assertOwnedFilesSame(hyperCanonicalDir, 'skills/hyper-cloaking');
+
+  const expectedSkillDirs = [...skillNames].toSorted();
+  for (const dir of [`${pluginRoot}/skills`, '.agents/skills', '.claude/skills', 'skills']) {
+    const actualSkillDirs = readdirSync(fullPath(dir), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .toSorted();
+    if (JSON.stringify(actualSkillDirs) !== JSON.stringify(expectedSkillDirs)) {
+      fail(
+        `${dir} directories ${JSON.stringify(actualSkillDirs)} do not match expected ${JSON.stringify(expectedSkillDirs)}`
+      );
+    }
+  }
+
+  validateClientSupportSurfaces();
+  validateNoStalePublicIdentity();
+  validateEngineOnlyMigration();
+  validateEngineTestRelocation();
+  validateLegacyEnginePathsAbsent();
+  validateNoRetiredEngineIdentity();
+  validateRelocationQualityScope(packageManifest);
+  await validateRelocatedEngine();
+
+  if (errors.length > 0) {
+    console.error(errors.map((error) => `- ${error}`).join('\n'));
+    process.exit(1);
+  }
+
+  console.log(
+    `Validated ${skillNames.length} skill, mirror parity, relocation policy, client support, and stale identity checks for Claude Code, Codex, Cursor, OpenClaw, Hermes, and Open Agent Skills.`
+  );
 }
 
-validateClientSupportSurfaces();
-
-validateNoStalePublicIdentity();
-
-validateEngineOnlyMigration();
-validateEngineTestRelocation();
-
-if (errors.length > 0) {
-  console.error(errors.map((error) => `- ${error}`).join('\n'));
-  process.exit(1);
-}
-
-console.log(
-  `Validated ${skillNames.length} skill, version metadata, skill paths, helper scripts, OpenClaw/Hermes client support, and stale identity checks for Claude Code, Codex, Cursor, OpenClaw, Hermes, and Open Agent Skills.`
-);
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  await main();

@@ -10,12 +10,12 @@ import {
   isSameOrigin,
   makeEvidencePlan,
   normalizeOrigin
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/recon-scope.mjs';
+} from '../../../mcp/engine/recon-scope.mjs';
 import {
   appendRunShape,
   clearRunShapes,
   sanitizeRunShape
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/run-shapes.mjs';
+} from '../../../mcp/engine/run-shapes.mjs';
 
 test('recon scope recognizes same and approved origins without network activity', () => {
   assert.equal(normalizeOrigin('https://Example.com:443/a'), 'https://example.com');

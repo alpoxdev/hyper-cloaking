@@ -4,7 +4,7 @@ Last verified: 2026-07-08.
 
 current package syntax, setup command, executable path behavior, source-sensitive caveat가 필요할 때 이 reference를 사용합니다. CloakBrowser, `@playwright/mcp`, Node requirement가 바뀌면 refresh합니다.
 
-> 범위: 이 문서는 upstream package와 legacy external Playwright MCP fact를 보존합니다. Operational skill run은 local `hyper-cloaking-mcp` 서버, `mcp/src/register.mjs`, typed `cloak_*` tool을 사용합니다. 아래 command는 recommended live surface가 아닙니다.
+> 범위: 이 문서는 upstream package와 legacy external Playwright MCP fact를 보존합니다. Operational installed run은 `hyper-cloaking-mcp`와 typed `cloak_*` tool을 사용하며, programmatic client configuration rendering이 필요할 때만 `@alpoxdev/hyper-cloaking/register`를 import합니다. repository source-development는 checkout에서 `mcp/dist/server.mjs`를 build할 수 있지만 installed-user instruction이 아닙니다. 아래 command는 recommended live surface가 아닙니다.
 
 ## Sources
 
@@ -285,7 +285,7 @@ Config file schema도 `browser.launchOptions.executablePath`를 허용하지만,
 4. `npx cloakbrowser install`을 실행합니다.
 5. `npx cloakbrowser info`를 실행합니다.
 6. `npx @playwright/mcp@latest --help`가 실행 가능한지 확인합니다.
-7. `engine/cli.mjs mcp-config`로 executable을 확인합니다.
+7. helper configuration은 installed `hyper-cloaking-engine mcp-config` command label로 확인하고, operational work는 legacy external MCP가 아니라 `hyper-cloaking-mcp`로 실행합니다.
 
 network access 또는 package installation이 막히면 environment의 approval/escalation policy를 따릅니다. setup 성공을 가장하지 않습니다.
 
@@ -294,7 +294,7 @@ network access 또는 package installation이 막히면 environment의 approval/
 Validation tier는 의도적으로 분리합니다.
 
 - validate/smoke: no-network, no-browser-launch입니다. static helper/config/schema check에만 사용합니다.
-- live: real local verification tier입니다. 환경이 허용하면 CloakBrowser를 실행하고, authorized target으로 navigate하며, outcome evidence를 수집하고, keep-open 요청이 없으면 깔끔하게 종료합니다.
+- live: real managed MCP verification tier입니다. 환경이 허용하면 `hyper-cloaking-mcp`로 authorized target을 navigate하고, outcome evidence를 수집하며, keep-open 요청이 없으면 깔끔하게 종료합니다.
 - blocked live: GUI, network, package install, license, sandbox, target policy가 live verification을 막으면 precise blocker/nonzero output과 next safe command/config를 보고합니다. live evidence를 page-load assumption으로 대체하지 않습니다.
 
 Completion은 page load만이 아니라 requested outcome evidence에 기반합니다. Mandatory completion/failure report는 top-level에 다음을 포함합니다.

@@ -5,7 +5,7 @@ import {
   compileAgentEnvelopeValidator,
   runParentVerifyCli,
   verifyAgentEnvelope
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/parent-verify.mjs';
+} from '../../../../mcp/engine/agents/parent-verify.mjs';
 
 const setupResult = {
   agentType: 'setup',

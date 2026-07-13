@@ -5,7 +5,7 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { ensureWorkspace, workspacePaths } from 'hyper-cloaking-engine';
+import { ensureWorkspace, workspacePaths } from '../../engine/browser-utils.mjs';
 import { defineTool } from '../error-signal.mjs';
 
 /**

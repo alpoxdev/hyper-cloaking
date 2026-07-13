@@ -295,6 +295,33 @@ function strictErrors(result) {
   }
   return errors;
 }
+/**
+ * Audits a selected canonical target using its declared documentation policy.
+ * @param {{key:string,policy:'strict'|'bounded',canonicalRoot:string,paths:string[]}} manifest
+ * @returns {{key:string,policy:string,files:number,failures:object[]}}
+ */
+export function auditTargetManifest(manifest) {
+  const policyByTarget = { 'mcp-src': 'strict', 'mcp-engine': 'bounded' };
+  const policy = policyByTarget[manifest?.key];
+  if (
+    !manifest ||
+    !policy ||
+    manifest.policy !== policy ||
+    typeof manifest.canonicalRoot !== 'string' ||
+    !Array.isArray(manifest.paths)
+  )
+    throw new Error('unknown-audit-target');
+
+  const failures = [];
+  for (const relative of manifest.paths) {
+    const file = `${manifest.canonicalRoot}/${relative}`;
+    const result = analyzeFile(file);
+    if (result.error) failures.push(result.error);
+    else if (policy === 'strict') failures.push(...strictErrors(result));
+    else if (!result.source.includes('/**')) failures.push({ code: 'missing-jsdoc', path: file });
+  }
+  return { key: manifest.key, policy, files: manifest.paths.length, failures };
+}
 export async function auditJsdoc({ files = [] } = {}) {
   const results = files.map((file) => {
     const result = analyzeFile(file);
@@ -417,15 +444,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const failures = [];
       let count = 0;
       for (const manifest of manifests) {
-        for (const relative of manifest.paths) {
-          const file = `${manifest.canonicalRoot}/${relative}`;
-          count += 1;
-          const result = analyzeFile(file);
-          if (result.error) failures.push(result.error);
-          else if (manifest.key === 'mcp') failures.push(...strictErrors(result));
-          else if (!result.source.includes('/**'))
-            failures.push({ code: 'missing-jsdoc', path: file });
-        }
+        const result = auditTargetManifest(manifest);
+        count += result.files;
+        failures.push(...result.failures);
       }
       if (failures.length) {
         console.error(JSON.stringify({ valid: false, failures }, null, 2));
@@ -439,7 +460,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       process.exitCode = 1;
     }
   } else {
-    console.error('usage: audit <files...> | verify <baseline> <files...> | check');
+    console.error(
+      'usage: audit <files...> | verify <baseline> <files...> | check [mcp-src|mcp-engine|all]'
+    );
     process.exitCode = 1;
   }
 }

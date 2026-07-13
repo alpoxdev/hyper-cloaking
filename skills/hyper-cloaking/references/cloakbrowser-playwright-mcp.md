@@ -4,7 +4,7 @@ Last verified: 2026-07-08.
 
 Use this reference for current package syntax, setup commands, executable path behavior, helper contract names, and source-sensitive caveats. Refresh it when CloakBrowser, `@playwright/mcp`, or Node requirements change.
 
-> Scope: this file preserves upstream package and legacy external Playwright MCP facts only. Operational skill runs use the local `hyper-cloaking-mcp` server, `mcp/src/register.mjs`, and typed `cloak_*` tools. Commands below are not the recommended live surface.
+> Scope: this file preserves upstream package and legacy external Playwright MCP facts only. Operational installed runs use `hyper-cloaking-mcp` and typed `cloak_*` tools; import `@alpoxdev/hyper-cloaking/register` only when programmatic client-configuration rendering is required. Repository source-development may build `mcp/dist/server.mjs` from a checkout, but that path is not an installed-user instruction. Commands below are not the recommended live surface.
 
 ## Sources
 
@@ -296,7 +296,7 @@ When the skill is loaded for an operational browser task and setup is missing, r
 4. Run `npx cloakbrowser install`.
 5. Run `npx cloakbrowser info`.
 6. Confirm `npx @playwright/mcp@latest --help` can run.
-7. Resolve the executable with `engine/cli.mjs mcp-config`.
+7. Resolve the helper configuration with the installed `hyper-cloaking-engine mcp-config` command label; launch operational work through `hyper-cloaking-mcp`, not the legacy external MCP.
 
 If network access or package installation is blocked, follow the environment's approval/escalation policy. Do not pretend setup succeeded.
 

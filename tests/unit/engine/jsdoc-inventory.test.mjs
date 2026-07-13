@@ -71,26 +71,36 @@ test('slices form a sorted, non-overlapping complete partition', async (t) => {
     )
   );
 });
-test('canonical target selection is shared and rejects unknown, missing, and empty targets', async (t) => {
+test('canonical target selection preserves policy order and rejects retired selectors', async (t) => {
   assert.deepEqual(
-    selectCanonicalTargets('mcp').map((target) => target.key),
-    ['mcp']
+    selectCanonicalTargets('mcp-src').map((target) => target.key),
+    ['mcp-src']
+  );
+  assert.deepEqual(
+    selectCanonicalTargets('mcp-engine').map((target) => target.key),
+    ['mcp-engine']
   );
   assert.deepEqual(
     selectCanonicalTargets('all').map((target) => target.key),
-    ['skills', 'mcp']
+    ['mcp-src', 'mcp-engine']
   );
+  assert.deepEqual(
+    selectCanonicalTargets('all').map((target) => target.policy),
+    ['strict', 'bounded']
+  );
+  assert.throws(() => selectCanonicalTargets('mcp'), /unknown-audit-target/);
+  assert.throws(() => selectCanonicalTargets('skills'), /unknown-audit-target/);
   assert.throws(() => selectCanonicalTargets('unknown'), /unknown-audit-target/);
 
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'jsdoc-target-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   assert.throws(
-    () => buildTargetManifest({ key: 'mcp', root: path.join(root, 'missing') }),
+    () => buildTargetManifest({ key: 'mcp-src', root: path.join(root, 'missing') }),
     /target-root-missing/
   );
   await fs.mkdir(path.join(root, 'empty'), { recursive: true });
   assert.throws(
-    () => buildTargetManifest({ key: 'mcp', root: path.join(root, 'empty') }),
+    () => buildTargetManifest({ key: 'mcp-engine', root: path.join(root, 'empty') }),
     /target-empty/
   );
   assert.throws(() => buildTargetManifest({ key: 'other', root }), /unknown-audit-target/);

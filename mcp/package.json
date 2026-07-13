@@ -13,12 +13,45 @@
     "node": ">=20"
   },
   "bin": {
-    "hyper-cloaking-mcp": "dist/server.mjs"
+    "hyper-cloaking-mcp": "./dist/server.mjs",
+    "hyper-cloaking-engine": "./engine/cli.mjs",
+    "hyper-cloaking-browser-utils": "./engine/browser-utils.mjs",
+    "hyper-cloaking-cookie": "./engine/cookie.mjs",
+    "hyper-cloaking-parent-dispatcher": "./engine/agents/parent-dispatcher.mjs"
   },
   "main": "./dist/server.mjs",
   "files": [
-    "dist"
+    "dist",
+    "engine",
+    "register.mjs"
   ],
+  "exports": {
+    ".": "./dist/server.mjs",
+    "./package.json": "./package.json",
+    "./register": "./register.mjs",
+    "./engine/browser-utils.mjs": "./engine/browser-utils.mjs",
+    "./engine/cli.mjs": "./engine/cli.mjs",
+    "./engine/config.mjs": "./engine/config.mjs",
+    "./engine/cookie.mjs": "./engine/cookie.mjs",
+    "./engine/credentials.mjs": "./engine/credentials.mjs",
+    "./engine/target-safety.mjs": "./engine/target-safety.mjs",
+    "./engine/outcome.mjs": "./engine/outcome.mjs",
+    "./engine/diagnostics.mjs": "./engine/diagnostics.mjs",
+    "./engine/evidence-boundary.mjs": "./engine/evidence-boundary.mjs",
+    "./engine/recon-scope.mjs": "./engine/recon-scope.mjs",
+    "./engine/run-shapes.mjs": "./engine/run-shapes.mjs",
+    "./engine/action-runtime/action-result.mjs": "./engine/action-runtime/action-result.mjs",
+    "./engine/action-runtime/guardrails.mjs": "./engine/action-runtime/guardrails.mjs",
+    "./engine/providers/index.mjs": "./engine/providers/index.mjs",
+    "./engine/providers/instagram/index.mjs": "./engine/providers/instagram/index.mjs",
+    "./engine/providers/naver/index.mjs": "./engine/providers/naver/index.mjs",
+    "./engine/providers/youtube/index.mjs": "./engine/providers/youtube/index.mjs",
+    "./engine/providers/coupang/index.mjs": "./engine/providers/coupang/index.mjs",
+    "./engine/providers/tiktok/index.mjs": "./engine/providers/tiktok/index.mjs",
+    "./engine/providers/x/index.mjs": "./engine/providers/x/index.mjs",
+    "./engine/agents/parent-dispatcher.mjs": "./engine/agents/parent-dispatcher.mjs",
+    "./engine/agents/parent-verify.mjs": "./engine/agents/parent-verify.mjs"
+  },
   "publishConfig": {
     "access": "public"
   },
@@ -29,13 +62,12 @@
     "prepack": "npm run build"
   },
   "dependencies": {
+    "ajv": "^8.20.0",
     "cloakbrowser": "^0.4.10",
     "playwright-core": "^1.61.1"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
-    "ajv": "^8.20.0",
-    "esbuild": "^0.28.1",
-    "hyper-cloaking-engine": "*"
+    "esbuild": "^0.28.1"
   }
 }

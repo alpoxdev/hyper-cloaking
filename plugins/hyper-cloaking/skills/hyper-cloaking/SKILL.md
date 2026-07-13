@@ -1,7 +1,7 @@
 ---
 name: hyper-cloaking
 description: "Use this skill when the user asks an MCP-capable agent to install, configure, or drive authorized CloakBrowser browsing through the stateful `hyper-cloaking-mcp` server, including setup repair, server build/registration, typed tool execution, provider actions, lifecycle cleanup, and evidence-backed completion. Do not use for ordinary stock-browser automation, generic Playwright tests, or unauthorized bot-detection evasion."
-compatibility: Claude Code, Codex, Gajae-Code skill workflows, Cursor, OpenClaw, Hermes Agent, and other MCP-capable clients; requires Node.js >= 20, npm, `cloakbrowser`, `playwright-core`, and the local `mcp/` workspace dependencies.
+compatibility: Claude Code, Codex, Gajae-Code skill workflows, Cursor, OpenClaw, Hermes Agent, and other MCP-capable clients; requires Node.js >= 20, npm, `cloakbrowser`, and `playwright-core`. Repository source-development additionally requires the local `mcp/` workspace dependencies.
 ---
 
 @rules/hyper-cloaking-workflow.md
@@ -28,7 +28,7 @@ Use this skill when the user wants one or more of:
 
 - CloakBrowser installed or prepared in a Node.js environment
 - missing `cloakbrowser`, `playwright-core`, MCP SDK dependency, server bundle, or CloakBrowser binary detected and repaired before browser work
-- a local `hyper-cloaking-mcp` stdio server built, registered, handshaked, and inspected through `tools/list`
+- an installed `hyper-cloaking-mcp` stdio server, or a repository source-development server, built, registered, handshaked, and inspected through `tools/list`
 - authorized browser work performed through typed `cloak_*` tools
 - MCP registration for Codex, JSON clients, Claude Code, Gajae-Code, OpenClaw, Hermes, or direct local execution
 - troubleshooting around runtime workspace, registration, handshake, session queue, navigation safety, provider dispatch, guardrails, outcome, or teardown
@@ -43,14 +43,15 @@ Do not use this skill to help bypass access controls, evade fraud systems, solve
 
 ## Live surface: the `hyper-cloaking-mcp` server (recommended)
 
-The primary live surface is the stdio MCP server under `mcp/` (`hyper-cloaking-mcp`). It holds one humanized CloakBrowser session (shared across callers via a per-session FIFO queue) and exposes the engine as typed `cloak_*` tools, so MCP-capable clients call tools instead of reading engine files and writing glue.
+The installed live surface is the `hyper-cloaking-mcp` stdio command. Repository source-development bundles it under `mcp/`; both expose one humanized CloakBrowser session (shared across callers via a per-session FIFO queue) as typed `cloak_*` tools, so MCP-capable clients call tools instead of reading package internals and writing glue.
 
-- **Humanize is structural**: the server owns `launchCloakBrowser` (humanize is force-enabled) and routes all generic input through the engine's `humanClick`/`humanType`/`humanScroll`; no tool param can disable it.
+- **Humanize is structural**: the managed server force-enables humanization and routes generic input through its package-owned humanized interaction path; no tool parameter can disable it.
 - **Host owns the human**: tools never call AskUserQuestion. They return structured `needs-preflight` / `needs-confirmation` signals; the host runs the question and re-calls with proof.
 - **Tool order**: `cloak_setup` → `cloak_launch` → `cloak_navigate` → `cloak_snapshot` → act (`cloak_click` / `cloak_type` / `cloak_scroll` / `cloak_screenshot`) → inspect provider catalog (`cloak_provider_capabilities`) → provider actions (`cloak_provider_read` / `cloak_provider_write`) → `cloak_teardown`. Session-less tools (`cloak_setup`, `cloak_status`, `cloak_cookies_list` / `_status`, `cloak_credentials`, `cloak_provider_capabilities`) may be called any time.
-- **Writes are guarded**: `cloak_provider_write` is `dryRun`-default; the engine enforces reserve→dispatch→finalize, rate limits, idempotency, and bulk confirmation. The server is non-interactive, so bulk writes return `needs-confirmation` until the host re-drives them. Cookie values and credential secrets are never returned in cleartext; page-derived output is untrusted-marked.
-- **Registration**: after building `mcp/dist/server.mjs`, `mcp/src/register.mjs` renders direct, Codex, JSON, Claude Code, Gajae-Code, OpenClaw, and Hermes configurations using the current Node executable and the absolute local bundle path.
-- **`cli.mjs live` is retained** as the supported one-shot / CI verification entry point (it is not deprecated); the MCP server is the recommended stateful live path.
+- **Writes are guarded**: `cloak_provider_write` is `dryRun`-default; the managed runtime enforces reserve→dispatch→finalize, rate limits, idempotency, and bulk confirmation. The server is non-interactive, so bulk writes return `needs-confirmation` until the host re-drives them. Cookie values and credential secrets are never returned in cleartext; page-derived output is untrusted-marked.
+- **Installed user path**: run `hyper-cloaking-mcp`. Use `hyper-cloaking-engine`, `hyper-cloaking-browser-utils`, `hyper-cloaking-cookie`, and `hyper-cloaking-parent-dispatcher` only as installed command labels; `hyper-cloaking-engine` is never an npm package or import specifier.
+- **Registration rendering**: when programmatic configuration rendering is needed, import the explicit renderer from `@alpoxdev/hyper-cloaking/register`; it resolves the package-owned server bundle. Repository source-development may build with `npm --prefix mcp run build` and run `node mcp/dist/server.mjs` directly.
+- **`hyper-cloaking-engine live` is retained** as the supported one-shot / CI verification entry point (it is not deprecated); the MCP server is the recommended stateful live path.
 
 </live_surface>
 
@@ -89,7 +90,7 @@ Positive examples:
 
 - "Install CloakBrowser and register the Hyper Cloaking MCP server."
 - "Handle this site's login flow through `hyper-cloaking-mcp` from start to finish."
-- "Create Codex MCP settings for the local `mcp/dist/server.mjs` bundle."
+- "Create Codex MCP settings for `hyper-cloaking-mcp`."
 - "Build and register the Hyper Cloaking MCP server."
 - "Create MCP settings usable from both Cursor and Claude Code."
 - "Configure OpenClaw to use `hyper-cloaking-mcp`."
@@ -110,12 +111,12 @@ Boundary example:
 <workflow>
 
 1. **Run the Target Safety Gate.** Decide whether the user needs setup/config only, a live browser task, troubleshooting, or a reusable MCP config. Classify authorization, allowed origins, disallowed origins, credential/account sensitivity, and whether the request must be refused or narrowed before installing or browsing.
-2. **Load current reference when needed.** Read `references/cloakbrowser-playwright-mcp.md` only for CloakBrowser package, binary, Node, license, and provenance facts; use `mcp/src/register.mjs` and the MCP tool schemas as the authority for the managed server surface.
+2. **Load current reference when needed.** Read `references/cloakbrowser-playwright-mcp.md` only for CloakBrowser package, binary, Node, license, and provenance facts; use the typed MCP schemas as the authority for the managed server surface. Render a client configuration programmatically only through `@alpoxdev/hyper-cloaking/register`.
 3. **Run the preflight question gate.** Before setup, cookie loading, or browser launch, ask one bundled preflight question through the host's structured question tool when available. Confirm or collect: target URL/site if missing, allowed origins, `headless` mode (`true` by default; `false` only when requested or selected), cookie mode (`use existing cookie.yml`, `provide/update cookie.yml`, or `no cookies`), cookie site/account when needed, whether to keep the browser open after completion, and any profile/account label. If the user already supplied a value in the prompt, do not re-ask it; include it in the preflight summary. Never ask for raw cookie values unless cookies are needed and the user chooses to provide/update them.
-3A. **Route through portable parent-executed roles.** Treat `rules/agents/setup-agent.md`, `rules/agents/browser-task-agent.md`, and `rules/agents/diagnostics-agent.md` as internal role contracts, not host-native agent registrations. The parent selects exactly one trigger through `engine/agents/parent-dispatcher.mjs`, verifies every result with the closed v1 schema, and owns authorization, teardown gating, evidence publication, and mirror/recovery state. `browser-task` is verification-only: it performs no arbitrary action list and cannot succeed without observed humanization telemetry plus verified cleanup. Unsupported native execution returns `native_unavailable`; spawn and contract failures stop without parent fallback or retry.
+3A. **Route through portable parent-executed roles.** Treat `rules/agents/setup-agent.md`, `rules/agents/browser-task-agent.md`, and `rules/agents/diagnostics-agent.md` as internal role contracts, not host-native agent registrations. The parent selects exactly one trigger with `hyper-cloaking-parent-dispatcher --input-stdin --json`, verifies every result with the closed v1 schema, and owns authorization, teardown gating, evidence publication, and mirror/recovery state. `browser-task` is verification-only: it performs no arbitrary action list and cannot succeed without observed humanization telemetry plus verified cleanup. Unsupported native execution returns `native_unavailable`; spawn and contract failures stop without parent fallback or retry.
 4. **Run the activation setup gate.** On every operational run, verify `node --version`, `npm --version`, a writable runtime workspace, `cloakbrowser`, `playwright-core`, the MCP SDK dependencies, and a cached CloakBrowser binary.
 5. **Initialize the runtime workspace.** Call `cloak_setup`; use `HYPER_CLOAKING_HOME` only for sandboxed tests or an explicit alternate workspace.
-6. **Build and register the server.** Run `npm --prefix mcp run build`, then render the target client configuration through `mcp/src/register.mjs`; its default command uses the current Node executable and absolute local bundle path.
+6. **Start and register the server.** Installed users run `hyper-cloaking-mcp`. Repository source-development builds with `npm --prefix mcp run build` before directly running `node mcp/dist/server.mjs`. When a client configuration must be rendered, import the explicit renderer from `@alpoxdev/hyper-cloaking/register`; do not resolve internal source files.
 7. **Check cookies and credentials without exposing secrets.** Use `cloak_cookies_status`, `cloak_cookies_list`, and `cloak_credentials`. Resolve `needs-account` through the host, and never request or return raw credential values.
 8. **Launch one managed session.** Call `cloak_launch` with the preflight-approved headless/headed and account settings. The server forces CloakBrowser humanization and owns the shared FIFO session.
 9. **Navigate through the safety boundary.** Call `cloak_navigate` with the target and approved origins. A refusal, approval requirement, unsafe redirect, challenge, or missing session is a blocker, not permission to use another browser lane.
@@ -135,39 +136,43 @@ Boundary example:
 <support_file_read_order>
 
 1. Read `rules/hyper-cloaking-workflow.md` when executing setup, MCP launch, live browsing, or troubleshooting.
-2. Read `references/runtime-workspace.md` when using `~/.hyper-cloaking/`, `cookie.yml`, profiles, evidence paths, `engine/cookie.mjs`, or `engine/browser-utils.mjs`.
+2. Read `references/runtime-workspace.md` when using `~/.hyper-cloaking/`, `cookie.yml`, profiles, evidence paths, or the installed workspace and cookie command labels.
 3. Read `references/cloakbrowser-playwright-mcp.md` only when current CloakBrowser package, binary, Node, provenance, or safety/license facts matter.
-4. Build `mcp/dist/server.mjs`, verify its stdio handshake, and inspect `tools/list` before first operational use.
+4. Installed users verify the `hyper-cloaking-mcp` stdio handshake and inspect `tools/list`; repository source-development first builds `mcp/dist/server.mjs`.
 5. Use helper-module contracts consistently when documenting or reporting runs: `target-safety.mjs`, `outcome.mjs`, `diagnostics.mjs`, `evidence-boundary.mjs`, `recon-scope.mjs`, and `run-shapes.mjs`.
 
 </support_file_read_order>
 
 <helper_script>
 
-Build the managed server and verify its local registration surface:
+Use the package-owned server without reading internal source files:
 
 ```bash
+# Installed user path
+hyper-cloaking-mcp
+
+# Repository source-development only
 npm --prefix mcp run build
 node mcp/dist/server.mjs
 ```
 
-Use `mcp/src/register.mjs` to render a runnable local command with the current Node executable and absolute bundle path. Runtime workspace, cookies, credentials, browser lifecycle, snapshots, interactions, provider actions, and teardown are exposed through typed `cloak_*` tools; agent workflows must not replace them with direct helper imports.
+When a client configuration must be rendered programmatically, import `generateServerRegistration` from `@alpoxdev/hyper-cloaking/register`. Runtime workspace, cookies, credentials, browser lifecycle, snapshots, interactions, provider actions, and teardown are exposed through typed `cloak_*` tools; agent workflows must not replace them with direct helper or provider imports.
 
 </helper_script>
 
-## Engine-only migration: removed commands
+## Removed skill-local helper commands
 
-The skill-local `scripts/*.mjs` helper surface was removed. Runtime helpers now live only under `engine/`. The commands below are **removed and unsupported**; use the engine replacement instead. This table is the only place old command strings may appear.
+The skill-local `scripts/*.mjs` helper surface was removed. Use these installed command labels instead; `hyper-cloaking-engine` is an executable command label, never an npm package or import specifier. The old command strings appear only in this unsupported migration table.
 
 | Removed (unsupported) | Use instead |
 | --- | --- |
-| `node scripts/hyper-cloaking.mjs mcp-config` | `node engine/cli.mjs mcp-config` |
-| `node scripts/browser-utils.mjs init` | `node engine/browser-utils.mjs init` |
-| `node scripts/browser-utils.mjs cookies` | `node engine/browser-utils.mjs cookies` |
-| `node scripts/cookie.mjs inspect` | `node engine/cookie.mjs inspect` |
-| `node scripts/cookie.mjs import-json` | `node engine/cookie.mjs import-json` |
+| `node scripts/hyper-cloaking.mjs mcp-config` | `hyper-cloaking-engine mcp-config` |
+| `node scripts/browser-utils.mjs init` | `hyper-cloaking-browser-utils init` |
+| `node scripts/browser-utils.mjs cookies` | `hyper-cloaking-browser-utils cookies` |
+| `node scripts/cookie.mjs inspect` | `hyper-cloaking-cookie inspect` |
+| `node scripts/cookie.mjs import-json` | `hyper-cloaking-cookie import-json` |
 
-This is an intentional engine-only hard migration, not an accidental omission. There are no compatibility wrappers.
+There are no compatibility wrappers.
 
 ## Provider tools
 
@@ -177,10 +182,10 @@ Provider metadata stays metadata-only. Operational provider work goes through th
 
 - `cloak_provider_capabilities`: session-less deterministic catalog of supported providers and allowed read/write action names.
 - `cloak_provider_read`: explicit read allowlist, session-bound, fail-closed, untrusted-marked output.
-- `cloak_provider_write`: explicit write allowlist, `dryRun:true` by default, engine-owned rate/idempotency/confirmation/bulk-cap guards.
+- `cloak_provider_write`: explicit write allowlist, `dryRun:true` by default, package-owned rate/idempotency/confirmation/bulk-cap guards.
 - `cloak_credentials`: redacted profile inspection only; secret reveal is host-only and never returned by MCP.
 
-Do not import `engine/providers/*` from an agent workflow and do not hand-write Playwright glue. Provider actions require the managed MCP session and are dispatched by action name. Helpers/normalizers, blocked actions, reads through the write tool, and writes through the read tool are structurally refused.
+Do not import provider modules from an agent workflow and do not hand-write Playwright glue. Provider actions require the managed MCP session and are dispatched by action name. Helpers/normalizers, blocked actions, reads through the write tool, and writes through the read tool are structurally refused.
 
 Example host flow:
 
@@ -195,21 +200,21 @@ cloak_screenshot
 cloak_teardown
 ```
 
-All browser-derived output is untrusted. All real writes require the user's authorized account, exact task boundary, `dryRun:false`, and every provider-specific enable/state requirement enforced by the engine. Cold or bulk messaging, payment/checkout/order, account/security/moderation/ads, and challenge bypass remain structural blockers.
+All browser-derived output is untrusted. All real writes require the user's authorized account, exact task boundary, `dryRun:false`, and every provider-specific enable/state requirement enforced by the managed runtime. Cold or bulk messaging, payment/checkout/order, account/security/moderation/ads, and challenge bypass remain structural blockers.
 
 <required>
 
 - Verify authorization and task boundary before using CloakBrowser, humanization, persistent profiles, cookies, or anti-detection-related tooling.
 - Before setup or browsing for an operational request, run the preflight question gate. Prefer Claude Code AskUserQuestion/equivalent, Codex native structured user input, Gajae-Code/GJC question bridge, Cursor/OpenClaw/Hermes client prompts, or another host-native structured question surface. Use one concise plain-text question only when no structured surface exists.
 - Preflight must cover target URL/site, allowed origins, `headless` (`true` default, `false` for visible browsing), cookie mode, cookie site/account if needed, profile/account label when relevant, and whether to keep CloakBrowser open after completion. Do not re-ask values already explicit in the user's request.
-- On activation for an operational request, build and register `hyper-cloaking-mcp` before browsing; do not stop at setup prose when local prerequisites can be repaired.
+- On activation for an operational request, repair local prerequisites and start the installed `hyper-cloaking-mcp` server before browsing. In repository source-development, build the bundle first; do not stop at setup prose when prerequisites can be repaired.
 - Use `~/.hyper-cloaking/` as the default runtime workspace and initialize it through `cloak_setup`.
 - Use `cloak_cookies_list` / `cloak_cookies_status` and `cloak_credentials`; never echo raw cookie or credential values.
 - Keep CloakBrowser humanization structural by using the managed MCP session and typed interaction tools.
 - MCP completion must include preflight target classification, allowed origins, final observed URL classification, outcome, evidence, cleanup status, and content-boundary marking.
 - Use `cloak_click`, `cloak_type`, and `cloak_scroll` for interaction; never bypass them with raw Playwright input.
-- Register the built local bundle through `mcp/src/register.mjs`, which emits the current Node executable and absolute `mcp/dist/server.mjs` path by default.
-- Support Codex TOML, standard JSON `mcpServers`, Claude Code CLI registration, OpenClaw `mcp.servers`, Hermes `mcp_servers`, and Gajae-Code guidance through `mcp/src/register.mjs`.
+- Installed configurations invoke `hyper-cloaking-mcp`; render a target client configuration programmatically only through `@alpoxdev/hyper-cloaking/register`.
+- Support Codex TOML, standard JSON `mcpServers`, Claude Code CLI registration, OpenClaw `mcp.servers`, Hermes `mcp_servers`, and Gajae-Code guidance through the renderer when configuration generation is required.
 - Use fully expanded paths in persistent MCP config files.
 - Keep setup facts source-backed and refresh `references/cloakbrowser-playwright-mcp.md` when package behavior changes.
 - Drive the final user task through the CloakBrowser-backed browser surface when the request is operational, not just configuration.
@@ -248,9 +253,9 @@ Before completion, check:
 - [ ] Missing `cloakbrowser`, `playwright-core`, MCP SDK dependencies, CloakBrowser binary, or server bundle is repaired, or a precise blocker is reported.
 - [ ] `cloak_setup` initialized the runtime workspace, or a precise filesystem blocker is reported.
 - [ ] Cookie/account state was checked through redacted MCP tools without exposing values.
-- [ ] `mcp/dist/server.mjs` was built and registered through the runnable local default from `mcp/src/register.mjs`.
+- [ ] The installed `hyper-cloaking-mcp` command was used, or repository source-development built and directly launched `mcp/dist/server.mjs`; no skill-local engine path was used.
 - [ ] The stdio handshake succeeds and `tools/list` exposes all 16 typed tools.
-- [ ] The target client surface is selected through `mcp/src/register.mjs`.
+- [ ] The target client surface is selected through the explicit `@alpoxdev/hyper-cloaking/register` renderer only when configuration generation is required.
 - [ ] `cloak_launch` owns a humanized managed session in the requested headless/headed mode.
 - [ ] Navigation, snapshots, interactions, and provider actions use typed `cloak_*` tools.
 - [ ] Removed/unknown/generic providers and cross-boundary actions fail closed.

@@ -1,19 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 // The distribution bundle must externalize cloakbrowser + playwright-core
 // (never inline them) and preserve browser-utils.mjs's runtime dynamic import so
 // the registered local dist server can resolve a workspace-installed
-// cloakbrowser at runtime. This bundles the engine entry the server imports and
-// asserts on the emitted code without shipping it.
-test('engine bundles with cloakbrowser/playwright-core external and dynamic import preserved', async () => {
+// cloakbrowser at runtime. This bundles the MCP server entry that imports the
+// engine and asserts on the emitted code without shipping it.
+const here = path.dirname(fileURLToPath(import.meta.url));
+
+test('server bundles with cloakbrowser/playwright-core external and dynamic import preserved', async () => {
   const result = await build({
-    stdin: {
-      contents: "export * from 'hyper-cloaking-engine';",
-      resolveDir: process.cwd(),
-      loader: 'js'
-    },
+    entryPoints: [path.join(here, '..', 'src', 'server.mjs')],
     bundle: true,
     platform: 'node',
     format: 'esm',

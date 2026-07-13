@@ -4,14 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { validateProviderSchema } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/schema.mjs';
-import { NetworkReadError } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/network.mjs';
-import { analyzePosts } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/actions/analyze.mjs';
+import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
+import { NetworkReadError } from '../../../../../mcp/engine/providers/network.mjs';
+import { analyzePosts } from '../../../../../mcp/engine/providers/x/actions/analyze.mjs';
 import {
   normalizePostRef,
   normalizeThreadRef,
   normalizeUserRef
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/actions/ids.mjs';
+} from '../../../../../mcp/engine/providers/x/actions/ids.mjs';
 import {
   getPost,
   getThread,
@@ -20,7 +20,7 @@ import {
   listDMThreads,
   readDMThread,
   searchPosts
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/actions/reads.mjs';
+} from '../../../../../mcp/engine/providers/x/actions/reads.mjs';
 import {
   blockedXAction,
   createPost,
@@ -28,9 +28,9 @@ import {
   replyToDM,
   replyToPost,
   setLiked
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/actions/writes.mjs';
-import { xProvider } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/metadata.mjs';
-import { xReadPromotions } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/network.mjs';
+} from '../../../../../mcp/engine/providers/x/actions/writes.mjs';
+import { xProvider } from '../../../../../mcp/engine/providers/x/metadata.mjs';
+import { xReadPromotions } from '../../../../../mcp/engine/providers/x/network.mjs';
 
 function safeTarget() {
   return { disposition: 'ok', reason: 'public-https', risks: [] };

@@ -7,7 +7,7 @@
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { generateAllServerRegistrations } from './src/register.mjs';
+import { generateAllServerRegistrations } from './register.mjs';
 import { mapErrorToSignal, defineTool } from './src/error-signal.mjs';
 import { createSessionManager } from './src/session-manager.mjs';
 import { takeAriaSnapshot, resolveTarget } from './src/snapshot-resolver.mjs';

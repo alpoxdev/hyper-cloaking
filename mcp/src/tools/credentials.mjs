@@ -8,10 +8,7 @@
  * A reveal request is refused with needs-confirmation (host-only, never served
  * by the MCP server).
  */
-import {
-  listCredentialProfiles,
-  inspectCredentialProfile
-} from 'hyper-cloaking-engine/credentials.mjs';
+import { listCredentialProfiles, inspectCredentialProfile } from '../../engine/credentials.mjs';
 import { defineTool } from '../error-signal.mjs';
 
 /**

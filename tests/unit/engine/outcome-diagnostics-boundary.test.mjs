@@ -1,19 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-  evaluateOutcome,
-  makeOutcomeReport
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/outcome.mjs';
+import { evaluateOutcome, makeOutcomeReport } from '../../../mcp/engine/outcome.mjs';
 import {
   classifyChallengeObservation,
   makeFailureDiagnostic
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/diagnostics.mjs';
+} from '../../../mcp/engine/diagnostics.mjs';
 import {
   markUntrustedBrowserContent,
   redactEvidenceText,
   summarizeEvidenceRef
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/evidence-boundary.mjs';
+} from '../../../mcp/engine/evidence-boundary.mjs';
 
 test('evaluateOutcome passes and fails deterministic multi-criteria without filesystem probing', () => {
   const observation = {

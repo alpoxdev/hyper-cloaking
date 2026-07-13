@@ -11,7 +11,7 @@ import {
   loadCookieConfig,
   parseCookieYaml,
   selectCookieRecords
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/cookie.mjs';
+} from '../../../mcp/engine/cookie.mjs';
 
 test('cookie JSON payload parser rejects unsupported shapes', () => {
   assert.deepEqual(cookiesFromJsonPayload([]), []);

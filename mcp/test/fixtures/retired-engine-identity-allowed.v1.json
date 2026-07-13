@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "name": "outer package bin key",
+      "file": "mcp/package.json",
+      "content": "{\"bin\":{\"$RETIRED_ENGINE_PACKAGE\":\"./engine/cli.mjs\"}}"
+    },
+    {
+      "name": "documented executable command",
+      "file": "docs/usage.md",
+      "content": "Run `$RETIRED_ENGINE_PACKAGE validate` after installation."
+    },
+    {
+      "name": "documented command-label list",
+      "file": "docs/usage.md",
+      "content": "Use `$RETIRED_ENGINE_PACKAGE`, `hyper-cloaking-cookie` only as installed command labels."
+    },
+    {
+      "name": "tested executable command",
+      "file": "tests/engine-command.test.mjs",
+      "content": "await spawn('$RETIRED_ENGINE_PACKAGE', ['validate']);"
+    },
+    {
+      "name": "named historical relocation source",
+      "file": "mcp/test/fixtures/engine-relocation-manifest.v1.json",
+      "content": "  \"source\": \"$LEGACY_ENGINE_ROOT/cli.mjs\""
+    },
+    {
+      "name": "Korean package-identity remediation",
+      "file": "docs/usage.ko.md",
+      "content": "`$RETIRED_ENGINE_PACKAGE`은 executable command label일 뿐 npm package나 import specifier가 아닙니다."
+    }
+  ]
+}

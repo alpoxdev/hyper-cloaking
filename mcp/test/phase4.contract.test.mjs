@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { reserveGuardedAction } from 'hyper-cloaking-engine/action-runtime/guardrails.mjs';
-import { initCredentialStore } from 'hyper-cloaking-engine/credentials.mjs';
+import { reserveGuardedAction } from '../engine/action-runtime/guardrails.mjs';
+import { initCredentialStore } from '../engine/credentials.mjs';
 import { createSessionManager } from '../src/session-manager.mjs';
 import { makeProviderWriteTool } from '../src/tools/providers.mjs';
 import { credentialsTool } from '../src/tools/credentials.mjs';
@@ -26,12 +26,27 @@ test('buildWriteOpts defaults dryRun TRUE and clamps cap to the bulk cap', () =>
 });
 
 test('classifyWriteResult maps engine envelopes to typed signals', () => {
-  assert.equal(classifyWriteResult({ blocked: true, failure: { stage: 'dry-run' } }).status, 'dry-run');
-  assert.equal(classifyWriteResult({ blocked: true, failure: { stage: 'confirmation-gate' } }).status, 'needs-confirmation');
-  assert.equal(classifyWriteResult({ blocked: true, failure: { stage: 'rate-limit' } }).status, 'rate-limited');
-  assert.equal(classifyWriteResult({ blocked: true, failure: { stage: 'bulk-cap' } }).status, 'refused');
+  assert.equal(
+    classifyWriteResult({ blocked: true, failure: { stage: 'dry-run' } }).status,
+    'dry-run'
+  );
+  assert.equal(
+    classifyWriteResult({ blocked: true, failure: { stage: 'confirmation-gate' } }).status,
+    'needs-confirmation'
+  );
+  assert.equal(
+    classifyWriteResult({ blocked: true, failure: { stage: 'rate-limit' } }).status,
+    'rate-limited'
+  );
+  assert.equal(
+    classifyWriteResult({ blocked: true, failure: { stage: 'bulk-cap' } }).status,
+    'refused'
+  );
   assert.equal(classifyWriteResult({ ok: true }).status, 'ok');
-  assert.equal(classifyWriteResult({ ok: true, alreadySatisfied: true }).status, 'already-verified');
+  assert.equal(
+    classifyWriteResult({ ok: true, alreadySatisfied: true }).status,
+    'already-verified'
+  );
   assert.equal(classifyWriteResult({ ok: false }).status, 'ambiguous');
 });
 
@@ -65,15 +80,19 @@ test('cloak_provider_write defaults to dryRun and performs NO navigation', async
     browser: { close: async () => {} },
     page: {
       url: () => 'https://www.instagram.com/p/ABC123/',
-      goto: async () => { navigated = true; }
+      goto: async () => {
+        navigated = true;
+      }
     }
   }));
   const tool = makeProviderWriteTool(manager);
-  const r = payload(await tool.handler({
-    provider: 'instagram',
-    action: 'likePost',
-    args: ['https://www.instagram.com/p/ABC123/']
-  }));
+  const r = payload(
+    await tool.handler({
+      provider: 'instagram',
+      action: 'likePost',
+      args: ['https://www.instagram.com/p/ABC123/']
+    })
+  );
   assert.equal(r.status, 'dry-run');
   assert.equal(navigated, false, 'dryRun default performed no navigation');
 });

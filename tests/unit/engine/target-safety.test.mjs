@@ -10,7 +10,7 @@ import {
   isPrivateIpLiteral,
   isUnsafeScheme,
   normalizeOrigin
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/target-safety.mjs';
+} from '../../../mcp/engine/target-safety.mjs';
 
 test('classifies public https FQDN as ok', () => {
   const result = classifyTargetUrl('https://example.com/path?q=1');

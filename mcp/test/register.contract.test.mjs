@@ -1,11 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 import {
   SERVER_ID,
   normalizeClient,
   generateServerRegistration,
-  generateAllServerRegistrations
-} from '../src/register.mjs';
+  generateAllServerRegistrations,
+  serverCommand
+} from '../register.mjs';
 const EXPECTED_REGISTRATION_KEYS = [
   'direct',
   'codex',
@@ -27,6 +29,19 @@ const EXPECTED_REGISTRATION_TYPES = {
   hermes: 'hermes-config-yaml',
   hermesAgent: 'hermes-config-yaml'
 };
+test('source registration default resolves to the package dist server', () => {
+  const expectedServerPath = fileURLToPath(new URL('../dist/server.mjs', import.meta.url));
+  const defaultCommand = serverCommand();
+
+  assert.deepEqual(defaultCommand, {
+    command: process.execPath,
+    args: [expectedServerPath]
+  });
+  assert.deepEqual(generateServerRegistration('direct').command, [
+    defaultCommand.command,
+    ...defaultCommand.args
+  ]);
+});
 
 test('all 8 client targets render a runnable local registration', () => {
   const all = generateAllServerRegistrations();

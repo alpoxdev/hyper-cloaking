@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "preimageRef": "agents/lib/sync-mirror.mjs",
+      "path": "agents/lib/sync-mirror.mjs",
+      "type": "file",
+      "mode": "0644",
+      "sha256": "6fb65167e794d2e94f226fc443483910afb5381bee769a6e6b8b79dd829e8cb4",
+      "bytesSha256": "6fb65167e794d2e94f226fc443483910afb5381bee769a6e6b8b79dd829e8cb4"
+    },
+    {
+      "preimageRef": "agents/parent-dispatcher.mjs",
+      "path": "agents/parent-dispatcher.mjs",
+      "type": "file",
+      "mode": "0644",
+      "sha256": "a913a48d6b2b8c4203cb0f91f90da062b4accdc326ce3a3c0c3d8e76a339f664",
+      "bytesSha256": "a913a48d6b2b8c4203cb0f91f90da062b4accdc326ce3a3c0c3d8e76a339f664"
+    },
+    {
+      "preimageRef": "browser-utils.mjs",
+      "path": "browser-utils.mjs",
+      "type": "file",
+      "mode": "0644",
+      "sha256": "ed8dda3de551ca596df22fbb4b3953800a004565bf167dc9fc4504c8b249335d",
+      "bytesSha256": "ed8dda3de551ca596df22fbb4b3953800a004565bf167dc9fc4504c8b249335d"
+    },
+    {
+      "preimageRef": "cli.mjs",
+      "path": "cli.mjs",
+      "type": "file",
+      "mode": "0644",
+      "sha256": "5a2265ab26682ac01b94648e49de82769417bf4d6229d3bc3c23f4b7ced38ae2",
+      "bytesSha256": "5a2265ab26682ac01b94648e49de82769417bf4d6229d3bc3c23f4b7ced38ae2"
+    },
+    {
+      "preimageRef": "cookie.mjs",
+      "path": "cookie.mjs",
+      "type": "file",
+      "mode": "0644",
+      "sha256": "c9579cefbb7cd54a500006c057d25ba3dd41a6382ebabe20151e5c2555331c9a",
+      "bytesSha256": "c9579cefbb7cd54a500006c057d25ba3dd41a6382ebabe20151e5c2555331c9a"
+    },
+    {
+      "preimageRef": "package.json",
+      "path": "package.json",
+      "type": "file",
+      "mode": "0644",
+      "sha256": "d720f46a240e774a2439a7199f6ac2af77f9af8bbd38efc088d7fbf0b64fd277",
+      "bytesSha256": "d720f46a240e774a2439a7199f6ac2af77f9af8bbd38efc088d7fbf0b64fd277"
+    }
+  ]
+}

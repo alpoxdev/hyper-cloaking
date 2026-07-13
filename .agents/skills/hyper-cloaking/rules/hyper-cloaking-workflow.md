@@ -1,6 +1,6 @@
 # Hyper Cloaking MCP Workflow Rules
 
-Use these rules for authorized runs through the stateful `hyper-cloaking-mcp` server. External `@playwright/mcp` commands and direct `engine/providers/*` imports are not operational lanes for this skill.
+Use these rules for authorized runs through the stateful `hyper-cloaking-mcp` server. External `@playwright/mcp` commands and direct provider imports are not operational lanes for this skill.
 
 ## 1. Target Safety and Preflight
 
@@ -9,8 +9,8 @@ Classify the target, authorization basis, allowed origins, account sensitivity, 
 ## 2. Setup and Registration
 
 1. Verify Node.js >= 20, npm, `cloakbrowser`, `playwright-core`, MCP workspace dependencies, and the CloakBrowser binary.
-2. Run `npm --prefix mcp run build`.
-3. Generate the client registration through `mcp/src/register.mjs`. Its default command uses the current Node executable and the absolute `mcp/dist/server.mjs` path.
+2. Installed users run `hyper-cloaking-mcp`. Repository source-development runs `npm --prefix mcp run build` before directly running `node mcp/dist/server.mjs`.
+3. Render a client registration programmatically only through `@alpoxdev/hyper-cloaking/register`; do not resolve internal source files or treat `hyper-cloaking-engine` as a package or import.
 4. Complete a stdio handshake and verify `tools/list` exposes 16 tools.
 5. Use the generated client shape:
    - Codex: `mcp_servers.<name>` TOML.
@@ -35,7 +35,7 @@ The server owns one humanized CloakBrowser session and serializes session calls 
 
 ### 3A. Portable parent-executed roles
 
-`rules/agents/setup-agent.md`, `browser-task-agent.md`, and `diagnostics-agent.md` are internal contracts. The parent selects one trigger through `engine/agents/parent-dispatcher.mjs`, validates the closed result envelope, and owns authorization, evidence publication, and teardown decisions. Native unavailability, spawn failure, or contract failure does not authorize fallback to another browser lane.
+`rules/agents/setup-agent.md`, `browser-task-agent.md`, and `diagnostics-agent.md` are internal contracts. The parent selects one trigger with `hyper-cloaking-parent-dispatcher --input-stdin --json`, validates the closed result envelope, and owns authorization, evidence publication, and teardown decisions. Native unavailability, spawn failure, or contract failure does not authorize fallback to another browser lane.
 
 ## 4. Provider Boundary
 

@@ -1,6 +1,6 @@
 # Hyper Cloaking MCP Workflow 규칙
 
-승인된 작업은 stateful `hyper-cloaking-mcp` 서버로 수행합니다. 외부 `@playwright/mcp` command와 direct `engine/providers/*` import는 이 skill의 operational lane이 아닙니다.
+승인된 작업은 stateful `hyper-cloaking-mcp` 서버로 수행합니다. 외부 `@playwright/mcp` command와 direct provider import는 이 skill의 operational lane이 아닙니다.
 
 ## 1. Target Safety와 Preflight
 
@@ -9,8 +9,8 @@ launch 전에 target, authorization, allowed origins, account sensitivity, reque
 ## 2. Setup과 Registration
 
 1. Node.js >= 20, npm, `cloakbrowser`, `playwright-core`, MCP workspace dependency, CloakBrowser binary를 확인합니다.
-2. `npm --prefix mcp run build`를 실행합니다.
-3. `mcp/src/register.mjs`로 client registration을 생성합니다. 기본 command는 현재 Node executable과 absolute `mcp/dist/server.mjs` path를 사용합니다.
+2. installed user는 `hyper-cloaking-mcp`를 실행합니다. repository source-development는 `npm --prefix mcp run build` 후 `node mcp/dist/server.mjs`를 직접 실행합니다.
+3. client registration은 programmatically 필요할 때만 `@alpoxdev/hyper-cloaking/register`로 생성합니다. internal source file을 resolve하거나 `hyper-cloaking-engine`을 package/import로 취급하지 않습니다.
 4. stdio handshake와 16개 `tools/list`를 검증합니다.
 5. 생성된 client shape를 사용합니다.
    - Codex: `mcp_servers.<name>` TOML
@@ -35,7 +35,7 @@ launch 전에 target, authorization, allowed origins, account sensitivity, reque
 
 ### 3A. Portable parent-executed 역할
 
-`rules/agents/setup-agent.ko.md`, `browser-task-agent.ko.md`, `diagnostics-agent.ko.md`는 내부 contract입니다. parent가 `engine/agents/parent-dispatcher.mjs`로 trigger 하나를 선택하고 closed result envelope를 검증하며 authorization, evidence publication, teardown decision을 소유합니다. Native unavailable, spawn failure, contract failure는 다른 browser lane으로 fallback할 권한이 아닙니다.
+`rules/agents/setup-agent.ko.md`, `browser-task-agent.ko.md`, `diagnostics-agent.ko.md`는 내부 contract입니다. parent가 `hyper-cloaking-parent-dispatcher --input-stdin --json`으로 trigger 하나를 선택하고 closed result envelope를 검증하며 authorization, evidence publication, teardown decision을 소유합니다. Native unavailable, spawn failure, contract failure는 다른 browser lane으로 fallback할 권한이 아닙니다.
 
 ## 4. Provider Boundary
 

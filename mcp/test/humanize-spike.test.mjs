@@ -3,12 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  launchCloakBrowser,
-  humanClick,
-  humanType,
-  humanScroll
-} from 'hyper-cloaking-engine';
+import { launchCloakBrowser } from '../engine/browser-utils.mjs';
+import { humanClick } from '../engine/mouse.mjs';
+import { humanType } from '../engine/keyboard.mjs';
+import { humanScroll } from '../engine/scroll.mjs';
 
 // P0-a (Phase-0 hard gate): on a REAL humanize:true CloakBrowser context, prove
 // the DEFAULT engine-routed input path (locator -> humanClick/humanType/humanScroll)
@@ -111,7 +109,9 @@ test('humanize spike: default engine-routed input is behaviorally humanized + ma
     matrix.push({ method: 'engine.humanType', path: 'default', ...type });
     assert.ok(type.keys >= 5, 'humanType emits one keydown per character');
     assert.ok(type.keysTrusted, 'humanType key events are isTrusted');
-    const medianDelta = type.keyDeltas.slice().sort((a, b) => a - b)[Math.floor(type.keyDeltas.length / 2)];
+    const medianDelta = type.keyDeltas.slice().sort((a, b) => a - b)[
+      Math.floor(type.keyDeltas.length / 2)
+    ];
     assert.ok(
       medianDelta >= PACED_KEYSTROKE_MIN_MS,
       `humanType is paced (median inter-keystroke ${medianDelta}ms >= ${PACED_KEYSTROKE_MIN_MS}ms)`
@@ -124,16 +124,52 @@ test('humanize spike: default engine-routed input is behaviorally humanized + ma
     assert.ok(scroll.scroll > 1, 'humanScroll emits multiple wheel increments');
 
     transcript.push(
-      { step: 1, type: 'launch', selector: 'browser', detail: 'launchCloakBrowser({headless:true}) humanize:true forced', verdict: 'ok' },
-      { step: 2, type: 'navigate', selector: 'data:', detail: 'data: page with mousemove/keydown/wheel recorders', verdict: 'ok' },
-      { step: 3, type: 'humanClick', selector: 'button', detail: `moves=${click.moves} trusted=${click.movesTrusted}`, verdict: 'humanized' },
-      { step: 4, type: 'humanType', selector: 'input', detail: `"hello" keys=${type.keys} deltas=${JSON.stringify(type.keyDeltas)}`, verdict: 'humanized' },
-      { step: 5, type: 'humanScroll', selector: 'body', detail: `800px/6steps wheel=${scroll.scroll}`, verdict: 'humanized' }
+      {
+        step: 1,
+        type: 'launch',
+        selector: 'browser',
+        detail: 'launchCloakBrowser({headless:true}) humanize:true forced',
+        verdict: 'ok'
+      },
+      {
+        step: 2,
+        type: 'navigate',
+        selector: 'data:',
+        detail: 'data: page with mousemove/keydown/wheel recorders',
+        verdict: 'ok'
+      },
+      {
+        step: 3,
+        type: 'humanClick',
+        selector: 'button',
+        detail: `moves=${click.moves} trusted=${click.movesTrusted}`,
+        verdict: 'humanized'
+      },
+      {
+        step: 4,
+        type: 'humanType',
+        selector: 'input',
+        detail: `"hello" keys=${type.keys} deltas=${JSON.stringify(type.keyDeltas)}`,
+        verdict: 'humanized'
+      },
+      {
+        step: 5,
+        type: 'humanScroll',
+        selector: 'body',
+        detail: `800px/6steps wheel=${scroll.scroll}`,
+        verdict: 'humanized'
+      }
     );
     await fs.mkdir(artifactsDir, { recursive: true });
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: screenshotPath });
-    transcript.push({ step: 6, type: 'screenshot', selector: 'page', detail: screenshotPath, verdict: 'ok' });
+    transcript.push({
+      step: 6,
+      type: 'screenshot',
+      selector: 'page',
+      detail: screenshotPath,
+      verdict: 'ok'
+    });
 
     // --- Option-C emit paths: measure which behaviorally humanize ---
     const cases = [

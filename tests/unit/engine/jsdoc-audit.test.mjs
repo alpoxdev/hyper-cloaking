@@ -8,9 +8,11 @@ import {
   validatePreDispatchBaseline,
   validatePostEditBaseline,
   auditJsdoc,
+  auditTargetManifest,
   createExportEvidence,
   createCommentOnlyProof
 } from '../../../scripts/audit-jsdoc.mjs';
+import { buildTargetManifest } from '../../../scripts/jsdoc-inventory.mjs';
 
 async function sourceFixture(source) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'jsdoc-audit-'));
@@ -181,4 +183,38 @@ test('default expression attachment and misplaced documentation are deterministi
     1
   );
   assert.ok(misplacedResult.errors.some((error) => error.code === 'comment-attachment-gap'));
+});
+test('mcp-src is strict while mcp-engine only requires parsing and JSDoc presence', async (t) => {
+  const strict = await sourceFixture('/** docs */\nexport const value = 1;\n');
+  const bounded = await sourceFixture('/** docs */\nexport const value = 1;\n');
+  const malformed = await sourceFixture('/** docs */\nexport const = 1;\n');
+  const undocumented = await sourceFixture('export const value = 1;\n');
+  t.after(() =>
+    Promise.all(
+      [strict, bounded, malformed, undocumented].map(({ root }) =>
+        fs.rm(root, { recursive: true, force: true })
+      )
+    )
+  );
+
+  const strictManifest = buildTargetManifest({ key: 'mcp-src', root: strict.root });
+  const strictResult = auditTargetManifest(strictManifest);
+  const boundedResult = auditTargetManifest(
+    buildTargetManifest({ key: 'mcp-engine', root: bounded.root })
+  );
+  const malformedResult = auditTargetManifest(
+    buildTargetManifest({ key: 'mcp-engine', root: malformed.root })
+  );
+  const undocumentedResult = auditTargetManifest(
+    buildTargetManifest({ key: 'mcp-engine', root: undocumented.root })
+  );
+
+  assert.ok(strictResult.failures.some((error) => error.code === 'missing-module-header'));
+  assert.deepEqual(boundedResult.failures, []);
+  assert.ok(malformedResult.failures.some((error) => error.code === 'parse-error'));
+  assert.ok(undocumentedResult.failures.some((error) => error.code === 'missing-jsdoc'));
+  assert.throws(
+    () => auditTargetManifest({ ...strictManifest, policy: 'bounded' }),
+    /unknown-audit-target/
+  );
 });

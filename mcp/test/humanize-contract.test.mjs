@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { launchCloakBrowser } from 'hyper-cloaking-engine';
+import { launchCloakBrowser } from '../engine/browser-utils.mjs';
 import { createSessionManager } from '../src/session-manager.mjs';
 import { makeInteractTools } from '../src/tools/interact.mjs';
 
@@ -47,20 +47,39 @@ test('cloak_click/cloak_type produce humanized motion; synthetic click does not 
 
   const [, clickTool, typeTool] = makeInteractTools(manager);
   try {
-    await page.evaluate(() => { window.__moves = []; });
+    await page.evaluate(() => {
+      window.__moves = [];
+    });
     const click = payload(await clickTool.handler({ selector: 'button' }));
     assert.equal(click.status, 'ok');
     const clickMoves = await page.evaluate(() => window.__moves);
-    assert.ok(clickMoves.length > MULTISTEP_POINTER_MIN, 'cloak_click emits a multi-step pointer path');
-    assert.ok(clickMoves.every((m) => m.trusted), 'cloak_click pointer events are isTrusted');
+    assert.ok(
+      clickMoves.length > MULTISTEP_POINTER_MIN,
+      'cloak_click emits a multi-step pointer path'
+    );
+    assert.ok(
+      clickMoves.every((m) => m.trusted),
+      'cloak_click pointer events are isTrusted'
+    );
 
-    await page.evaluate(() => { window.__keys = []; });
+    await page.evaluate(() => {
+      window.__keys = [];
+    });
     const type = payload(await typeTool.handler({ selector: 'input', text: 'hello' }));
     assert.equal(type.status, 'ok');
     const keys = await page.evaluate(() => window.__keys);
-    assert.ok(keys.length >= 5 && keys.every((k) => k.trusted), 'cloak_type keystrokes are trusted');
-    const deltas = keys.slice(1).map((k, i) => k.t - keys[i].t).sort((x, y) => x - y);
-    assert.ok(deltas[Math.floor(deltas.length / 2)] >= PACED_KEYSTROKE_MIN_MS, 'cloak_type is paced');
+    assert.ok(
+      keys.length >= 5 && keys.every((k) => k.trusted),
+      'cloak_type keystrokes are trusted'
+    );
+    const deltas = keys
+      .slice(1)
+      .map((k, i) => k.t - keys[i].t)
+      .sort((x, y) => x - y);
+    assert.ok(
+      deltas[Math.floor(deltas.length / 2)] >= PACED_KEYSTROKE_MIN_MS,
+      'cloak_type is paced'
+    );
 
     // Teeth: a synthetic (non-humanized) DOM click emits NO trusted pointer motion,
     // so the humanized assertion above would fail for a non-humanized implementation.

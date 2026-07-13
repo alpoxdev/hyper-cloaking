@@ -12,8 +12,8 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import path from 'node:path';
 import { allTools } from './tools/index.mjs';
 /**
  * MCP implementation identity advertised during initialization.
@@ -67,8 +67,20 @@ export async function main() {
   await server.connect(transport);
 }
 
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-if (isMain) {
+/**
+ * Determines whether this module was invoked as the server entry point.
+ *
+ * @returns {boolean} True when the invoked path resolves to this module.
+ */
+function isMainModule() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+}
+if (isMainModule()) {
   main().catch((error) => {
     process.stderr.write(`hyper-cloaking-mcp failed to start: ${error?.stack || error}\n`);
     process.exit(1);

@@ -1,0 +1,965 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/action-runtime/action-result.mjs",
+      "destination": "mcp/engine/action-runtime/action-result.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "5c31fff57e3ec96dacfdfbeec81e1c954d0a168eb8eff7b17a84a57218a227d5",
+      "postSha256": "5c31fff57e3ec96dacfdfbeec81e1c954d0a168eb8eff7b17a84a57218a227d5",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/action-runtime/guardrails.mjs",
+      "destination": "mcp/engine/action-runtime/guardrails.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "cdca281548c7f8963781360db3e071a0a0bfe550d9f10d6f3dc5124a992f404c",
+      "postSha256": "cdca281548c7f8963781360db3e071a0a0bfe550d9f10d6f3dc5124a992f404c",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/browser-task-agent.mjs",
+      "destination": "mcp/engine/agents/browser-task-agent.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "214834ff516d098a24d00a5f21be68c3d8cc318b55ad4b3d2025361755c2e693",
+      "postSha256": "214834ff516d098a24d00a5f21be68c3d8cc318b55ad4b3d2025361755c2e693",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/diagnostics-agent.mjs",
+      "destination": "mcp/engine/agents/diagnostics-agent.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "7e4720a487c2db035975716886e6617f14f1515c374ec9bf557ce519a7711047",
+      "postSha256": "7e4720a487c2db035975716886e6617f14f1515c374ec9bf557ce519a7711047",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/evidence-writer.mjs",
+      "destination": "mcp/engine/agents/evidence-writer.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "e054b60e55287e25d096792256698489350020fa0afb8f7be44f0d67d468f1b9",
+      "postSha256": "e054b60e55287e25d096792256698489350020fa0afb8f7be44f0d67d468f1b9",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/lib/allowed-origin-guard.mjs",
+      "destination": "mcp/engine/agents/lib/allowed-origin-guard.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "14c1f1cd70928a7c461757bd384f141e9fa5702e535ae260b77437fafb536039",
+      "postSha256": "14c1f1cd70928a7c461757bd384f141e9fa5702e535ae260b77437fafb536039",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/lib/sync-mirror.mjs",
+      "destination": "mcp/engine/agents/lib/sync-mirror.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "6fb65167e794d2e94f226fc443483910afb5381bee769a6e6b8b79dd829e8cb4",
+      "postSha256": "7d1d2f1ae7f4bf2781f33eb2a63d96f61eadeaab1f64cf85da6eaa013071f8ff",
+      "exceptionKind": "sync-mirror-owned-manifest",
+      "permittedTransforms": [
+        "replace-owned-canonical-manifest"
+      ],
+      "preimageRef": "agents/lib/sync-mirror.mjs"
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/parent-dispatcher.mjs",
+      "destination": "mcp/engine/agents/parent-dispatcher.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "a913a48d6b2b8c4203cb0f91f90da062b4accdc326ce3a3c0c3d8e76a339f664",
+      "postSha256": "ffb0c3a3f43ff943ed2b848500719bd7fb97bf1947ec1589d922f66a5230dfd8",
+      "exceptionKind": "realpath-main-guard",
+      "permittedTransforms": [
+        "add-node-hashbang",
+        "replace-main-check-with-realpath-guard"
+      ],
+      "preimageRef": "agents/parent-dispatcher.mjs"
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/parent-verify.mjs",
+      "destination": "mcp/engine/agents/parent-verify.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "a9a137149ddd2e0db83237c02abb813b21c194d47f54471c974a922d4e63eb73",
+      "postSha256": "a9a137149ddd2e0db83237c02abb813b21c194d47f54471c974a922d4e63eb73",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/schemas/hyper-cloaking-agent-output.ko.md",
+      "destination": "mcp/engine/agents/schemas/hyper-cloaking-agent-output.ko.md",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "0722fa099139b57e9b298b18351534e1be836e369d59efb10bacc5d4980f91ab",
+      "postSha256": "0722fa099139b57e9b298b18351534e1be836e369d59efb10bacc5d4980f91ab",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/schemas/hyper-cloaking-agent-output.schema.json",
+      "destination": "mcp/engine/agents/schemas/hyper-cloaking-agent-output.schema.json",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "a4d018a7505765a4ba2430ea6fb11ce16cd5202feb84ea18440350fd05942717",
+      "postSha256": "a4d018a7505765a4ba2430ea6fb11ce16cd5202feb84ea18440350fd05942717",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/setup-agent.mjs",
+      "destination": "mcp/engine/agents/setup-agent.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "deaed0b923daa72d2bc58a09aed7b88944fd72aa68eb970935dd26e6897c5f91",
+      "postSha256": "deaed0b923daa72d2bc58a09aed7b88944fd72aa68eb970935dd26e6897c5f91",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/browser-utils.mjs",
+      "destination": "mcp/engine/browser-utils.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "ed8dda3de551ca596df22fbb4b3953800a004565bf167dc9fc4504c8b249335d",
+      "postSha256": "f6fbacd56628e45830c164ef291cddb536c57d1d93e732a6e900a6697e6a0242",
+      "exceptionKind": "realpath-main-guard",
+      "permittedTransforms": [
+        "replace-main-check-with-realpath-guard"
+      ],
+      "preimageRef": "browser-utils.mjs"
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/cli.mjs",
+      "destination": "mcp/engine/cli.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "5a2265ab26682ac01b94648e49de82769417bf4d6229d3bc3c23f4b7ced38ae2",
+      "postSha256": "096a0a5c22ba3fc5ee814ba4cb17ece1a8c4cf1d2bb314f028e87190063ab004",
+      "exceptionKind": "realpath-main-guard",
+      "permittedTransforms": [
+        "add-node-hashbang",
+        "replace-main-check-with-realpath-guard"
+      ],
+      "preimageRef": "cli.mjs"
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/config.mjs",
+      "destination": "mcp/engine/config.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "0d2dac5826348f985faa91080fcc0299c2c422f14e1da1f7f8923abfe8b63863",
+      "postSha256": "0d2dac5826348f985faa91080fcc0299c2c422f14e1da1f7f8923abfe8b63863",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/cookie.mjs",
+      "destination": "mcp/engine/cookie.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "c9579cefbb7cd54a500006c057d25ba3dd41a6382ebabe20151e5c2555331c9a",
+      "postSha256": "282cb41489cbdd8a0e85dd380e57c140ea2b6ed70fb01fb826ac75852a3971eb",
+      "exceptionKind": "realpath-main-guard",
+      "permittedTransforms": [
+        "replace-main-check-with-realpath-guard"
+      ],
+      "preimageRef": "cookie.mjs"
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/credentials.mjs",
+      "destination": "mcp/engine/credentials.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "c815baf54e15b6b3915c5a76fa5c048e8bd8ed805be5cfacb2d9237fe61b722a",
+      "postSha256": "c815baf54e15b6b3915c5a76fa5c048e8bd8ed805be5cfacb2d9237fe61b722a",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/diagnostics.mjs",
+      "destination": "mcp/engine/diagnostics.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "339c746ebbe8b61fb8a7d08070896aa3d37bc1979505f1465340d02c90b9d359",
+      "postSha256": "339c746ebbe8b61fb8a7d08070896aa3d37bc1979505f1465340d02c90b9d359",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/evidence-boundary.mjs",
+      "destination": "mcp/engine/evidence-boundary.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "daab6e1c78d68be65997ff29b89523c6dc19ae9dad83589754e4ebd5eb3e97f5",
+      "postSha256": "daab6e1c78d68be65997ff29b89523c6dc19ae9dad83589754e4ebd5eb3e97f5",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/input-core.mjs",
+      "destination": "mcp/engine/input-core.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "d77795d1ddfd0cb3167b82f241fec6196531b2bede977d801a48f467e2c528b8",
+      "postSha256": "d77795d1ddfd0cb3167b82f241fec6196531b2bede977d801a48f467e2c528b8",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/keyboard.mjs",
+      "destination": "mcp/engine/keyboard.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "6133d68070f8b3e36144ccdd8697d2f36a14a7d90f9e012e5c63f14fc3ea2f9c",
+      "postSha256": "6133d68070f8b3e36144ccdd8697d2f36a14a7d90f9e012e5c63f14fc3ea2f9c",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/mcp-config.mjs",
+      "destination": "mcp/engine/mcp-config.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "8082b705142218aa30b06332c6edd1ef7ecf23bf6f7f51c54eb48675ba511bbd",
+      "postSha256": "8082b705142218aa30b06332c6edd1ef7ecf23bf6f7f51c54eb48675ba511bbd",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/mouse.mjs",
+      "destination": "mcp/engine/mouse.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "55aa130fc9ca74c1de5406982f5f87fd67ac16ffff03c9026d263b662d172494",
+      "postSha256": "55aa130fc9ca74c1de5406982f5f87fd67ac16ffff03c9026d263b662d172494",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/outcome.mjs",
+      "destination": "mcp/engine/outcome.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "cd96b5c6799478ece739332d11575675995a624755ffa6b205ff51505f8d2c29",
+      "postSha256": "cd96b5c6799478ece739332d11575675995a624755ffa6b205ff51505f8d2c29",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/package.json",
+      "destination": null,
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "d720f46a240e774a2439a7199f6ac2af77f9af8bbd38efc088d7fbf0b64fd277",
+      "postSha256": null,
+      "exceptionKind": "absorbed-outer-package-manifest",
+      "permittedTransforms": [
+        "absorb-outer-package-manifest"
+      ],
+      "preimageRef": "package.json"
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/actions/analyze.mjs",
+      "destination": "mcp/engine/providers/coupang/actions/analyze.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "fa59a47bb59c94730a65470f9bb7d39756491c50b04162e8d6d123294c7647c1",
+      "postSha256": "fa59a47bb59c94730a65470f9bb7d39756491c50b04162e8d6d123294c7647c1",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/actions/ids.mjs",
+      "destination": "mcp/engine/providers/coupang/actions/ids.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "6fd3d57265c02dfe8c84e6bb3db00d216eba8c5508f2144355de7b322f1ceaa9",
+      "postSha256": "6fd3d57265c02dfe8c84e6bb3db00d216eba8c5508f2144355de7b322f1ceaa9",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/actions/reads.mjs",
+      "destination": "mcp/engine/providers/coupang/actions/reads.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "243dd970346a93e8cc29dfbec67406ab5abfd1d44a9341dd0c1aba36e0aad580",
+      "postSha256": "243dd970346a93e8cc29dfbec67406ab5abfd1d44a9341dd0c1aba36e0aad580",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/actions/writes.mjs",
+      "destination": "mcp/engine/providers/coupang/actions/writes.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "529d93a88838e3be303b6225977e312f68e8b0e578a636acbf4c67d41778a167",
+      "postSha256": "529d93a88838e3be303b6225977e312f68e8b0e578a636acbf4c67d41778a167",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/index.mjs",
+      "destination": "mcp/engine/providers/coupang/index.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "332b76a723f9a9b083364b476bfaf198154ea0cc956935ea363de06e81e07af2",
+      "postSha256": "332b76a723f9a9b083364b476bfaf198154ea0cc956935ea363de06e81e07af2",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/metadata.mjs",
+      "destination": "mcp/engine/providers/coupang/metadata.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "97daea8ac48d180c119a7158f99fedd7f607d75e1c28ecdf09582a9cb5fa0fbd",
+      "postSha256": "97daea8ac48d180c119a7158f99fedd7f607d75e1c28ecdf09582a9cb5fa0fbd",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/network.mjs",
+      "destination": "mcp/engine/providers/coupang/network.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "d8c49881cc530c368dd9a14d88fee99bbe9383fb7a30d49335723c09fbd170fd",
+      "postSha256": "d8c49881cc530c368dd9a14d88fee99bbe9383fb7a30d49335723c09fbd170fd",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/selectors.mjs",
+      "destination": "mcp/engine/providers/coupang/selectors.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "a163e2ddcf94fe674dca028f1f301015e31bb26ca7a89a89a9e3bef50baacc77",
+      "postSha256": "a163e2ddcf94fe674dca028f1f301015e31bb26ca7a89a89a9e3bef50baacc77",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/session.mjs",
+      "destination": "mcp/engine/providers/coupang/session.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "6fe89566e563eaf8d9e19aca9ee4e9774f8a9a73f0e6b467923fc99d95741291",
+      "postSha256": "6fe89566e563eaf8d9e19aca9ee4e9774f8a9a73f0e6b467923fc99d95741291",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/generic.mjs",
+      "destination": "mcp/engine/providers/generic.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "4f6f0343cb2259dbfbb87e56110abc71f941da9e82cdfb4446dfd2f4b4034b7f",
+      "postSha256": "4f6f0343cb2259dbfbb87e56110abc71f941da9e82cdfb4446dfd2f4b4034b7f",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/index.mjs",
+      "destination": "mcp/engine/providers/index.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "85d63aa7f6e92f5408cbc7b3e5bc3b4c834093ff18f9c8ca80a90a2e7a89cda0",
+      "postSha256": "85d63aa7f6e92f5408cbc7b3e5bc3b4c834093ff18f9c8ca80a90a2e7a89cda0",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/actions/analyze.mjs",
+      "destination": "mcp/engine/providers/instagram/actions/analyze.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "438f8152d14af55088c98d71a0c3d619939225bfbb27d71982d085c1c84147ed",
+      "postSha256": "438f8152d14af55088c98d71a0c3d619939225bfbb27d71982d085c1c84147ed",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/actions/dm.mjs",
+      "destination": "mcp/engine/providers/instagram/actions/dm.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "001f1e05c1f45d0e53e1d4e9e51f30c26d5607ac2b7f3d5cff74da560ed08185",
+      "postSha256": "001f1e05c1f45d0e53e1d4e9e51f30c26d5607ac2b7f3d5cff74da560ed08185",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/actions/posts.mjs",
+      "destination": "mcp/engine/providers/instagram/actions/posts.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "4285c553d7c5ee7e426ef6bcb470cf7e28b0cda8eb26ecb3d9deb3b5d109e7f8",
+      "postSha256": "4285c553d7c5ee7e426ef6bcb470cf7e28b0cda8eb26ecb3d9deb3b5d109e7f8",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/actions/reactions.mjs",
+      "destination": "mcp/engine/providers/instagram/actions/reactions.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "5be64ac2e3618770219f94d125f8f18f27ae9ed57f668946e23083c5a4cdc08e",
+      "postSha256": "5be64ac2e3618770219f94d125f8f18f27ae9ed57f668946e23083c5a4cdc08e",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/actions/user.mjs",
+      "destination": "mcp/engine/providers/instagram/actions/user.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "f02def789770330d1ee7bef81b64510a5f739bd6faa0a31ed5bd625786f3fbdc",
+      "postSha256": "f02def789770330d1ee7bef81b64510a5f739bd6faa0a31ed5bd625786f3fbdc",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/index.mjs",
+      "destination": "mcp/engine/providers/instagram/index.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "cc0b5a65aa696a6a206d31e30f325961b86d6bc0af2103c2b950ea083c9458d9",
+      "postSha256": "cc0b5a65aa696a6a206d31e30f325961b86d6bc0af2103c2b950ea083c9458d9",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/metadata.mjs",
+      "destination": "mcp/engine/providers/instagram/metadata.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "37984abbe3eb0d51021a080bb016e8b61610b9a32efae23fcbb04720ea5247a1",
+      "postSha256": "37984abbe3eb0d51021a080bb016e8b61610b9a32efae23fcbb04720ea5247a1",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/network.mjs",
+      "destination": "mcp/engine/providers/instagram/network.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "473249dbf8fab5f22a154e3142584505e6b1ae364862cc4875132554b84cfa80",
+      "postSha256": "473249dbf8fab5f22a154e3142584505e6b1ae364862cc4875132554b84cfa80",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/selectors.mjs",
+      "destination": "mcp/engine/providers/instagram/selectors.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "5ac3bdce837167e434d9b420d6bc95584440667e4b5f8ad8eea6314fbbecf863",
+      "postSha256": "5ac3bdce837167e434d9b420d6bc95584440667e4b5f8ad8eea6314fbbecf863",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/session.mjs",
+      "destination": "mcp/engine/providers/instagram/session.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "66aa9f32510549621b913507953c6d3af04d7eefa539be018cc3c552c18c9ad2",
+      "postSha256": "66aa9f32510549621b913507953c6d3af04d7eefa539be018cc3c552c18c9ad2",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver.mjs",
+      "destination": "mcp/engine/providers/naver.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "ae1958e10b0ff5068533c336a69114397ef35697d4a17fa978bff5457af055d4",
+      "postSha256": "ae1958e10b0ff5068533c336a69114397ef35697d4a17fa978bff5457af055d4",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/actions/analyze.mjs",
+      "destination": "mcp/engine/providers/naver/actions/analyze.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "69f157cae498d432fa4e4415e3a412bd22f3768c5a341f6a8e9c47ce1eee41e9",
+      "postSha256": "69f157cae498d432fa4e4415e3a412bd22f3768c5a341f6a8e9c47ce1eee41e9",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/actions/ids.mjs",
+      "destination": "mcp/engine/providers/naver/actions/ids.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "59bb93367ca7d0f59c5a1a55c10340444745da38811728cd139d1189d8b12e0e",
+      "postSha256": "59bb93367ca7d0f59c5a1a55c10340444745da38811728cd139d1189d8b12e0e",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/actions/reads.mjs",
+      "destination": "mcp/engine/providers/naver/actions/reads.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "cbd83bc42d34f51a5df9f3377456e9311e4363c031dcbd54553e6041f6a09ec5",
+      "postSha256": "cbd83bc42d34f51a5df9f3377456e9311e4363c031dcbd54553e6041f6a09ec5",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/actions/writes.mjs",
+      "destination": "mcp/engine/providers/naver/actions/writes.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "6428cc8521f90b67e5d4795b93042f2efa34fc5286a4c17a87918175094fd95f",
+      "postSha256": "6428cc8521f90b67e5d4795b93042f2efa34fc5286a4c17a87918175094fd95f",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/index.mjs",
+      "destination": "mcp/engine/providers/naver/index.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "cb842d6ea032bb0ae9f2b7bed5a8e66b5d63a9f8c8010691885bc46afb995a28",
+      "postSha256": "cb842d6ea032bb0ae9f2b7bed5a8e66b5d63a9f8c8010691885bc46afb995a28",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/metadata.mjs",
+      "destination": "mcp/engine/providers/naver/metadata.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "310b7f7976c2cdff232ff2960e6deddfdf1e60d1d0f242a105ff22894e7969a9",
+      "postSha256": "310b7f7976c2cdff232ff2960e6deddfdf1e60d1d0f242a105ff22894e7969a9",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/network.mjs",
+      "destination": "mcp/engine/providers/naver/network.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "36317569e1117f3c79c8ea436ec334690e4e5eb1761d78db281e73a7ff6dcf0b",
+      "postSha256": "36317569e1117f3c79c8ea436ec334690e4e5eb1761d78db281e73a7ff6dcf0b",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/selectors.mjs",
+      "destination": "mcp/engine/providers/naver/selectors.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "34e4c0e2868709c62b326d3e6cc86644dd0a53e4ae767df3dcca4d1f952abda4",
+      "postSha256": "34e4c0e2868709c62b326d3e6cc86644dd0a53e4ae767df3dcca4d1f952abda4",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/session.mjs",
+      "destination": "mcp/engine/providers/naver/session.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "d03dd92f4cf358d1395c6745e4ebb96da323d1e5f2bb39203e19918c108492b1",
+      "postSha256": "d03dd92f4cf358d1395c6745e4ebb96da323d1e5f2bb39203e19918c108492b1",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/network.mjs",
+      "destination": "mcp/engine/providers/network.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "60f8d0b4732801a23312eab3442ebebf15acb2846c6f6ac461ee929dbee5ac62",
+      "postSha256": "60f8d0b4732801a23312eab3442ebebf15acb2846c6f6ac461ee929dbee5ac62",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/registry.mjs",
+      "destination": "mcp/engine/providers/registry.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "6503c505377c7d287e4ca5a0c3d04615d0737bb94a3d5efbf3a9d285947c2a3c",
+      "postSha256": "6503c505377c7d287e4ca5a0c3d04615d0737bb94a3d5efbf3a9d285947c2a3c",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/schema.mjs",
+      "destination": "mcp/engine/providers/schema.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "6af4f7ed7436d2d4e58cba07477d61fd6f9a6a75d495bb75cb0228a76ae2a71e",
+      "postSha256": "6af4f7ed7436d2d4e58cba07477d61fd6f9a6a75d495bb75cb0228a76ae2a71e",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/session.mjs",
+      "destination": "mcp/engine/providers/session.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "11ed46087b48ba03737436f78b7848d62a042b374cd0c327088ba70d74d6299d",
+      "postSha256": "11ed46087b48ba03737436f78b7848d62a042b374cd0c327088ba70d74d6299d",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/actions/analyze.mjs",
+      "destination": "mcp/engine/providers/tiktok/actions/analyze.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "e122266884bb82829679b140a05ba1d43d7bcf67283fa1053fd7fd661737dcc8",
+      "postSha256": "e122266884bb82829679b140a05ba1d43d7bcf67283fa1053fd7fd661737dcc8",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/actions/ids.mjs",
+      "destination": "mcp/engine/providers/tiktok/actions/ids.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "aac20e304e5ae0da293bd417e054ec1325d9060e676e9e9a2b4dfd79c593718a",
+      "postSha256": "aac20e304e5ae0da293bd417e054ec1325d9060e676e9e9a2b4dfd79c593718a",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/actions/reads.mjs",
+      "destination": "mcp/engine/providers/tiktok/actions/reads.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "a0cf1f749b89077f566962932fca65c62e6b4381a11884c2e4c828a232adf1f4",
+      "postSha256": "a0cf1f749b89077f566962932fca65c62e6b4381a11884c2e4c828a232adf1f4",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/actions/writes.mjs",
+      "destination": "mcp/engine/providers/tiktok/actions/writes.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "b80dea063cf0585cbc87c22d0efc825fadffaabf4b6df55064d189e0bb6907bf",
+      "postSha256": "b80dea063cf0585cbc87c22d0efc825fadffaabf4b6df55064d189e0bb6907bf",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/index.mjs",
+      "destination": "mcp/engine/providers/tiktok/index.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "c45a6fcb0a93df5da8965ddf0d28152d85226d3d4be0f8d0ff4ff95fc65be0c8",
+      "postSha256": "c45a6fcb0a93df5da8965ddf0d28152d85226d3d4be0f8d0ff4ff95fc65be0c8",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/metadata.mjs",
+      "destination": "mcp/engine/providers/tiktok/metadata.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "4996bf721d14f5fe39996d6c9f394c9b9897c9eeed5f95cd53b6ad36dfacd8ea",
+      "postSha256": "4996bf721d14f5fe39996d6c9f394c9b9897c9eeed5f95cd53b6ad36dfacd8ea",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/network.mjs",
+      "destination": "mcp/engine/providers/tiktok/network.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "51b05afb9487f8a21cc57d1e97f4ac3d46f697915603f01bc6d3b28e813bb007",
+      "postSha256": "51b05afb9487f8a21cc57d1e97f4ac3d46f697915603f01bc6d3b28e813bb007",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/selectors.mjs",
+      "destination": "mcp/engine/providers/tiktok/selectors.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "fe69531cfdee8a840ef1f3f4fa6fa5915a4dd289b10ea8a2b78b6603471ee269",
+      "postSha256": "fe69531cfdee8a840ef1f3f4fa6fa5915a4dd289b10ea8a2b78b6603471ee269",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/session.mjs",
+      "destination": "mcp/engine/providers/tiktok/session.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "243c6470c6c281ed24f6bc1cbdfe00da40148f169777e6d9707a5a2a850bb91b",
+      "postSha256": "243c6470c6c281ed24f6bc1cbdfe00da40148f169777e6d9707a5a2a850bb91b",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x.mjs",
+      "destination": "mcp/engine/providers/x.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "1d023cca5b38af1ae75655d232b4598f8b18ac46f3eaf20186dd5bd4e180ca6b",
+      "postSha256": "1d023cca5b38af1ae75655d232b4598f8b18ac46f3eaf20186dd5bd4e180ca6b",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/actions/analyze.mjs",
+      "destination": "mcp/engine/providers/x/actions/analyze.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "d81cd4c27ccf21adc7086977802428bd85aa004996a510d111c0e4e1b7b5bdf8",
+      "postSha256": "d81cd4c27ccf21adc7086977802428bd85aa004996a510d111c0e4e1b7b5bdf8",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/actions/ids.mjs",
+      "destination": "mcp/engine/providers/x/actions/ids.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "7c8d7bdce196e198a4c592362d9a507e864bcdd2245e0226728e6182ad1d1081",
+      "postSha256": "7c8d7bdce196e198a4c592362d9a507e864bcdd2245e0226728e6182ad1d1081",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/actions/reads.mjs",
+      "destination": "mcp/engine/providers/x/actions/reads.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "ead60119b54fec379f1ac8eed8478e094491376d52b37e7baf20702b36f18690",
+      "postSha256": "ead60119b54fec379f1ac8eed8478e094491376d52b37e7baf20702b36f18690",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/actions/writes.mjs",
+      "destination": "mcp/engine/providers/x/actions/writes.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "2dd55246073c0d94304c8698519081c2171fbb05ceb78c3dbae09108a4612d4e",
+      "postSha256": "2dd55246073c0d94304c8698519081c2171fbb05ceb78c3dbae09108a4612d4e",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/index.mjs",
+      "destination": "mcp/engine/providers/x/index.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "67aaced83389a0b1e4271b4dfd5459f76fe71acea723e0c0166ef486ddb61319",
+      "postSha256": "67aaced83389a0b1e4271b4dfd5459f76fe71acea723e0c0166ef486ddb61319",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/metadata.mjs",
+      "destination": "mcp/engine/providers/x/metadata.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "94994b290bd785e2c32906c77304b3794bd79f1e363b9836387579c40f2a03e8",
+      "postSha256": "94994b290bd785e2c32906c77304b3794bd79f1e363b9836387579c40f2a03e8",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/network.mjs",
+      "destination": "mcp/engine/providers/x/network.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "0d3eb75ae348f5c4f39c2b5823c97708db4e1e11e6a7fb854a2a68aff4fbd698",
+      "postSha256": "0d3eb75ae348f5c4f39c2b5823c97708db4e1e11e6a7fb854a2a68aff4fbd698",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/selectors.mjs",
+      "destination": "mcp/engine/providers/x/selectors.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "3fdac6cd3ccbab66fe96bb2944bd42f9166e92b8805cf50d2b47e176ff23b8f5",
+      "postSha256": "3fdac6cd3ccbab66fe96bb2944bd42f9166e92b8805cf50d2b47e176ff23b8f5",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x/session.mjs",
+      "destination": "mcp/engine/providers/x/session.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "b38dc36e52fbbe990760499522bb45820a0162c8dc0cf754e449d0059c0cc18c",
+      "postSha256": "b38dc36e52fbbe990760499522bb45820a0162c8dc0cf754e449d0059c0cc18c",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/actions/analyze.mjs",
+      "destination": "mcp/engine/providers/youtube/actions/analyze.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "fb58ed527faf21de88221635b80c5fd89db7cb8d0e7c6ca722423290c27a0b43",
+      "postSha256": "fb58ed527faf21de88221635b80c5fd89db7cb8d0e7c6ca722423290c27a0b43",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/actions/channel.mjs",
+      "destination": "mcp/engine/providers/youtube/actions/channel.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "b62be02d4f0aeac01dbad9940f35373fbeda1259450b60bd3aaff585685a047e",
+      "postSha256": "b62be02d4f0aeac01dbad9940f35373fbeda1259450b60bd3aaff585685a047e",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/actions/ids.mjs",
+      "destination": "mcp/engine/providers/youtube/actions/ids.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "1a59650d0390fed524264a9b74f7be95c18c156e6b4c63980e973043b3718f0c",
+      "postSha256": "1a59650d0390fed524264a9b74f7be95c18c156e6b4c63980e973043b3718f0c",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/actions/reactions.mjs",
+      "destination": "mcp/engine/providers/youtube/actions/reactions.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "d1919799ef5728c0b0824276de6e9d51dc75e1ed77dc8f1681d0ff33bc0f3e4b",
+      "postSha256": "d1919799ef5728c0b0824276de6e9d51dc75e1ed77dc8f1681d0ff33bc0f3e4b",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/actions/search.mjs",
+      "destination": "mcp/engine/providers/youtube/actions/search.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "1884a2e292e06fc17cb924fdecb6f44eb40da1dcb41e5f30dae0794a883d79ec",
+      "postSha256": "1884a2e292e06fc17cb924fdecb6f44eb40da1dcb41e5f30dae0794a883d79ec",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/actions/video.mjs",
+      "destination": "mcp/engine/providers/youtube/actions/video.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "60708e4d23b82e314f3b123c83c9805a8797385ec2edbcbee866ae496424c7a0",
+      "postSha256": "60708e4d23b82e314f3b123c83c9805a8797385ec2edbcbee866ae496424c7a0",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/index.mjs",
+      "destination": "mcp/engine/providers/youtube/index.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "d98c2b5a3a7e6ac7c27e71a37ed8e7b00d25865e08b507d09e87b5127146d3b1",
+      "postSha256": "d98c2b5a3a7e6ac7c27e71a37ed8e7b00d25865e08b507d09e87b5127146d3b1",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/metadata.mjs",
+      "destination": "mcp/engine/providers/youtube/metadata.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "975057941574f73ca69c88c1bee0a366b3f647d62f2c599f3775931b442d8ee0",
+      "postSha256": "975057941574f73ca69c88c1bee0a366b3f647d62f2c599f3775931b442d8ee0",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/network.mjs",
+      "destination": "mcp/engine/providers/youtube/network.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "e8113f6266e02a6be300dd31c9a5747b39eee206a3b79a4122eead41378d5b55",
+      "postSha256": "e8113f6266e02a6be300dd31c9a5747b39eee206a3b79a4122eead41378d5b55",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/selectors.mjs",
+      "destination": "mcp/engine/providers/youtube/selectors.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "58c969e5b2b56b36955e8eb7166eae7e0e80642848bdae1a596c33c8a4697365",
+      "postSha256": "58c969e5b2b56b36955e8eb7166eae7e0e80642848bdae1a596c33c8a4697365",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/session.mjs",
+      "destination": "mcp/engine/providers/youtube/session.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "72b484afcb4a57f7bd3ba0bfa212674a752a5a3030e0830a211d7b2377dd3d9a",
+      "postSha256": "72b484afcb4a57f7bd3ba0bfa212674a752a5a3030e0830a211d7b2377dd3d9a",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/recon-scope.mjs",
+      "destination": "mcp/engine/recon-scope.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "5c7376977622ed06bf52f5b0c470a093b3c55815a04dda149f53b484dafa22bb",
+      "postSha256": "5c7376977622ed06bf52f5b0c470a093b3c55815a04dda149f53b484dafa22bb",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/run-shapes.mjs",
+      "destination": "mcp/engine/run-shapes.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "44f37a3adbe9ec80669bebb156e07a671b489d9325a8a94b960389be07eb6439",
+      "postSha256": "44f37a3adbe9ec80669bebb156e07a671b489d9325a8a94b960389be07eb6439",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/scroll.mjs",
+      "destination": "mcp/engine/scroll.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "4691af3b1d2877bdfbb3240646ff154d2ef06f980a2e5218546b87ea9038e784",
+      "postSha256": "4691af3b1d2877bdfbb3240646ff154d2ef06f980a2e5218546b87ea9038e784",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    },
+    {
+      "source": "plugins/hyper-cloaking/skills/hyper-cloaking/engine/target-safety.mjs",
+      "destination": "mcp/engine/target-safety.mjs",
+      "type": "file",
+      "mode": "0644",
+      "preSha256": "840214183efc04e278330506e11e98a41d82172437ed3ac8c67a5b692bc9d87b",
+      "postSha256": "840214183efc04e278330506e11e98a41d82172437ed3ac8c67a5b692bc9d87b",
+      "exceptionKind": null,
+      "permittedTransforms": []
+    }
+  ]
+}

@@ -26,7 +26,7 @@ import {
   setDefaultCredentialProfile,
   validateCredentialStore,
   withCredentialProfileOperation
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/credentials.mjs';
+} from '../../../mcp/engine/credentials.mjs';
 
 const evidenceHash = 'e'.repeat(64);
 

@@ -9,7 +9,11 @@ function fakeLaunch() {
   const state = { closed: false };
   return {
     factory: async () => ({
-      browser: { close: async () => { state.closed = true; } },
+      browser: {
+        close: async () => {
+          state.closed = true;
+        }
+      },
       page: { url: () => 'about:blank' },
       account: 'acct'
     }),

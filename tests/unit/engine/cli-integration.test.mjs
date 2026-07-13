@@ -10,14 +10,11 @@ import {
   installNavigationSafety,
   runCli,
   runLiveVerification
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/cli.mjs';
-import {
-  generateMcpConfig,
-  mcpCommand
-} from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/mcp-config.mjs';
-import { buildNoSandboxWarningSafeCloakOptions } from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/browser-utils.mjs';
-import { resolveHome } from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/config.mjs';
-import { resolveWorkspace } from '../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/cookie.mjs';
+} from '../../../mcp/engine/cli.mjs';
+import { generateMcpConfig, mcpCommand } from '../../../mcp/engine/mcp-config.mjs';
+import { buildNoSandboxWarningSafeCloakOptions } from '../../../mcp/engine/browser-utils.mjs';
+import { resolveHome } from '../../../mcp/engine/config.mjs';
+import { resolveWorkspace } from '../../../mcp/engine/cookie.mjs';
 
 async function runJson(args) {
   let stdout = '';

@@ -16,15 +16,15 @@ import {
   standardReadEnvelope,
   validateObservedPrivateCapability,
   withObservedPrivateReplay
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/network.mjs';
+} from '../../../../mcp/engine/providers/network.mjs';
 import {
   executeInstagramRead,
   instagramReadPromotions
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/instagram/network.mjs';
+} from '../../../../mcp/engine/providers/instagram/network.mjs';
 import {
   executeYouTubeRead,
   youtubeReadPromotions
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/youtube/network.mjs';
+} from '../../../../mcp/engine/providers/youtube/network.mjs';
 
 const promoted = {
   sanitizedFixtures: true,

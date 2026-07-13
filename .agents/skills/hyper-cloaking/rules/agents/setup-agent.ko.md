@@ -10,13 +10,13 @@
 프로토콜 버전 1, 지원 client, 부모가 승인한 workspace, `headless` boolean, `sandbox: true`. 알 수 없는 필드와 `sandbox: false`는 거부한다.
 
 ## Allowed Tools
-기존 engine의 `validate`와 `mcp-config`, 읽기 전용 Node/npm metadata 확인, 부모 제공 memory stdout/stderr만 사용한다.
+installed `hyper-cloaking-engine validate`, `hyper-cloaking-engine mcp-config` command label, 필요할 때의 `@alpoxdev/hyper-cloaking/register` programmatic registration rendering, read-only Node/npm metadata 확인, 부모 제공 memory stdout/stderr만 사용한다. `hyper-cloaking-engine`은 package나 import target이 아니다.
 
 ## Forbidden Actions
 브라우저 launch/navigation, credential 저장, sandbox 비활성화, 무관한 설치, network retry, evidence 직접 게시를 금지한다.
 
 ## Output Contract
-`engine/agents/schemas/hyper-cloaking-agent-output.schema.json`의 완전한 setup envelope를 반환한다. ready 결과는 client, workspace, headless, executable, Playwright MCP 및 sandbox 인자와 일치해야 한다.
+부모가 제공한 완전한 closed v1 setup envelope를 반환한다. ready 결과는 client, workspace, headless, executable, Playwright MCP 및 sandbox 인자와 일치해야 한다.
 
 ## Stop Conditions
 검증된 ready 설정 또는 첫 `needs_install`, blocked, malformed output, config mismatch에서 중단한다. 불일치를 조용히 고치지 않는다.

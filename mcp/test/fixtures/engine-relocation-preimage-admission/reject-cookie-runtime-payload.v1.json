@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "path": "cookie.yml",
+      "type": "file",
+      "mode": "0644",
+      "sha256": "c64dad7217998ab3bb666f696bc14aa9e86250c82e9fa0527a22a4ed9b36de64",
+      "bytesBase64": "c2l0ZXM6CiAgc3ludGhldGljOgogICAgY29va2llczogW10K"
+    }
+  ]
+}

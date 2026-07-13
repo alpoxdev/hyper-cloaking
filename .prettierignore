@@ -9,6 +9,8 @@ node_modules/
 .codex/
 .cursor/
 skills/
+# Relocation-ledger payload — formatting would invalidate verified engine bytes.
+mcp/engine/
 
 # Agent / tooling state (also gitignored)
 .omc/

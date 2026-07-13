@@ -1,22 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { genericProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/generic.mjs';
+import { genericProvider } from '../../../../mcp/engine/providers/generic.mjs';
 import {
   getProvider,
   providers,
   resolveProviderForUrl,
   validateProviderRegistry
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/index.mjs';
-import { coupangProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/metadata.mjs';
+} from '../../../../mcp/engine/providers/index.mjs';
+import { coupangProvider } from '../../../../mcp/engine/providers/coupang/metadata.mjs';
 import {
   buildProviderRegistry,
   hostMatchesDomain,
   resolveProviderForUrl as resolveProviderForUrlFromRegistry,
   validateProviderRegistry as validateProviderRegistryFromRegistry
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/registry.mjs';
-import { xProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x.mjs';
-import { tiktokProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/metadata.mjs';
+} from '../../../../mcp/engine/providers/registry.mjs';
+import { xProvider } from '../../../../mcp/engine/providers/x.mjs';
+import { tiktokProvider } from '../../../../mcp/engine/providers/tiktok/metadata.mjs';
 
 test('validateProviderRegistry passes for the built-in provider set', () => {
   const result = validateProviderRegistry();

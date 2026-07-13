@@ -7,7 +7,7 @@
  * launchPersistentCloakContext, both of which hard-force humanize; no tool param
  * can disable it.
  */
-import { launchCloakBrowser, launchPersistentCloakContext } from 'hyper-cloaking-engine';
+import { launchCloakBrowser, launchPersistentCloakContext } from '../../engine/browser-utils.mjs';
 import { defineTool } from '../error-signal.mjs';
 
 /**

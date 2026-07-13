@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "name": "package identity",
+      "file": "package.json",
+      "content": "{\"name\":\"$RETIRED_ENGINE_PACKAGE\"}",
+      "expectedRule": "package-identity"
+    },
+    {
+      "name": "package dependency",
+      "file": "mcp/package.json",
+      "content": "{\"dependencies\":{\"$RETIRED_ENGINE_PACKAGE\":\"1.0.0\"}}",
+      "expectedRule": "package-dependency"
+    },
+    {
+      "name": "package workspace",
+      "file": "package.json",
+      "content": "{\"workspaces\":{\"packages\":[\"$RETIRED_ENGINE_PACKAGE\"]}}",
+      "expectedRule": "package-workspace"
+    },
+    {
+      "name": "non-outer bin key",
+      "file": "package.json",
+      "content": "{\"bin\":{\"$RETIRED_ENGINE_PACKAGE\":\"./cli.mjs\"}}",
+      "expectedRule": "package-bin"
+    },
+    {
+      "name": "lockfile package identity",
+      "file": "package-lock.json",
+      "content": "{\"packages\":{\"node_modules/$RETIRED_ENGINE_PACKAGE\":{\"name\":\"$RETIRED_ENGINE_PACKAGE\"}}}",
+      "expectedRule": "lockfile-package-identity"
+    },
+    {
+      "name": "nested lockfile package identity",
+      "file": "package-lock.json",
+      "content": "{\"packages\":{\"node_modules/example/node_modules/$RETIRED_ENGINE_PACKAGE\":{\"link\":true,\"resolved\":\"../../mcp\"}}}",
+      "expectedRule": "lockfile-package-identity"
+    },
+    {
+      "name": "lockfile v1 nested dependency",
+      "file": "package-lock.json",
+      "content": "{\"dependencies\":{\"parent\":{\"dependencies\":{\"$RETIRED_ENGINE_PACKAGE\":{\"version\":\"1.0.0\"}}}}}",
+      "expectedRule": "lockfile-package-identity"
+    },
+    {
+      "name": "static import",
+      "file": "src/consumer.mjs",
+      "content": "import { run } from '$RETIRED_ENGINE_PACKAGE';",
+      "expectedRule": "retired-import"
+    },
+    {
+      "name": "multiline static import",
+      "file": "src/consumer.mjs",
+      "content": "import {\n  run\n} from '$RETIRED_ENGINE_PACKAGE';",
+      "expectedRule": "retired-import"
+    },
+    {
+      "name": "re-export",
+      "file": "src/consumer.mjs",
+      "content": "export { run } from '$RETIRED_ENGINE_PACKAGE';",
+      "expectedRule": "retired-import"
+    },
+    {
+      "name": "dynamic import",
+      "file": "src/consumer.mjs",
+      "content": "await import('$RETIRED_ENGINE_PACKAGE');",
+      "expectedRule": "retired-import"
+    },
+    {
+      "name": "template-literal dynamic import",
+      "file": "src/consumer.mjs",
+      "content": "await import(`$RETIRED_ENGINE_PACKAGE`);",
+      "expectedRule": "retired-import"
+    },
+    {
+      "name": "CommonJS require",
+      "file": "src/consumer.cjs",
+      "content": "require('$RETIRED_ENGINE_PACKAGE');",
+      "expectedRule": "retired-import"
+    },
+    {
+      "name": "template-literal CommonJS require",
+      "file": "src/consumer.cjs",
+      "content": "require(`$RETIRED_ENGINE_PACKAGE`);",
+      "expectedRule": "retired-import"
+    },
+    {
+      "name": "legacy engine filesystem path",
+      "file": "src/config.mjs",
+      "content": "const legacyPath = '$LEGACY_ENGINE_ROOT/cli.mjs';",
+      "expectedRule": "legacy-engine-path"
+    },
+    {
+      "name": "unparseable JavaScript fails closed",
+      "file": "src/consumer.mjs",
+      "content": "import {",
+      "expectedRule": "unparseable-javascript"
+    },
+    {
+      "name": "legacy source outside the named relocation fixture",
+      "file": "mcp/test/fixtures/other-manifest.v1.json",
+      "content": "  \"source\": \"$LEGACY_ENGINE_ROOT/cli.mjs\"",
+      "expectedRule": "legacy-engine-path"
+    },
+    {
+      "name": "documentation package context",
+      "file": "docs/usage.md",
+      "content": "Use `$RETIRED_ENGINE_PACKAGE` as an npm package.",
+      "expectedRule": "documentation-package"
+    },
+    {
+      "name": "documentation install context",
+      "file": "docs/usage.md",
+      "content": "Run npm install $RETIRED_ENGINE_PACKAGE.",
+      "expectedRule": "documentation-install"
+    },
+    {
+      "name": "negation does not permit an installation command",
+      "file": "docs/usage.md",
+      "content": "This is not recommended: npm install $RETIRED_ENGINE_PACKAGE.",
+      "expectedRule": "documentation-install"
+    },
+    {
+      "name": "negated and positive package clauses",
+      "file": "docs/usage.md",
+      "content": "$RETIRED_ENGINE_PACKAGE is never a package; $RETIRED_ENGINE_PACKAGE is a package.",
+      "expectedRule": "documentation-package"
+    },
+    {
+      "name": "coordinating conjunction does not mask package role",
+      "file": "docs/usage.md",
+      "content": "$RETIRED_ENGINE_PACKAGE is not an npm package, yet $RETIRED_ENGINE_PACKAGE is a package dependency.",
+      "expectedRule": "documentation-package"
+    },
+    {
+      "name": "comma clause does not mask package role",
+      "file": "docs/usage.md",
+      "content": "$RETIRED_ENGINE_PACKAGE is not an npm package, $RETIRED_ENGINE_PACKAGE is a package dependency.",
+      "expectedRule": "documentation-package"
+    },
+    {
+      "name": "colon clause does not mask package role",
+      "file": "docs/usage.md",
+      "content": "$RETIRED_ENGINE_PACKAGE is not an npm package: $RETIRED_ENGINE_PACKAGE is a package dependency.",
+      "expectedRule": "documentation-package"
+    },
+    {
+      "name": "em dash clause does not mask prior package role",
+      "file": "docs/usage.md",
+      "content": "$RETIRED_ENGINE_PACKAGE is a package dependency — $RETIRED_ENGINE_PACKAGE is not an npm package.",
+      "expectedRule": "documentation-package"
+    },
+    {
+      "name": "unsplit repeated identity fails closed",
+      "file": "docs/usage.md",
+      "content": "$RETIRED_ENGINE_PACKAGE is not an npm package or $RETIRED_ENGINE_PACKAGE is a package dependency.",
+      "expectedRule": "documentation-identity"
+    },
+    {
+      "name": "retired identity in committed artifact",
+      "file": "artifacts/obsolete.json",
+      "content": "{\"historical\":\"$RETIRED_ENGINE_PACKAGE\"}",
+      "expectedRule": "artifact-retired-package-identity"
+    },
+    {
+      "name": "documentation import context",
+      "file": "docs/usage.md",
+      "content": "import { run } from '$RETIRED_ENGINE_PACKAGE';",
+      "expectedRule": "documentation-import"
+    },
+    {
+      "name": "undocumented bare identity",
+      "file": "docs/usage.md",
+      "content": "The $RETIRED_ENGINE_PACKAGE runtime remains unavailable.",
+      "expectedRule": "documentation-identity"
+    }
+  ]
+}

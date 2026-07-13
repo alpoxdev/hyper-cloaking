@@ -16,7 +16,7 @@ import {
   workspacePaths,
   markUntrustedBrowserContent,
   summarizeEvidenceRef
-} from 'hyper-cloaking-engine';
+} from '../../engine/browser-utils.mjs';
 import { defineTool } from '../error-signal.mjs';
 import { takeAriaSnapshot, resolveTarget } from '../snapshot-resolver.mjs';
 

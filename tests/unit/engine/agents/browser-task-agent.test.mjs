@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runBrowserTask } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/browser-task-agent.mjs';
+import { runBrowserTask } from '../../../../mcp/engine/agents/browser-task-agent.mjs';
 
 const input = {
   schemaVersion: 1,

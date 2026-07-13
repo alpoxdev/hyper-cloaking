@@ -4,10 +4,10 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { validateProviderSchema } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/schema.mjs';
-import { NetworkReadError } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/network.mjs';
-import { naverSelectors } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/selectors.mjs';
-import { analyzePosts } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/actions/analyze.mjs';
+import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
+import { NetworkReadError } from '../../../../../mcp/engine/providers/network.mjs';
+import { naverSelectors } from '../../../../../mcp/engine/providers/naver/selectors.mjs';
+import { analyzePosts } from '../../../../../mcp/engine/providers/naver/actions/analyze.mjs';
 import {
   normalizeBlogCommentRef,
   normalizeBlogPostRef,
@@ -16,7 +16,7 @@ import {
   normalizeCafePostRef,
   normalizeCafeRef,
   normalizeDraftRef
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/actions/ids.mjs';
+} from '../../../../../mcp/engine/providers/naver/actions/ids.mjs';
 import {
   getBlogList,
   getBlogPost,
@@ -25,7 +25,7 @@ import {
   searchBlog,
   searchCafe,
   searchWeb
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/actions/reads.mjs';
+} from '../../../../../mcp/engine/providers/naver/actions/reads.mjs';
 import {
   blockedNaverAction,
   commentBlogPost,
@@ -33,9 +33,9 @@ import {
   createCafePost,
   setBlogPostLiked,
   setCafePostLiked
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/actions/writes.mjs';
-import { naverProvider } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/metadata.mjs';
-import { naverReadPromotions } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/network.mjs';
+} from '../../../../../mcp/engine/providers/naver/actions/writes.mjs';
+import { naverProvider } from '../../../../../mcp/engine/providers/naver/metadata.mjs';
+import { naverReadPromotions } from '../../../../../mcp/engine/providers/naver/network.mjs';
 
 function safeTarget() {
   return { disposition: 'ok', reason: 'public-https', risks: [] };

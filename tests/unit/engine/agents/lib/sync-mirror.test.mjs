@@ -8,7 +8,7 @@ import {
   captureMirrorBaseline,
   prepareMirrorSync,
   recoverMirrorSync
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/lib/sync-mirror.mjs';
+} from '../../../../../mcp/engine/agents/lib/sync-mirror.mjs';
 
 async function trees() {
   const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'mirror-sync-'));

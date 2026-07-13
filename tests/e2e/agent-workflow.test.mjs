@@ -4,11 +4,11 @@ import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-import { runSetup } from '../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/setup-agent.mjs';
-import { runBrowserTask } from '../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/browser-task-agent.mjs';
-import { runDiagnostics } from '../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/diagnostics-agent.mjs';
-import { dispatchParent } from '../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/parent-dispatcher.mjs';
-import { guardAllowedOrigin } from '../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/lib/allowed-origin-guard.mjs';
+import { runSetup } from '../../mcp/engine/agents/setup-agent.mjs';
+import { runBrowserTask } from '../../mcp/engine/agents/browser-task-agent.mjs';
+import { runDiagnostics } from '../../mcp/engine/agents/diagnostics-agent.mjs';
+import { dispatchParent } from '../../mcp/engine/agents/parent-dispatcher.mjs';
+import { guardAllowedOrigin } from '../../mcp/engine/agents/lib/allowed-origin-guard.mjs';
 import { startMockMcpServer } from './fixtures/agent-workflow/mock-mcp-server.mjs';
 
 const fixtures = new URL('./fixtures/agent-workflow/', import.meta.url);

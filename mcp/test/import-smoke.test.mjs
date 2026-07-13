@@ -1,27 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-// P0-b: prove the mcp package can import every deep engine module it needs
-// through the `hyper-cloaking-engine` package name (no relative `../../` climb).
-test('mcp imports deep engine modules by package name', async () => {
-  const engine = await import('hyper-cloaking-engine');
-  assert.equal(typeof engine.launchCloakBrowser, 'function');
-  assert.equal(typeof engine.humanClick, 'function');
-  assert.equal(typeof engine.humanType, 'function');
-  assert.equal(typeof engine.humanScroll, 'function');
-  assert.equal(typeof engine.ensureWorkspace, 'function');
+// This source-local test verifies MCP implementation imports only. Public export
+// coverage belongs to the installed-package consumer test.
+test('mcp source-local engine modules provide required implementation symbols', async () => {
+  const browserUtils = await import('../engine/browser-utils.mjs');
+  assert.equal(typeof browserUtils.launchCloakBrowser, 'function');
+  assert.equal(typeof browserUtils.ensureWorkspace, 'function');
 
-  const guardrails = await import('hyper-cloaking-engine/action-runtime/guardrails.mjs');
+  const mouse = await import('../engine/mouse.mjs');
+  const keyboard = await import('../engine/keyboard.mjs');
+  const scroll = await import('../engine/scroll.mjs');
+  assert.equal(typeof mouse.humanClick, 'function');
+  assert.equal(typeof keyboard.humanType, 'function');
+  assert.equal(typeof scroll.humanScroll, 'function');
+
+  const guardrails = await import('../engine/action-runtime/guardrails.mjs');
   assert.equal(typeof guardrails.reserveGuardedAction, 'function');
   assert.equal(typeof guardrails.finalizeGuardedAction, 'function');
   assert.equal(typeof guardrails.enforceBulkCap, 'function');
   assert.equal(guardrails.DEFAULT_BULK_CAP, 20);
 
-  const providers = await import('hyper-cloaking-engine/providers/index.mjs');
+  const providers = await import('../engine/providers/index.mjs');
   assert.equal(typeof providers.resolveProviderForUrl, 'function');
   assert.equal(typeof providers.getProvider, 'function');
 
-  const targetSafety = await import('hyper-cloaking-engine/target-safety.mjs');
+  const targetSafety = await import('../engine/target-safety.mjs');
   assert.equal(typeof targetSafety.classifyTargetUrl, 'function');
   assert.equal(typeof targetSafety.assertNavigationAllowed, 'function');
 });

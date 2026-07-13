@@ -16,8 +16,8 @@ import {
   loadBulkLedger,
   recordBulkProgress,
   DEFAULT_BULK_CAP
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/action-runtime/guardrails.mjs';
-import { makeActionResult } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/action-runtime/action-result.mjs';
+} from '../../../../mcp/engine/action-runtime/guardrails.mjs';
+import { makeActionResult } from '../../../../mcp/engine/action-runtime/action-result.mjs';
 
 async function tmpStateDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'hc-guardrails-'));

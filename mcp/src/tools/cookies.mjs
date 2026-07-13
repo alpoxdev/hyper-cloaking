@@ -12,7 +12,7 @@ import {
   loadCookieConfig,
   selectCookieRecords,
   redactCookies
-} from 'hyper-cloaking-engine';
+} from '../../engine/browser-utils.mjs';
 import { defineTool } from '../error-signal.mjs';
 
 /**

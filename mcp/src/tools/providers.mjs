@@ -10,26 +10,17 @@
  * session gate so unknown/ambiguous/unsupported requests fail closed without a
  * live browser.
  */
-import { markUntrustedBrowserContent, workspacePaths } from 'hyper-cloaking-engine';
-import { resolveProviderForUrl, getProvider } from 'hyper-cloaking-engine/providers/index.mjs';
+import { markUntrustedBrowserContent, workspacePaths } from '../../engine/browser-utils.mjs';
+import { resolveProviderForUrl, getProvider } from '../../engine/providers/index.mjs';
 import {
   instagramActions,
   buildInstagramSession
-} from 'hyper-cloaking-engine/providers/instagram/index.mjs';
-import { naverActions, buildNaverSession } from 'hyper-cloaking-engine/providers/naver/index.mjs';
-import {
-  youtubeActions,
-  buildYouTubeSession
-} from 'hyper-cloaking-engine/providers/youtube/index.mjs';
-import {
-  coupangActions,
-  buildCoupangSession
-} from 'hyper-cloaking-engine/providers/coupang/index.mjs';
-import {
-  tiktokActions,
-  buildTikTokSession
-} from 'hyper-cloaking-engine/providers/tiktok/index.mjs';
-import { xActions, buildXSession } from 'hyper-cloaking-engine/providers/x/index.mjs';
+} from '../../engine/providers/instagram/index.mjs';
+import { naverActions, buildNaverSession } from '../../engine/providers/naver/index.mjs';
+import { youtubeActions, buildYouTubeSession } from '../../engine/providers/youtube/index.mjs';
+import { coupangActions, buildCoupangSession } from '../../engine/providers/coupang/index.mjs';
+import { tiktokActions, buildTikTokSession } from '../../engine/providers/tiktok/index.mjs';
+import { xActions, buildXSession } from '../../engine/providers/x/index.mjs';
 import { defineTool } from '../error-signal.mjs';
 import { buildWriteOpts, classifyWriteResult } from '../guardrail-bridge.mjs';
 

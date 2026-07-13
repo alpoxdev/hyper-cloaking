@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   guardAllowedOrigin,
   normalizeAllowedOrigins
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/agents/lib/allowed-origin-guard.mjs';
+} from '../../../../../mcp/engine/agents/lib/allowed-origin-guard.mjs';
 
 const classify = () => ({ disposition: 'ok', reason: 'public target' });
 

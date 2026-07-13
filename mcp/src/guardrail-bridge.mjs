@@ -12,7 +12,7 @@
  * (2) classifies the engine result envelope into a typed MCP signal.
  */
 import crypto from 'node:crypto';
-import { DEFAULT_BULK_CAP } from 'hyper-cloaking-engine/action-runtime/guardrails.mjs';
+import { DEFAULT_BULK_CAP } from '../engine/action-runtime/guardrails.mjs';
 
 /**
  * Stable sha256 hex of a string (matches the engine hashing shape for guarded keys).

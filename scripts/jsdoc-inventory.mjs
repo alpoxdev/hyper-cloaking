@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-export const CANONICAL_ROOT = 'plugins/hyper-cloaking/skills/hyper-cloaking';
+export const CANONICAL_ROOT = 'mcp/src';
 export const CANONICAL_TARGETS = [
-  { key: 'skills', root: CANONICAL_ROOT },
-  { key: 'mcp', root: 'mcp/src' }
+  { key: 'mcp-src', root: 'mcp/src', policy: 'strict' },
+  { key: 'mcp-engine', root: 'mcp/engine', policy: 'bounded' }
 ];
 export function canonicalTarget(key) {
   return CANONICAL_TARGETS.find((target) => target.key === key);
@@ -13,7 +13,7 @@ export function canonicalTarget(key) {
 export function selectCanonicalTargets(selection = 'all') {
   const keys =
     selection === 'all' || selection == null
-      ? ['skills', 'mcp']
+      ? CANONICAL_TARGETS.map((target) => target.key)
       : Array.isArray(selection)
         ? selection
         : [selection];
@@ -21,14 +21,15 @@ export function selectCanonicalTargets(selection = 'all') {
   return keys.map((key) => canonicalTarget(key));
 }
 export function buildTargetManifest(target) {
-  if (!target || !target.root || !target.key || !canonicalTarget(target.key))
-    throw new Error('unknown-audit-target');
+  const canonical = target && canonicalTarget(target.key);
+  if (!target || !target.root || !target.key || !canonical) throw new Error('unknown-audit-target');
   if (!fs.existsSync(target.root) || !fs.statSync(target.root).isDirectory())
     throw new Error('target-root-missing');
   const paths = enumerateMjsFiles(target.root);
   if (!paths.length) throw new Error('target-empty');
   return {
-    key: target.key,
+    key: canonical.key,
+    policy: canonical.policy,
     canonicalRoot: target.root,
     paths,
     discoveredCount: paths.length,
@@ -40,11 +41,6 @@ export function generateTargetManifests(selection = 'all') {
 }
 export const selectAuditTargets = selectCanonicalTargets;
 export const resolveCanonicalTargets = selectCanonicalTargets;
-export const MIRROR_ROOTS = [
-  '.agents/skills/hyper-cloaking',
-  '.claude/skills/hyper-cloaking',
-  'skills/hyper-cloaking'
-];
 export function sha256(data) {
   return crypto.createHash('sha256').update(data).digest('hex');
 }

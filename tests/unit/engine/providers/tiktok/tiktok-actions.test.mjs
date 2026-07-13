@@ -4,15 +4,15 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { validateProviderSchema } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/schema.mjs';
-import { NetworkReadError } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/network.mjs';
-import { analyzeVideos } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/actions/analyze.mjs';
+import { validateProviderSchema } from '../../../../../mcp/engine/providers/schema.mjs';
+import { NetworkReadError } from '../../../../../mcp/engine/providers/network.mjs';
+import { analyzeVideos } from '../../../../../mcp/engine/providers/tiktok/actions/analyze.mjs';
 import {
   normalizeCommentRef,
   normalizeThreadRef,
   normalizeUserRef,
   normalizeVideoRef
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/actions/ids.mjs';
+} from '../../../../../mcp/engine/providers/tiktok/actions/ids.mjs';
 import {
   getUser,
   getUserVideos,
@@ -20,16 +20,16 @@ import {
   listDMThreads,
   readDMThread,
   searchVideos
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/actions/reads.mjs';
+} from '../../../../../mcp/engine/providers/tiktok/actions/reads.mjs';
 import {
   blockedTikTokAction,
   createUploadDraft,
   publishDraft,
   replyToDM,
   setLiked
-} from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/actions/writes.mjs';
-import { tiktokProvider } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/metadata.mjs';
-import { tiktokReadPromotions } from '../../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/network.mjs';
+} from '../../../../../mcp/engine/providers/tiktok/actions/writes.mjs';
+import { tiktokProvider } from '../../../../../mcp/engine/providers/tiktok/metadata.mjs';
+import { tiktokReadPromotions } from '../../../../../mcp/engine/providers/tiktok/network.mjs';
 
 function safeTarget() {
   return { disposition: 'ok', reason: 'public-https', risks: [] };

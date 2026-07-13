@@ -8,7 +8,7 @@
  * `ok` disposition navigates; anything else returns a structured needs-preflight
  * signal with no navigation. Redirects are re-classified after load.
  */
-import { classifyTargetUrl, classifyRedirect } from 'hyper-cloaking-engine';
+import { classifyTargetUrl, classifyRedirect } from '../../engine/browser-utils.mjs';
 import { defineTool } from '../error-signal.mjs';
 
 /**

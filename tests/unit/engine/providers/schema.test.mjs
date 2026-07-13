@@ -1,20 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { genericProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/generic.mjs';
-import { coupangProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/coupang/metadata.mjs';
-import { naverProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/naver/metadata.mjs';
+import { genericProvider } from '../../../../mcp/engine/providers/generic.mjs';
+import { coupangProvider } from '../../../../mcp/engine/providers/coupang/metadata.mjs';
+import { naverProvider } from '../../../../mcp/engine/providers/naver/metadata.mjs';
 import {
   FORBIDDEN_PROVIDER_FIELDS,
   validateProviderSchema
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/schema.mjs';
-import { validateProviderRegistry as validateProviderRegistryFromRegistry } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/registry.mjs';
-import { xProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/x.mjs';
-import { tiktokProvider } from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/tiktok/metadata.mjs';
-import {
-  buildProviderSession,
-  OffOriginError
-} from '../../../../plugins/hyper-cloaking/skills/hyper-cloaking/engine/providers/session.mjs';
+} from '../../../../mcp/engine/providers/schema.mjs';
+import { validateProviderRegistry as validateProviderRegistryFromRegistry } from '../../../../mcp/engine/providers/registry.mjs';
+import { xProvider } from '../../../../mcp/engine/providers/x.mjs';
+import { tiktokProvider } from '../../../../mcp/engine/providers/tiktok/metadata.mjs';
+import { buildProviderSession, OffOriginError } from '../../../../mcp/engine/providers/session.mjs';
 
 test('valid built-in providers pass schema validation', () => {
   for (const provider of [
